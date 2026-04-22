@@ -1,6 +1,0 @@
-[
-  {
-    "name": "app-container",
-    "imageUri": "123456789.dkr.ecr.ap-northeast-2.amazonaws.com/repo:latest"
-  }
-]
