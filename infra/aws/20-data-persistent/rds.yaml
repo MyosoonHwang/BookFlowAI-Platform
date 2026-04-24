@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 20 · RDS PostgreSQL (Data VPC DB subnet · 구축 Single-AZ · 시나리오만 Multi-AZ)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  DbInstanceClass:
+    Type: String
+    Default: db.t3.micro
+  DbName:
+    Type: String
+    Default: bookflow
+  EnableMultiAz:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 구축 false (비용 절감) · 시나리오 failover 테스트 때만 true 로 update-stack
+  BackupRetentionDays:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 7
+    Description: 매일 destroy · Ansible re-seed 라 자동 백업 불필요 (0 = off)
+
+Conditions:
+  MultiAz: !Equals [!Ref EnableMultiAz, 'true']
+
+Resources:
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub ${ProjectName}-rds-subnet-group
+      DBSubnetGroupDescription: BOOKFLOW RDS · Data VPC DB subnet
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-data-db-az1
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-data-db-az2
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-rds-subnet-group' }]
+
+  DbParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      DBParameterGroupName: !Sub ${ProjectName}-rds-pg16
+      Description: BOOKFLOW PostgreSQL 16 parameter group
+      Family: postgres16
+      Parameters:
+        log_statement: mod
+        log_min_duration_statement: '1000'
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-rds-sg
+      GroupDescription: BOOKFLOW RDS - 5432 from BookFlow AI, Sales Data, Egress, Ansible VPC
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-data-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.0.0.0/16
+          Description: BookFlow AI VPC (EKS Pod)
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.1.0.0/16
+          Description: Sales Data VPC (POS sim)
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.2.0.0/16
+          Description: Egress VPC (inventory ECS)
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.4.0.0/16
+          Description: Ansible VPC (schema/seed)
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-rds-sg' }]
+
+  MonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-rds-monitoring-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: monitoring.rds.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub ${ProjectName}-postgres
+      DBName: !Ref DbName
+      Engine: postgres
+      EngineVersion: '16.6'
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: '20'
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: !If [MultiAz, true, false]
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      DBParameterGroupName: !Ref DbParameterGroup
+      VPCSecurityGroups: [!Ref DbSecurityGroup]
+      MasterUsername: !Join
+        - ''
+        - - '{{resolve:secretsmanager:'
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-secrets-rds-master-arn
+          - ':SecretString:username}}'
+      MasterUserPassword: !Join
+        - ''
+        - - '{{resolve:secretsmanager:'
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-secrets-rds-master-arn
+          - ':SecretString:password}}'
+      BackupRetentionPeriod: !Ref BackupRetentionDays
+      PreferredMaintenanceWindow: 'sun:18:00-sun:19:00'
+      PubliclyAccessible: false
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt MonitoringRole.Arn
+      EnablePerformanceInsights: false
+      EnableCloudwatchLogsExports: [postgresql]
+      DeletionProtection: false
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-postgres' }]
+
+Outputs:
+  DbEndpointAddress:
+    Value: !GetAtt DbInstance.Endpoint.Address
+    Export: { Name: !Sub '${ProjectName}-rds-endpoint' }
+  DbEndpointPort:
+    Value: !GetAtt DbInstance.Endpoint.Port
+    Export: { Name: !Sub '${ProjectName}-rds-port' }
+  DbName:
+    Value: !Ref DbName
+    Export: { Name: !Sub '${ProjectName}-rds-dbname' }
+  DbSecurityGroupId:
+    Value: !Ref DbSecurityGroup
+    Export: { Name: !Sub '${ProjectName}-rds-sg-id' }
+  DbSubnetGroupName:
+    Value: !Ref DbSubnetGroup
+    Export: { Name: !Sub '${ProjectName}-rds-subnet-group-name' }

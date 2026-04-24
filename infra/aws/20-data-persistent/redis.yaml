@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 20 · ElastiCache Redis (Data VPC DB subnet · 구축 Single-node · 시나리오만 Replication Group)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  CacheNodeType:
+    Type: String
+    Default: cache.t3.micro
+  EnableReplication:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 구축 false (Single-node cluster) · 시나리오만 true 로 ReplicationGroup 전환
+
+Conditions:
+  Replicated: !Equals [!Ref EnableReplication, 'true']
+  SingleNode: !Equals [!Ref EnableReplication, 'false']
+
+Resources:
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Sub ${ProjectName}-redis-subnet-group
+      Description: BOOKFLOW Redis · Data VPC DB subnet
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-data-db-az1
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-data-db-az2
+
+  CacheParameterGroup:
+    Type: AWS::ElastiCache::ParameterGroup
+    Properties:
+      Description: BOOKFLOW Redis 7 parameter group
+      CacheParameterGroupFamily: redis7
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-redis-sg
+      GroupDescription: BOOKFLOW Redis - 6379 from BookFlow AI VPC (Pod session cache)
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-data-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.0.0.0/16
+          Description: BookFlow AI VPC (EKS Pod)
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-redis-sg' }]
+
+  # ─── Single-node (구축 phase · 저렴) ───
+  RedisSingle:
+    Type: AWS::ElastiCache::CacheCluster
+    Condition: SingleNode
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      ClusterName: !Sub ${ProjectName}-redis
+      Engine: redis
+      EngineVersion: '7.1'
+      CacheNodeType: !Ref CacheNodeType
+      NumCacheNodes: 1
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      CacheParameterGroupName: !Ref CacheParameterGroup
+      VpcSecurityGroupIds: [!Ref CacheSecurityGroup]
+      Port: 6379
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-redis' }]
+
+  # ─── Replication Group (시나리오 phase · Multi-AZ + replica) ───
+  RedisReplicated:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Condition: Replicated
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      ReplicationGroupId: !Sub ${ProjectName}-redis-rg
+      ReplicationGroupDescription: BOOKFLOW Redis · 시나리오 Multi-AZ
+      Engine: redis
+      EngineVersion: '7.1'
+      CacheNodeType: !Ref CacheNodeType
+      NumCacheClusters: 2
+      AutomaticFailoverEnabled: true
+      MultiAZEnabled: true
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      CacheParameterGroupName: !Ref CacheParameterGroup
+      SecurityGroupIds: [!Ref CacheSecurityGroup]
+      Port: 6379
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-redis-rg' }]
+
+Outputs:
+  RedisEndpoint:
+    Value: !If
+      - SingleNode
+      - !GetAtt RedisSingle.RedisEndpoint.Address
+      - !GetAtt RedisReplicated.PrimaryEndPoint.Address
+    Export: { Name: !Sub '${ProjectName}-redis-endpoint' }
+  RedisPort:
+    Value: !If
+      - SingleNode
+      - !GetAtt RedisSingle.RedisEndpoint.Port
+      - !GetAtt RedisReplicated.PrimaryEndPoint.Port
+    Export: { Name: !Sub '${ProjectName}-redis-port' }
+  RedisSecurityGroupId:
+    Value: !Ref CacheSecurityGroup
+    Export: { Name: !Sub '${ProjectName}-redis-sg-id' }
