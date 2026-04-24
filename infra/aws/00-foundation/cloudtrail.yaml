@@ -1,6 +1,31 @@
-# CloudTrail · Management + Data events · S3 저장 · KMS 암호화 (영구 · 감사 의무)
-# 라이프사이클: 🔒 영구
-# BOOKFLOW V6.2
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 00 · CloudTrail (Management events · S3 저장 · KMS 암호화)
 
-# TODO: 팀원이 실제 스펙 정의
-# 참고: docs/ARCHITECTURE.md · docs/DEPLOYMENT.md
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  Trail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: !Sub ${ProjectName}-trail
+      S3BucketName: !ImportValue
+        Fn::Sub: ${ProjectName}-s3-audit-name
+      KMSKeyId: !ImportValue
+        Fn::Sub: ${ProjectName}-kms-cloudtrail-arn
+      IncludeGlobalServiceEvents: true
+      IsLogging: true
+      IsMultiRegionTrail: true
+      EnableLogFileValidation: true
+      EventSelectors:
+        - ReadWriteType: All
+          IncludeManagementEvents: true
+          DataResources: []
+
+Outputs:
+  TrailArn:
+    Value: !GetAtt Trail.Arn
+    Export:
+      Name: !Sub ${ProjectName}-cloudtrail-arn

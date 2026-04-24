@@ -1,6 +1,121 @@
-# Systems Manager Parameter Store · Standard parameters (영구 · 무료)
-# 라이프사이클: 🔒 영구
-# BOOKFLOW V6.2
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 00 · SSM Parameter Store (Standard tier 무료 공통 설정)
 
-# TODO: 팀원이 실제 스펙 정의
-# 참고: docs/ARCHITECTURE.md · docs/DEPLOYMENT.md
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, stage, prod]
+
+Resources:
+  # ─── 네트워크 ───
+  RegionParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/config/region
+      Type: String
+      Value: !Ref AWS::Region
+
+  EnvironmentParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/config/environment
+      Type: String
+      Value: !Ref Environment
+
+  # ─── VPC CIDR 블록 (4 VPC) ───
+  VpcCidrBookflowAi:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/vpc-cidr/bookflow-ai
+      Type: String
+      Value: 10.0.0.0/16
+
+  VpcCidrSalesData:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/vpc-cidr/sales-data
+      Type: String
+      Value: 10.1.0.0/16
+
+  VpcCidrEgress:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/vpc-cidr/egress
+      Type: String
+      Value: 10.2.0.0/16
+
+  VpcCidrData:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/vpc-cidr/data
+      Type: String
+      Value: 10.3.0.0/16
+
+  # ─── TGW BGP ASN (AWS 측) ───
+  TgwBgpAsn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/tgw-bgp-asn
+      Type: String
+      Value: '64512'
+
+  # ─── Azure/GCP Customer Gateway IPs (초기 placeholder · Phase 2에서 실제 IP 주입) ───
+  AzureVpnGatewayIp:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/azure-vpn-gateway-ip
+      Type: String
+      Value: 0.0.0.0
+      Description: Azure VPN Gateway Public IP (Phase 2에 민지가 aws ssm put-parameter로 업데이트)
+
+  GcpHaVpnIp:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/gcp-ha-vpn-ip
+      Type: String
+      Value: 0.0.0.0
+      Description: GCP HA VPN Peer IP (Phase 2에 우혁이 업데이트)
+
+  # ─── EKS 클러스터 이름 ───
+  EksClusterName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/eks/cluster-name
+      Type: String
+      Value: !Sub ${ProjectName}
+
+  # ─── ECS 클러스터 이름 ───
+  EcsClusterName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/ecs/cluster-name
+      Type: String
+      Value: !Sub ${ProjectName}
+
+  # ─── GCP Project (영헌·민지가 참조 · Phase 2에 우혁이 제공) ───
+  GcpProjectId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/gcp/project-id
+      Type: String
+      Value: REPLACE_WITH_GCP_PROJECT
+      Description: GCP Project ID (Phase 2에 우혁이 업데이트)
+
+  # ─── Azure Tenant ID ───
+  AzureTenantId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/azure/tenant-id
+      Type: String
+      Value: REPLACE_WITH_TENANT_ID
+      Description: Azure Entra ID tenant (Phase 2에 민지가 업데이트)
+
+Outputs:
+  ParameterPathPrefix:
+    Value: !Sub /${ProjectName}/
+    Export:
+      Name: !Sub ${ProjectName}-ssm-param-prefix
