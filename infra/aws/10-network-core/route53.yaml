@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · Route 53 Private Hosted Zone
+  vpn.bookflow.internal · Client VPN endpoint + 내부 service discovery
+  모든 VPC와 association (BookFlow AI · Sales Data · Egress · Data · Ansible)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  DomainName:
+    Type: String
+    Default: vpn.bookflow.internal
+
+Resources:
+  PrivateZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig:
+        Comment: !Sub ${ProjectName} internal private DNS
+      VPCs:
+        - VPCId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+          VPCRegion: !Ref AWS::Region
+        - VPCId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+          VPCRegion: !Ref AWS::Region
+        - VPCId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-egress-id' }
+          VPCRegion: !Ref AWS::Region
+        - VPCId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-data-id' }
+          VPCRegion: !Ref AWS::Region
+        - VPCId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+          VPCRegion: !Ref AWS::Region
+      HostedZoneTags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-private-zone'
+
+Outputs:
+  HostedZoneId:
+    Value: !Ref PrivateZone
+    Export: { Name: !Sub '${ProjectName}-r53-private-zone-id' }
+
+  DomainName:
+    Value: !Ref DomainName
+    Export: { Name: !Sub '${ProjectName}-r53-private-zone-name' }

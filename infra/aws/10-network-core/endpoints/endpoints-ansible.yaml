@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · Ansible VPC Interface Endpoints
+  SSM + SSMMessages + EC2Messages (Session Manager · GHA → SSM SendCommand)
+  Secrets Manager (RDS 비밀번호 조회)
+  Glue (Script deploy)
+  + S3 Gateway (Glue Scripts bucket sync)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  EndpointSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-ansible-endpoint-sg'
+      GroupDescription: Allow HTTPS from Ansible VPC
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.4.0.0/16
+
+  Ssm:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-ansible-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  SsmMessages:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-ansible-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  Ec2Messages:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-ansible-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  SecretsManager:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-ansible-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  Glue:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.glue
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-ansible-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  S3Gateway:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-rt-ansible-private' }
+
+Outputs:
+  EndpointSgId:
+    Value: !Ref EndpointSg
+    Export: { Name: !Sub '${ProjectName}-endpoint-sg-ansible' }

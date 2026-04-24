@@ -6,6 +6,11 @@ CLAUDE.md
 # ─── Cross-cloud exports (매일 새로 생성 · 팀 단톡 공유용) ───
 exports/
 
+# ─── 임시 파일 (스크립트가 render한 PNG 등 실수 방지) ───
+_tmp_*
+*.tmp
+tmp/
+
 # ─── 개인별 설정 override ───
 scripts/aws/config/aws.local.ps1
 scripts/azure/config/azure.local.ps1

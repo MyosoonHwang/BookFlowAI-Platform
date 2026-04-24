@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · BookFlow AI VPC Interface Endpoints (7개)
+  ECR api · ECR dkr · Kinesis · SSM · Secrets Manager · CloudWatch Logs · KMS
+  + S3 Gateway Endpoint
+  단일 AZ (AZ1) · 학프 간소화
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  # Security Group · Endpoint ENI가 VPC 내부에서 받는 트래픽 허용
+  EndpointSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-bookflow-ai-endpoint-sg'
+      GroupDescription: Allow HTTPS from VPC
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.0.0.0/16
+
+  EcrApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  EcrDkr:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  Kinesis:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.kinesis-streams
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  Ssm:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  SecretsManager:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  CloudWatchLogs:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  Kms:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.kms
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-bookflow-ai-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  # S3 Gateway Endpoint (무료)
+  S3Gateway:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-rt-bookflow-ai-private' }
+
+Outputs:
+  EndpointSgId:
+    Value: !Ref EndpointSg
+    Export: { Name: !Sub '${ProjectName}-endpoint-sg-bookflow-ai' }
