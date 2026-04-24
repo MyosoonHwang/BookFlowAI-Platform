@@ -1,0 +1,4 @@
+-- RDS 사용자별 권한 (GRANT SELECT/INSERT/UPDATE)
+-- BOOKFLOW V6.2
+
+-- TODO: 실제 DDL/시드 정의

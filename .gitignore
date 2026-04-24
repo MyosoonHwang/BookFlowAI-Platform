@@ -1,0 +1,69 @@
+# ─── Claude Code 개인 설정 (public repo 방지) ───
+.claude/
+.mcp.json
+CLAUDE.md
+
+# ─── 환경 변수 / 시크릿 ───
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+*-credentials.json
+
+# ─── AWS / 클라우드 로컬 state ───
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfplan
+terraform.tfvars
+!terraform.tfvars.example
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+
+# Azure Bicep
+main.json
+*.bicepbuild
+
+# ─── IDE / OS ───
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# ─── Node ───
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+.npm
+
+# ─── Ansible ───
+*.retry
+ansible.log
+
+# ─── 로컬 빌드 산출물 ───
+dist/
+build/
+*.zip
+*.tar.gz
+
+# ─── 기타 ───
+.coverage
+htmlcov/
+*.log
