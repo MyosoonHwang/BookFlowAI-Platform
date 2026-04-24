@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 00 · CodeStar Connection (GitHub OAuth for CodePipeline)
+  ⚠ 배포 후 AWS Console 에서 수동 Activate 필요 (PENDING → AVAILABLE)
+  단계: 1) 이 stack deploy · 2) Console Developer Tools > Connections 에서 pending 클릭
+        3) Update pending connection · 4) GitHub App 설치 · 5) 권한 승인
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  GitHubConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: !Sub ${ProjectName}-github
+      ProviderType: GitHub
+
+Outputs:
+  ConnectionArn:
+    Value: !Ref GitHubConnection
+    Export:
+      Name: !Sub ${ProjectName}-codestar-github-connection-arn
+
+  ActivateInstructions:
+    Value: >
+      Console > Developer Tools > Settings > Connections 에서 PENDING 상태 connection 클릭
+      → 'Update pending connection' → GitHub App install 승인 → AVAILABLE 확인

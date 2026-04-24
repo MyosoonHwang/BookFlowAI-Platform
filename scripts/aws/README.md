@@ -24,7 +24,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 # AWS CLI 설치 확인
 aws --version
 
-# AWS 자격 증명 설정
+# AWS 자격 증명 설정 (CFN deploy 로컬 수행용)
 aws configure
 # AWS Access Key ID: ...
 # AWS Secret Access Key: ...
@@ -35,6 +35,17 @@ aws configure
 Copy-Item config\aws.local.ps1.example config\aws.local.ps1
 # 수정: aws.local.ps1
 ```
+
+### IAM 역할 구분
+
+| 주체 | 권한 | 용도 |
+|---|---|---|
+| **로컬 `aws configure` IAM User** (영헌) | CFN deploy 권한 필요 | 모든 `aws cloudformation deploy` 실행 주체 |
+| **GhaGlueRedeployRole** (GHA OIDC) | `ssm:SendCommand` 만 | `.github/workflows/glue-redeploy.yml` 에서 assume |
+| **GhaRdsRedeployRole** (GHA OIDC) | `ssm:SendCommand` 만 | `.github/workflows/rds-redeploy.yml` 에서 assume |
+
+→ GHA는 SSM으로 Ansible CN만 트리거. 실제 인프라 변경은 Ansible CN이 수행.
+→ CFN deploy는 로컬 (영헌 PowerShell)에서만 수행. GHA에 CFN 권한 Role 없음.
 
 ## 일상 사용법
 
@@ -64,6 +75,86 @@ cd BookFlowAI-Platform
 .\scripts\aws\1-daily\base-down.ps1
 # → 전체 역순 destroy (base + 모든 task 포함)
 ```
+
+## Stack 배포 순서 (의존성 기반)
+
+CloudFormation Stack은 **Outputs + Import** 관계 때문에 순서가 중요함. 스크립트가 자동 처리.
+
+### Tier 00 Foundation (Day 0 1회 · phase0-foundation.ps1) · 10 stack
+
+```
+ 1. iam                   ← GHA OIDC + GHA Role 2개 (SSM 트리거 전용)
+ 2. kms                   ← CMK × 2 (EKS envelope + CloudTrail)
+ 3. parameter-store       ← 공통 설정값 (독립)
+ 4. secrets               ← Secrets Manager skeleton (값 주입은 Phase 2)
+ 5. acm                   ← Client VPN cert (skeleton · easy-rsa import 필요)
+ 6. ecr                   ← 12 repo (Pod 8 + ECS 3 + Publisher 1)
+ 7. codestar-connection   ← GitHub OAuth (⚠ Console 수동 Activate 필요)
+ 8. s3                    ← 6 bucket (kms Import)
+ 9. cloudtrail            ← Trail (s3 + kms Import)
+10. cloudwatch            ← Log Groups (EKS + Lambda 6종 + Alarm SNS)
+```
+※ `route53` (Private Hosted Zone)은 VPC 필요 → **20a-network-core에서 생성**
+※ `codestar-connection` 은 deploy 후 AWS Console에서 GitHub App install 수동 승인 필요 (PENDING → AVAILABLE)
+
+### Tier 10 Data (매일 · base-up.ps1 내)
+
+```
+10. rds     ← 20a-vpc Import 필요 → 20a 먼저 배포 후
+11. redis   ← 20a-vpc Import
+12. kinesis ← 00-s3 + 00-kms Import
+```
+
+### Tier 20 Network (매일)
+
+```
+13. 20a-vpc                    ← 독립 (네트워크 근간)
+14. 20a-peering                ← vpc Import (VPC ID + Route Table ID)
+15. 20a-endpoints              ← vpc + 00-kms Import
+16. 20a-customer-gateway       ← 독립
+17. 20b-nat-gateway            ← 20a-vpc Import (public subnet)
+18. 20b-alb-external           ← 20a-vpc Import (public subnet + SG)
+19. 20b-waf                    ← 20b-alb-external Import (ALB ARN)
+20. 20c-tgw                    ← 20a-vpc Import
+21. 20c-vpn-site-to-site       ← 20c-tgw + 20a-customer-gateway Import
+22. 20c-client-vpn             ← 20a-vpc + 00-acm + 00-route53 Import
+```
+
+### Tier 30 Cluster (매일)
+
+```
+23. 30-eks-cluster             ← 00-kms + 20a-vpc Import
+24. 30-eks-alb-controller      ← 30-eks-cluster Import (OIDC issuer URL)
+25. 30-ecs-cluster             ← 독립
+26. 30-control-node            ← 00-iam + 20a-vpc Import
+```
+
+### Tier 40 Runtime (매일)
+
+```
+27. 40-eks-nodegroup           ← 30-eks-cluster Import
+28. 40-ecs-services            ← 30-ecs-cluster + 20b-alb-external Import
+29. 40-publisher-asg           ← 20a-vpc + 00-iam Import
+```
+
+### Tier 99 Serverless / Glue (영구 · 매일)
+
+```
+30. 99-serverless (SAM)        ← 00-s3 + 00-secrets + 00-kms Import
+31. 99-glue-catalog            ← 00-s3 + 00-iam Import
+```
+
+### 전체 배포 순서 (full-cross-cloud-test.ps1)
+
+```
+phase0-foundation (1~9)
+  ↓
+base (10~26)
+  ↓
+필요한 task (27+)
+```
+
+---
 
 ## 스크립트 매트릭스
 

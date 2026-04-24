@@ -1,6 +1,84 @@
-# CloudWatch Log Groups + Alarms + Dashboards (영구 · retention 7일)
-# 라이프사이클: 🔒 영구
-# BOOKFLOW V6.2
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 00 · CloudWatch Log Groups + 기본 Alarm (영구 · retention 7일)
 
-# TODO: 팀원이 실제 스펙 정의
-# 참고: docs/ARCHITECTURE.md · docs/DEPLOYMENT.md
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  # ─── 공용 Log Groups (retention 7일) ───
+  EksLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/eks/${ProjectName}/cluster
+      RetentionInDays: 7
+
+  EksContainerInsightsApplication:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/containerinsights/${ProjectName}/application
+      RetentionInDays: 7
+
+  EksContainerInsightsDataplane:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/containerinsights/${ProjectName}/dataplane
+      RetentionInDays: 7
+
+  LambdaLogGroupAladinSync:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-aladin-sync
+      RetentionInDays: 7
+
+  LambdaLogGroupEventSync:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-event-sync
+      RetentionInDays: 7
+
+  LambdaLogGroupSnsGen:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-sns-gen
+      RetentionInDays: 7
+
+  LambdaLogGroupSpikeDetect:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-spike-detect
+      RetentionInDays: 7
+
+  LambdaLogGroupForecastTrigger:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-forecast-trigger
+      RetentionInDays: 7
+
+  LambdaLogGroupSecretForwarder:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-secret-forwarder
+      RetentionInDays: 7
+
+  # ─── 공용 알람용 SNS Topic ───
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${ProjectName}-alarms
+      DisplayName: BOOKFLOW Alarms
+
+  # ─── 기본 Alarm (예시 · 실제 리소스가 올라갈 때 추가) ───
+  # RDS / EKS / Lambda 등의 alarm은 각 리소스 stack에서 자체 선언 (분산 관리 원칙)
+
+Outputs:
+  EksLogGroupName:
+    Value: !Ref EksLogGroup
+    Export:
+      Name: !Sub ${ProjectName}-cw-eks-log-group
+
+  AlarmTopicArn:
+    Value: !Ref AlarmTopic
+    Export:
+      Name: !Sub ${ProjectName}-cw-alarm-topic-arn

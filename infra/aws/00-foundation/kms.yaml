@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 00 · KMS CMK 2개 (EKS envelope · CloudTrail)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  # ─── EKS envelope encryption용 CMK ───
+  EksKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: BOOKFLOW EKS envelope encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+
+  EksKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${ProjectName}-eks
+      TargetKeyId: !Ref EksKey
+
+  # ─── CloudTrail 로그 암호화용 CMK ───
+  CloudTrailKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: BOOKFLOW CloudTrail log encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+          - Sid: Allow CloudTrail to encrypt logs
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+            Condition:
+              StringLike:
+                kms:EncryptionContext:aws:cloudtrail:arn: !Sub arn:aws:cloudtrail:*:${AWS::AccountId}:trail/*
+
+  CloudTrailKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/${ProjectName}-cloudtrail
+      TargetKeyId: !Ref CloudTrailKey
+
+Outputs:
+  EksKeyArn:
+    Value: !GetAtt EksKey.Arn
+    Export:
+      Name: !Sub ${ProjectName}-kms-eks-arn
+
+  EksKeyId:
+    Value: !Ref EksKey
+    Export:
+      Name: !Sub ${ProjectName}-kms-eks-id
+
+  CloudTrailKeyArn:
+    Value: !GetAtt CloudTrailKey.Arn
+    Export:
+      Name: !Sub ${ProjectName}-kms-cloudtrail-arn
+
+  CloudTrailKeyId:
+    Value: !Ref CloudTrailKey
+    Export:
+      Name: !Sub ${ProjectName}-kms-cloudtrail-id
