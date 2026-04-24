@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · Customer Gateway × 2 (Azure VNet GW · GCP HA VPN)
+  IP는 Parameter(기본 placeholder) · Phase 2에서 민지(Azure)·우혁(GCP)이 실 IP로 재배포
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  AzureVpnGatewayIp:
+    Type: String
+    Default: 0.0.0.0
+    Description: Azure VPN Gateway Public IP (Phase 2에 주입)
+  AzureBgpAsn:
+    Type: Number
+    Default: 65515
+    Description: Azure VPN Gateway BGP ASN
+  GcpHaVpnIp:
+    Type: String
+    Default: 0.0.0.0
+    Description: GCP HA VPN peer IP (Phase 2에 주입)
+  GcpBgpAsn:
+    Type: Number
+    Default: 65516
+    Description: GCP HA VPN BGP ASN
+
+Conditions:
+  HasAzureIp: !Not [!Equals [!Ref AzureVpnGatewayIp, '0.0.0.0']]
+  HasGcpIp: !Not [!Equals [!Ref GcpHaVpnIp, '0.0.0.0']]
+
+Resources:
+  # ─── Azure Customer Gateway ───
+  AzureCgw:
+    Type: AWS::EC2::CustomerGateway
+    Condition: HasAzureIp
+    Properties:
+      Type: ipsec.1
+      IpAddress: !Ref AzureVpnGatewayIp
+      BgpAsn: !Ref AzureBgpAsn
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-cgw-azure' }]
+
+  # ─── GCP Customer Gateway ───
+  GcpCgw:
+    Type: AWS::EC2::CustomerGateway
+    Condition: HasGcpIp
+    Properties:
+      Type: ipsec.1
+      IpAddress: !Ref GcpHaVpnIp
+      BgpAsn: !Ref GcpBgpAsn
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-cgw-gcp' }]
+
+Outputs:
+  AzureCgwId:
+    Condition: HasAzureIp
+    Value: !Ref AzureCgw
+    Export: { Name: !Sub '${ProjectName}-cgw-azure-id' }
+
+  GcpCgwId:
+    Condition: HasGcpIp
+    Value: !Ref GcpCgw
+    Export: { Name: !Sub '${ProjectName}-cgw-gcp-id' }
+
+  SetupInstructions:
+    Value: >
+      초기엔 placeholder IP(0.0.0.0)로 CGW 생성 skip.
+      Azure/GCP VPN Gateway 생성 후 Public IP 확보 →
+      'aws cloudformation deploy --parameter-overrides AzureVpnGatewayIp=x.x.x.x GcpHaVpnIp=y.y.y.y' 로 재배포

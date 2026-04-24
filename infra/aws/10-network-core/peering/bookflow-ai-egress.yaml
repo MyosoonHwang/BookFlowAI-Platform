@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · VPC Peering · BookFlow AI ↔ Egress
+  auth-pod → NAT (Azure Entra OIDC outbound) · Pod → ALB (외부 API 호출 시)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  Peering:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      PeerVpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-egress-id' }
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-peering-bookflow-ai-egress' }]
+
+  RouteBookflowAiToEgress:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: 10.2.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+  RouteEgressToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: 10.0.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+Outputs:
+  PeeringId:
+    Value: !Ref Peering
+    Export: { Name: !Sub '${ProjectName}-peering-bookflow-ai-egress-id' }

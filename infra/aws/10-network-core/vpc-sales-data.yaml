@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 10 · Sales Data VPC (10.1.0.0/16) · POS 시뮬 ECS · Private only
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  AzA:
+    Type: String
+    Default: ap-northeast-1a
+  AzC:
+    Type: String
+    Default: ap-northeast-1c
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpc-sales-data' }]
+
+  PrivateAz1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.1.1.0/24
+      AvailabilityZone: !Ref AzA
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-sales-data-private-az1' }]
+
+  PrivateAz2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.1.2.0/24
+      AvailabilityZone: !Ref AzC
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-sales-data-private-az2' }]
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-sales-data-private-rt' }]
+
+  RtAssocAz1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref PrivateAz1, RouteTableId: !Ref RouteTable }
+
+  RtAssocAz2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref PrivateAz2, RouteTableId: !Ref RouteTable }
+
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+    Export: { Name: !Sub '${ProjectName}-vpc-sales-data-id' }
+  Cidr:
+    Value: !GetAtt Vpc.CidrBlock
+    Export: { Name: !Sub '${ProjectName}-vpc-sales-data-cidr' }
+  PrivateAz1Id:
+    Value: !Ref PrivateAz1
+    Export: { Name: !Sub '${ProjectName}-subnet-sales-data-private-az1' }
+  PrivateAz2Id:
+    Value: !Ref PrivateAz2
+    Export: { Name: !Sub '${ProjectName}-subnet-sales-data-private-az2' }
+  RouteTableId:
+    Value: !Ref RouteTable
+    Export: { Name: !Sub '${ProjectName}-rt-sales-data-private' }

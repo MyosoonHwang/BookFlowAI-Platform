@@ -55,6 +55,13 @@ Resources:
       Type: String
       Value: 10.3.0.0/16
 
+  VpcCidrAnsible:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${ProjectName}/network/vpc-cidr/ansible
+      Type: String
+      Value: 10.4.0.0/16
+
   # ─── TGW BGP ASN (AWS 측) ───
   TgwBgpAsn:
     Type: AWS::SSM::Parameter

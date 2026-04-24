@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · Sales Data VPC Interface Endpoints (3개)
+  ECR api/dkr (ECS Fargate image pull) · Kinesis (POS put_records)
+  + S3 Gateway Endpoint
+  단일 AZ · 학프 간소화
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  EndpointSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-sales-data-endpoint-sg'
+      GroupDescription: Allow HTTPS from VPC
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 10.1.0.0/16
+
+  EcrApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  EcrDkr:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  Kinesis:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.kinesis-streams
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  # S3 Gateway Endpoint (무료 · Firehose 경로 아님 · ECR image layer 저장 이용)
+  S3Gateway:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-rt-sales-data-private' }
+
+Outputs:
+  EndpointSgId:
+    Value: !Ref EndpointSg
+    Export: { Name: !Sub '${ProjectName}-endpoint-sg-sales-data' }

@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · VPC Peering · BookFlow AI ↔ Data
+  Pod(EKS) → RDS/Redis 접근 · 구축·개발 기간 Peering 기반
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  Peering:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-bookflow-ai-id' }
+      PeerVpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-data-id' }
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-peering-bookflow-ai-data' }]
+
+  # BookFlow AI → Data route
+  RouteBookflowAiToData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: 10.3.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+  # Data Private → BookFlow AI route
+  RouteDataPrivateToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: 10.0.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+  # Data DB → BookFlow AI route
+  RouteDataDbToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: 10.0.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+Outputs:
+  PeeringId:
+    Value: !Ref Peering
+    Export: { Name: !Sub '${ProjectName}-peering-bookflow-ai-data-id' }

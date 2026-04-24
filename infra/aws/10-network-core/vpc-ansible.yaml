@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 10 · Ansible VPC (10.4.0.0/16) · Ansible Control Node 전용 · Private only
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  AzA:
+    Type: String
+    Default: ap-northeast-1a
+  AzC:
+    Type: String
+    Default: ap-northeast-1c
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.4.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpc-ansible' }]
+
+  PrivateAz1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.4.1.0/24
+      AvailabilityZone: !Ref AzA
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ansible-private-az1' }]
+
+  PrivateAz2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.4.2.0/24
+      AvailabilityZone: !Ref AzC
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ansible-private-az2' }]
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ansible-private-rt' }]
+
+  RtAssocAz1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref PrivateAz1, RouteTableId: !Ref RouteTable }
+
+  RtAssocAz2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref PrivateAz2, RouteTableId: !Ref RouteTable }
+
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+    Export: { Name: !Sub '${ProjectName}-vpc-ansible-id' }
+  Cidr:
+    Value: !GetAtt Vpc.CidrBlock
+    Export: { Name: !Sub '${ProjectName}-vpc-ansible-cidr' }
+  PrivateAz1Id:
+    Value: !Ref PrivateAz1
+    Export: { Name: !Sub '${ProjectName}-subnet-ansible-private-az1' }
+  PrivateAz2Id:
+    Value: !Ref PrivateAz2
+    Export: { Name: !Sub '${ProjectName}-subnet-ansible-private-az2' }
+  RouteTableId:
+    Value: !Ref RouteTable
+    Export: { Name: !Sub '${ProjectName}-rt-ansible-private' }

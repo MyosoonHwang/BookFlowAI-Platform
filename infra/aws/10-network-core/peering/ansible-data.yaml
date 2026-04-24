@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW · Tier 10 · VPC Peering · Ansible ↔ Data
+  Ansible CN → RDS (schema/seed/grants SQL 실행) · RDS 스키마 GitOps 관리
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  Peering:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-ansible-id' }
+      PeerVpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-data-id' }
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-peering-ansible-data' }]
+
+  RouteAnsibleToData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-ansible-private' }
+      DestinationCidrBlock: 10.3.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+  RouteDataPrivateToAnsible:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: 10.4.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+  RouteDataDbToAnsible:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: 10.4.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
+Outputs:
+  PeeringId:
+    Value: !Ref Peering
+    Export: { Name: !Sub '${ProjectName}-peering-ansible-data-id' }
