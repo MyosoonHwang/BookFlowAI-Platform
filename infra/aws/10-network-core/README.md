@@ -20,13 +20,17 @@
 
 ### 🏗 VPC 기본 (5 파일 · 독립 deploy 순서 무관)
 
+각 VPC 파일은 **VPC + Subnet + Route Table + Custom NACL** 포함 (default NACL 미사용).
+
 | YAML | 내용 |
 |---|---|
-| `vpc-bookflow-ai.yaml` | BookFlow AI VPC + Subnet × 2 + Route Table |
-| `vpc-sales-data.yaml` | Sales Data VPC |
-| `vpc-egress.yaml` | Egress VPC + IGW + Default Route 0.0.0.0/0 → IGW |
-| `vpc-data.yaml` | Data VPC + Private RT + DB RT |
-| `vpc-ansible.yaml` | Ansible VPC |
+| `vpc-bookflow-ai.yaml` | VPC + Subnet × 2 + Route Table + NACL (allow all) |
+| `vpc-sales-data.yaml` | VPC + Subnet × 2 + Route Table + NACL |
+| `vpc-egress.yaml` | VPC + IGW + Public Subnet × 2 + Default Route 0.0.0.0/0 → IGW + NACL |
+| `vpc-data.yaml` | VPC + Private × 2 + DB × 2 + Private RT + DB RT + NACL |
+| `vpc-ansible.yaml` | VPC + Subnet × 2 + Route Table + NACL |
+
+**NACL 정책**: 현재 Ingress/Egress 100 · Allow all (0.0.0.0/0). Stateful 제어는 SG에서. 시간 남으면 제한적 rule로 강화 예정.
 
 ### 🛡 Customer Gateway (1 파일)
 
