@@ -3,6 +3,14 @@
 .mcp.json
 CLAUDE.md
 
+# ─── Cross-cloud exports (매일 새로 생성 · 팀 단톡 공유용) ───
+exports/
+
+# ─── 개인별 설정 override ───
+scripts/aws/config/aws.local.ps1
+scripts/azure/config/azure.local.ps1
+scripts/gcp/config/gcp.local.ps1
+
 # ─── 환경 변수 / 시크릿 ───
 .env
 .env.*
