@@ -62,14 +62,9 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${ProjectName}-secret-forwarder
       RetentionInDays: 7
 
-  # ─── 공용 알람용 SNS Topic ───
-  AlarmTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub ${ProjectName}-alarms
-      DisplayName: BOOKFLOW Alarms
-
   # ─── 기본 Alarm (예시 · 실제 리소스가 올라갈 때 추가) ───
+  # BOOKFLOW는 모든 알림을 Azure Logic Apps 로 통일 → AWS SNS Topic 사용 안 함
+  # CloudWatch Alarm → EventBridge Rule → Azure Logic App HTTP trigger 경로
   # RDS / EKS / Lambda 등의 alarm은 각 리소스 stack에서 자체 선언 (분산 관리 원칙)
 
 Outputs:
@@ -77,8 +72,3 @@ Outputs:
     Value: !Ref EksLogGroup
     Export:
       Name: !Sub ${ProjectName}-cw-eks-log-group
-
-  AlarmTopicArn:
-    Value: !Ref AlarmTopic
-    Export:
-      Name: !Sub ${ProjectName}-cw-alarm-topic-arn
