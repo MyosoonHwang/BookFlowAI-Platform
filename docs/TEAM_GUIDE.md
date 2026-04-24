@@ -237,13 +237,11 @@ git checkout aws                # 내 작업으로 복귀
 - `scripts/start-day.sh`, `stop-day.sh` (AWS 부분)
 
 ### 민지 (`azure` 브랜치)
-- `infra/azure/**`
-- `.github/workflows/azure-bicep-deploy.yml`
+- `infra/azure/**` (로컬 apply · `az deployment group create`)
 - AWS의 Glue 스크립트 연관 (`cicd/ansible/roles/glue-scripts/*`)
 
 ### 우혁 (`gcp` 브랜치)
-- `infra/gcp/**`
-- `.github/workflows/gcp-terraform-apply.yml`
+- `infra/gcp/**` (로컬 apply · `terraform apply` · GCS backend)
 
 ### 공통 (main에 직접 수정 금지 · PR 필수)
 - `README.md`
@@ -298,12 +296,19 @@ git remote -v                   # 원격 저장소 확인
 
 ## 11. 자동화 트리거 (참고)
 
+### 🤖 자동화 (GHA + Ansible)
+
 | 변경 위치 | 트리거 | 결과 |
 |---|---|---|
-| `infra/azure/99-content/**` push | GHA `azure-bicep-deploy.yml` | Logic Apps 자동 배포 |
-| `infra/gcp/99-content/**` push | GHA `gcp-terraform-apply.yml` | Cloud Functions 자동 배포 |
-| `cicd/ansible/roles/glue-scripts/**` push | GHA `glue-redeploy.yml` → SSM → Ansible CN | Glue scripts 동기화 |
-| `cicd/ansible/sql/**` push | GHA `rds-redeploy.yml` → SSM → Ansible CN | RDS 스키마/시드 적용 |
+| `cicd/ansible/roles/glue-scripts/**` push | GHA `glue-redeploy.yml` → OIDC → SSM → Ansible CN | Glue scripts S3 sync · Job dry-run |
+| `cicd/ansible/sql/**` push · `playbooks/rds-*.yml` push | GHA `rds-redeploy.yml` → OIDC → SSM → Ansible CN | RDS 스키마 + 시드 + 권한 재적용 |
 | `bookflow-apps` repo push (별도) | CodePipeline (EKS·ECS·Lambda·Publisher) | 앱 자동 배포 |
 
-→ main으로 merge되는 즉시 위 자동화가 작동. 로컬 apply 불필요 (Day 0 bootstrap 제외).
+### 🖐️ 로컬 apply (자동화 안 함)
+
+| 영역 | 명령 | 이유 |
+|---|---|---|
+| Azure Bicep (`infra/azure/**`) | `az deployment group create` | dev iteration 5배 빠름 · 실 운영 단계 없음 |
+| GCP Terraform (`infra/gcp/**`) | `terraform apply` (GCS backend) | 동일 이유 · state 공유는 GCS backend로 해결 |
+
+민지(Azure) / 우혁(GCP)은 본인 PC에서 직접 deploy/destroy 실행. git push는 **상태 기록**용이고 실제 배포는 로컬 CLI.
