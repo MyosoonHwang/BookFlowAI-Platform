@@ -12,6 +12,75 @@
 | `azure` | 민지 | Azure IaC · Logic Apps · Bicep 파이프라인 |
 | `gcp` | 우혁 | GCP IaC · Vertex AI · Cloud Functions |
 
+### 장수 브랜치 (long-lived branches)
+
+- `aws`, `azure`, `gcp` 는 **프로젝트 끝날 때까지 계속 유지**. merge되어도 삭제 안 함.
+- 본인 브랜치에서 계속 작업 → feature 단위로 PR → merge 후 같은 브랜치에서 다음 작업 이어감.
+- feature branch 별도 생성 불필요 (3명이 각자 영역 분리돼 있어서 충돌 거의 없음).
+
+### PR 단위 (feature 단위 점진적 PR)
+
+**한 번에 몰아서 PR 하지 말 것** — 이유:
+- aws/azure/gcp 브랜치가 main에서 오래 떨어져 있으면 마지막에 거대한 conflict
+- 리뷰어가 100+ 파일 diff 한 번에 보면 제대로 리뷰 안 됨
+- 진행률 가시화 어려움
+
+**권장 PR 크기**: 2~3일치 작업 · 5~15 파일 · 하나의 논리적 단위 (예: "Tier 00 foundation", "NAT + Peering")
+
+#### PR 단위 예시 (영헌 기준)
+
+| # | PR 제목 | 변경 범위 |
+|---|---|---|
+| 1 | [AWS] Tier 00 foundation 완성 | IAM·KMS·S3·Secrets·ACM·R53·CloudTrail·CloudWatch |
+| 2 | [AWS] Tier 20 VPC + Peering + Endpoints | 4 VPC + Peering 6 + Interface Endpoint 7 |
+| 3 | [AWS] Tier 20 cross-cloud (TGW + VPN) | TGW 허브 + Attachment + Site-to-Site VPN × 2 + Customer GW |
+| 4 | [AWS] Tier 20 NAT + Client VPN + ALB + WAF | NAT × 2 + Client VPN + Internal/External ALB + WAF |
+| 5 | [AWS] Tier 30 compute-cluster | EKS · ECS · Ansible Control Node |
+| 6 | [AWS] Tier 40 compute-runtime | EKS Nodegroup · ECS Services × 3 · Publisher ASG |
+| 7 | [AWS] Tier 99 serverless + glue | SAM Lambda × 6 · Glue Catalog/Jobs |
+| 8 | [AWS] CodePipeline 4종 | EKS · ECS · Lambda SAM · Publisher CodeDeploy |
+| 9 | [AWS] Ansible (RDS GitOps) | playbooks · roles · sql |
+| 10 | [AWS] 운영 스크립트 | start-day.sh · stop-day.sh · deploy-foundation.sh |
+
+→ 민지/우혁도 유사한 사이즈로 분할
+
+---
+
+## PR 사이클 요약
+
+```
+[aws 브랜치 계속 유지 · 삭제 X]
+  ↓ feature 1 작업 (예: Tier 00 foundation)
+  ↓ commit + push
+  ↓ main 최신 반영: git fetch origin && git merge origin/main
+  ↓ GitHub 웹에서 PR 생성 (base: main, compare: aws)
+민지/우혁 리뷰 → Approve
+  ↓ Squash and merge 선택
+  ↓ 로컬 정리: git checkout main && git pull → git checkout aws && git merge main
+  ↓ feature 2 작업 시작 (같은 aws 브랜치에서)
+  ↓ ... 반복
+```
+
+### 각 PR 사이클 체크리스트
+
+- [ ] feature 1개 단위로 완료 (2~3일 분량)
+- [ ] commit 메시지 prefix 규칙 준수 (`feat(aws):` 등)
+- [ ] main 최신 merge 완료
+- [ ] push 완료
+- [ ] GitHub 웹에서 PR 생성 · 제목 · 설명 작성
+- [ ] 다른 담당자 2명에게 리뷰 요청 (`@민지 @우혁`)
+- [ ] Approve 받음
+- [ ] **Squash and merge** 선택 (커밋 히스토리 1줄로)
+- [ ] 로컬 main 최신화
+- [ ] aws 브랜치에 main 다시 merge (다음 작업 전)
+
+### 주의사항
+
+- ❌ 브랜치 삭제하지 말 것 — `aws/azure/gcp` 는 계속 살아 있어야 함
+- ❌ **PR 올린 상태에서 같은 브랜치에서 다음 feature 이어서 작업 하지 말 것** — 리뷰 복잡해짐. merge 기다리고 시작.
+- ✅ PR 올린 후 추가 commit 필요하면 같은 브랜치에 push → PR에 자동 반영 (새 PR 안 만들어도 됨)
+- ✅ 병렬로 여러 작업 해야 하면 aws 브랜치에서 또 다른 하위 브랜치 만들어도 OK (예: `aws/experiment-x`) — 보통 불필요
+
 ---
 
 ## 1. 최초 setup (각 담당자 1회만)
