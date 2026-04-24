@@ -48,11 +48,10 @@ BookFlowAI-Platform/
 │       ├── roles/                  glue-scripts · postgres-schema
 │       └── sql/                    001_tables · 002_indexes · 003_grants
 │
-├── .github/workflows/            GHA (OIDC/WIF · long-lived secret 0)
-│   ├── azure-bicep-deploy.yml      Azure 99-content 배포
-│   ├── gcp-terraform-apply.yml     GCP 99-content 배포
-│   ├── glue-redeploy.yml           Glue scripts · git push → SSM → CN
-│   └── rds-redeploy.yml            RDS schema · git push → SSM → CN
+├── .github/workflows/            GHA (OIDC · long-lived secret 0) · Ansible 트리거 전용
+│   ├── glue-redeploy.yml           Glue scripts · git push → SSM → CN → Ansible
+│   └── rds-redeploy.yml            RDS schema · git push → SSM → CN → Ansible
+│                                   ※ Azure Bicep / GCP Terraform은 로컬 apply (iteration 빠름)
 │
 ├── scripts/                      일상 운영
 │   ├── deploy-foundation.sh        Day 0 1회 (00 + 99)
@@ -86,8 +85,8 @@ BookFlowAI-Platform/
 | AWS CI/CD | CodePipeline + CodeBuild | IAM Role 직접 사용 |
 | AWS Lambda + EventBridge | SAM (CFN 확장) | Slide 23 패턴 |
 | AWS Glue + RDS | Ansible (GHA + OIDC + SSM → CN) | GitOps · git state로 reconcile |
-| Azure 인프라+콘텐츠 | Bicep + GitHub Actions OIDC | workflow JSON 인라인 |
-| GCP 인프라+콘텐츠 | Terraform + GitHub Actions WIF | `archive_file`로 CF 코드 인라인 |
+| Azure 인프라+콘텐츠 | Bicep **로컬 apply** (`az deployment group create`) | dev iteration 5배 빠름 · 자동화 오버헤드 불필요 |
+| GCP 인프라+콘텐츠 | Terraform **로컬 apply** (`terraform apply`) | 동일 이유 · GCS backend로 state 공유 |
 
 ## 비용 구조 (~$203/월 · 도쿄 · 25 영업일)
 
