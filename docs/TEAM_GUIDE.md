@@ -3,6 +3,9 @@
 > Repo: https://github.com/MyosoonHwang/BookFlowAI-Platform
 > V6.2 아키텍처 · 3인 팀 (영헌 · 민지 · 우혁)
 
+> ⚠️ **Git/GitHub 처음이라면** → [GIT_BASICS.md](./GIT_BASICS.md) 먼저 읽기 (개념 · 용어 · 실습)
+> 이 문서는 개념은 이해한 상태에서 보는 **실전 워크플로우 레퍼런스**.
+
 ## 브랜치 전략
 
 | 브랜치 | 담당 | 역할 |
