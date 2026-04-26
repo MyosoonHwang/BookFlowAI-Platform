@@ -3,7 +3,7 @@ resource "google_vertex_ai_endpoint" "forecast" {
   display_name = "bookflow-forecast-endpoint"
   description  = "Private endpoint for BOOKFLOW demand forecasting inference."
   project      = var.project_id
-  location     = var.region
+  location     = local.region
   labels       = var.labels
   network      = data.google_compute_network.bookflow_vpc.id
 

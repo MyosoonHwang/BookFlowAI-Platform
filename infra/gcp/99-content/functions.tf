@@ -3,7 +3,7 @@ resource "google_cloudfunctions2_function" "content" {
 
   name        = each.value.name
   project     = var.project_id
-  location    = var.region
+  location    = local.region
   description = each.value.description
   labels      = var.labels
 
@@ -13,7 +13,7 @@ resource "google_cloudfunctions2_function" "content" {
 
     source {
       storage_source {
-        bucket = local.function_source_bucket_name
+        bucket = data.google_storage_bucket.function_source.name
         object = each.value.source
       }
     }

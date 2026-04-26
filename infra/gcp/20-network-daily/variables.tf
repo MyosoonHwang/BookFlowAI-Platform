@@ -3,11 +3,10 @@ variable "aws_vpc_cidrs" {
   type        = list(string)
 }
 
-variable "aws_vpn_gateway_interfaces" {
-  description = "AWS VPN public IPs exposed for the four TGW tunnel endpoints."
-  type = map(object({
-    ip_address = string
-  }))
+variable "aws_peer_ips" {
+  description = "AWS VPN public peer IPs exposed for the four TGW tunnel endpoints."
+  type        = list(string)
+  default     = ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4"]
 }
 
 variable "aws_tgw_bgp_asn" {
@@ -15,9 +14,10 @@ variable "aws_tgw_bgp_asn" {
   type        = number
 }
 
-variable "vpn_shared_secrets" {
-  description = "Pre-shared keys for the four HA VPN tunnels."
-  type        = map(string)
+variable "vpn_shared_secret" {
+  description = "Pre-shared key reused by the HA VPN tunnels for local collaboration only."
+  type        = string
+  default     = "dummy-shared-secret-change-me"
   sensitive   = true
 }
 

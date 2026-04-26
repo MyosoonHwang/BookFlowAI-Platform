@@ -16,10 +16,10 @@ resource "google_compute_external_vpn_gateway" "aws_tgw" {
   redundancy_type = "FOUR_IPS_REDUNDANCY"
 
   dynamic "interface" {
-    for_each = var.aws_vpn_gateway_interfaces
+    for_each = { for index, ip in var.aws_peer_ips : tostring(index) => ip }
     content {
       id         = tonumber(interface.key)
-      ip_address = interface.value.ip_address
+      ip_address = interface.value
     }
   }
 }
@@ -35,7 +35,7 @@ resource "google_compute_vpn_tunnel" "aws_tunnels" {
   peer_external_gateway           = google_compute_external_vpn_gateway.aws_tgw.id
   peer_external_gateway_interface = each.value.peer_external_gateway_interface
   router                          = google_compute_router.bookflow_aws_router.id
-  shared_secret                   = var.vpn_shared_secrets[each.key]
+  shared_secret                   = var.vpn_shared_secret
 
   depends_on = [
     google_compute_router.bookflow_aws_router,

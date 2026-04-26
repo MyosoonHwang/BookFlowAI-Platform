@@ -5,7 +5,7 @@ resource "google_service_account" "staging_cleanup" {
 }
 
 resource "google_storage_bucket_iam_member" "staging_cleanup_object_admin" {
-  bucket = google_storage_bucket.staging.name
+  bucket = data.google_storage_bucket.staging.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.staging_cleanup.email}"
 }
@@ -13,7 +13,7 @@ resource "google_storage_bucket_iam_member" "staging_cleanup_object_admin" {
 resource "google_workflows_workflow" "staging_cleanup" {
   name            = "bookflow-staging-cleanup-4h"
   project         = var.project_id
-  region          = var.region
+  region          = local.region
   service_account = google_service_account.staging_cleanup.email
   description     = "Deletes BOOKFLOW GCS staging objects older than 4 hours."
 
@@ -68,14 +68,14 @@ resource "google_project_iam_member" "staging_cleanup_workflows_invoker" {
 resource "google_cloud_scheduler_job" "staging_cleanup" {
   name        = "bookflow-staging-cleanup-4h"
   project     = var.project_id
-  region      = var.region
+  region      = local.region
   description = "Runs BOOKFLOW staging cleanup for objects older than 4 hours."
   schedule    = "0 * * * *"
   time_zone   = "Asia/Seoul"
 
   http_target {
     http_method = "POST"
-    uri         = "https://workflowexecutions.googleapis.com/v1/projects/${var.project_id}/locations/${var.region}/workflows/${google_workflows_workflow.staging_cleanup.name}/executions"
+    uri         = "https://workflowexecutions.googleapis.com/v1/projects/${var.project_id}/locations/${local.region}/workflows/${google_workflows_workflow.staging_cleanup.name}/executions"
 
     headers = {
       Content-Type = "application/json"
@@ -83,7 +83,7 @@ resource "google_cloud_scheduler_job" "staging_cleanup" {
 
     body = base64encode(jsonencode({
       argument = jsonencode({
-        bucket = google_storage_bucket.staging.name
+        bucket = data.google_storage_bucket.staging.name
       })
     }))
 

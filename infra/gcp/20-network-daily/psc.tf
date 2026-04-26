@@ -19,7 +19,7 @@ resource "google_compute_global_address" "psc_googleapis_ip" {
 }
 
 resource "google_compute_global_forwarding_rule" "psc_googleapis" {
-  name                  = "bookflow-psc-googleapis"
+  name                  = "bookflowpscapi"
   project               = var.project_id
   network               = data.google_compute_network.bookflow_vpc.id
   ip_address            = google_compute_global_address.psc_googleapis_ip.id

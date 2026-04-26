@@ -1,7 +1,7 @@
 resource "google_eventarc_trigger" "gcs_finalize" {
   name            = "bookflow-gcs-finalize-content"
   project         = var.project_id
-  location        = var.region
+  location        = local.region
   service_account = google_service_account.eventarc.email
   labels          = var.labels
 

@@ -16,6 +16,11 @@ locals {
     "workflows.googleapis.com",
   ])
 
+  region             = var.region
+  vpc_name           = "bookflow-vpc"
+  vpc_connector_name = "bookflow-vpc-conn"
+  dataset_id         = var.dataset_id
+
   staging_bucket_name          = coalesce(var.staging_bucket_name, "${var.project_id}-bookflow-staging")
   models_bucket_name           = coalesce(var.models_bucket_name, "${var.project_id}-bookflow-models")
   function_source_bucket_name  = coalesce(var.function_source_bucket_name, local.staging_bucket_name)
@@ -69,7 +74,7 @@ locals {
       source       = var.function_source_objects.vertex_invoke
       env = {
         BOOKFLOW_VERTEX_ENDPOINT = google_vertex_ai_endpoint.forecast.name
-        BOOKFLOW_VERTEX_LOCATION = var.region
+        BOOKFLOW_VERTEX_LOCATION = local.region
         BOOKFLOW_DATASET_ID      = var.dataset_id
       }
     }

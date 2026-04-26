@@ -1,7 +1,7 @@
 resource "google_workflows_workflow" "gcs_router" {
   name            = "bookflow-gcs-router"
   project         = var.project_id
-  region          = var.region
+  region          = local.region
   description     = "Routes GCS finalized objects through BQ load and Vertex AI workflows."
   service_account = google_service_account.workflow.email
   labels          = var.labels
@@ -12,12 +12,12 @@ main:
   steps:
     - init:
         assign:
-          - bucket: $${default(map.get(event, "bucket"), "${local.staging_bucket_name}")}
+          - bucket: $${default(map.get(event, "bucket"), "${data.google_storage_bucket.staging.name}")}
           - object_name: $${default(map.get(event, "name"), "")}
           - request:
               bucket: $${bucket}
               object: $${object_name}
-              dataset_id: "${var.dataset_id}"
+              dataset_id: "${local.dataset_id}"
               project_id: "${var.project_id}"
               bq_location: "${var.bigquery_location}"
     - load_bigquery:
@@ -45,7 +45,7 @@ main:
             Content-Type: "application/json"
           body:
             project_id: "${var.project_id}"
-            dataset_id: "${var.dataset_id}"
+            dataset_id: "${local.dataset_id}"
             bucket: $${bucket}
             object: $${object_name}
         result: feature_result
@@ -69,7 +69,7 @@ main:
     - start_existing_book_pipeline:
         call: googleapis.aiplatform.v1.projects.locations.pipelineJobs.create
         args:
-          parent: "projects/${var.project_id}/locations/${var.region}"
+          parent: "projects/${var.project_id}/locations/${local.region}"
           body:
             displayName: "bookflow-existing-books-forecast"
             serviceAccount: "${google_service_account.vertex_pipeline.email}"
@@ -78,9 +78,9 @@ main:
               gcsOutputDirectory: "${local.vertex_pipeline_root}"
               parameterValues:
                 project_id: "${var.project_id}"
-                dataset_id: "${var.dataset_id}"
-                staging_bucket: "${local.staging_bucket_name}"
-                models_bucket: "${local.models_bucket_name}"
+                dataset_id: "${local.dataset_id}"
+                staging_bucket: "${data.google_storage_bucket.staging.name}"
+                models_bucket: "${data.google_storage_bucket.models.name}"
                 source_object: $${object_name}
         result: pipeline_result
     - return_existing_books:
