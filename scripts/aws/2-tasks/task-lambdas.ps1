@@ -33,9 +33,9 @@ if (-not (Test-Stack -Name "peering-bookflow-ai-data" -Tier "10")) {
     Write-Warn "peering bookflow-ai-data 미배포 · pos-ingestor / spike-detect → RDS 경로 단절 · task-msa-pods.ps1 권장"
 }
 
-# Step Functions ARN 조회 (Tier 99-glue 후 존재)
+# Step Functions ARN 조회 (Tier 99-glue 의 step-functions stack 후 존재)
 $prefix = $env:BOOKFLOW_STACK_PREFIX
-$sfnArn = aws cloudformation describe-stacks --stack-name "$prefix-99-glue-jobs" `
+$sfnArn = aws cloudformation describe-stacks --stack-name "$prefix-99-step-functions" `
     --region $env:AWS_REGION `
     --query 'Stacks[0].Outputs[?OutputKey==`Etl3StateMachineArn`].OutputValue' --output text 2>$null
 if (-not $sfnArn -or $sfnArn -eq "None") { $sfnArn = "" }
