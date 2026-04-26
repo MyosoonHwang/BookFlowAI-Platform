@@ -23,6 +23,12 @@ if (-not (Test-Stack -Name "rds" -Tier "20")) {
 # BookFlow AI VPC Endpoints (ECR pull · CW logs · Secrets 등 · Private subnet 에서 AWS 서비스 접근)
 Deploy-Stack -Tier "10" -Name "endpoints-bookflow-ai" -Template "10-network-core/endpoints/endpoints-bookflow-ai.yaml"
 
+# Peering (build phase · TGW 없이 cross-VPC)
+#   bookflow-ai-data : Pod → RDS/Redis
+#   bookflow-ai-egress : Pod → External ALB (intervention-svc → inventory-api 등)
+Deploy-Stack -Tier "10" -Name "peering-bookflow-ai-data"   -Template "10-network-core/peering/bookflow-ai-data.yaml"
+Deploy-Stack -Tier "10" -Name "peering-bookflow-ai-egress" -Template "10-network-core/peering/bookflow-ai-egress.yaml"
+
 # EKS Control Plane (15분 · 가장 오래)
 Deploy-Stack -Tier "30" -Name "eks-cluster"             -Template "30-compute-cluster/eks-cluster.yaml"
 

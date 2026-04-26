@@ -13,16 +13,16 @@ Parameters:
     Description: Azure VPN Gateway Public IP (Phase 2에 주입)
   AzureBgpAsn:
     Type: Number
-    Default: 65515
-    Description: Azure VPN Gateway BGP ASN
+    Default: 65001
+    Description: Azure VPN Gateway BGP ASN (scripts/azure/2-tasks/deploy-vpn.sh vpnBgpAsn=65001 일치)
   GcpHaVpnIp:
     Type: String
     Default: 0.0.0.0
-    Description: GCP HA VPN peer IP (Phase 2에 주입)
+    Description: GCP HA VPN peer IP (Phase 2에 주입 · 우혁이 4 IPs 중 1개 전달)
   GcpBgpAsn:
     Type: Number
-    Default: 65516
-    Description: GCP HA VPN BGP ASN
+    Default: 64514
+    Description: GCP Cloud Router BGP ASN (infra/gcp/20-network-daily/cloud-router.tf gcp_router_asn 일치)
 
 Conditions:
   HasAzureIp: !Not [!Equals [!Ref AzureVpnGatewayIp, '0.0.0.0']]

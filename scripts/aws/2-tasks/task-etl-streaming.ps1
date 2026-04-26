@@ -25,6 +25,9 @@ if (-not (Test-Stack -Name "ecs-cluster" -Tier "30")) {
 # Sales Data VPC Endpoints (ECR pull · Kinesis put · Private subnet 에서 AWS 서비스 접근)
 Deploy-Stack -Tier "10" -Name "endpoints-sales-data" -Template "10-network-core/endpoints/endpoints-sales-data.yaml"
 
+# Peering: Sales sim → External ALB (재고 조회 API 호출 · Slide 6)
+Deploy-Stack -Tier "10" -Name "peering-sales-data-egress" -Template "10-network-core/peering/sales-data-egress.yaml"
+
 # ECS sims (image 는 placeholder · CI/CD 가 update-stack 으로 갱신)
 Deploy-Stack -Tier "40" -Name "ecs-online-sim"  -Template "40-compute-runtime/ecs-online-sim.yaml"
 Deploy-Stack -Tier "40" -Name "ecs-offline-sim" -Template "40-compute-runtime/ecs-offline-sim.yaml"

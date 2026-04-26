@@ -24,6 +24,9 @@ if (-not (Test-Stack -Name "rds" -Tier "20")) {
     Write-Warn "RDS 미배포 · inventory-api 가 DB 접속 필요 · task-data.ps1 권장"
 }
 
+# ─── 0. Peering: inventory-api ECS (Egress) → RDS (Data) ───
+Deploy-Stack -Tier "10" -Name "peering-egress-data" -Template "10-network-core/peering/egress-data.yaml"
+
 # ─── 1. External ALB + Target Groups (Tier 50) ───
 Deploy-Stack -Tier "50" -Name "alb-external" -Template "50-network-traffic/alb-external.yaml"
 
