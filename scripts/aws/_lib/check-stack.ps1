@@ -15,6 +15,16 @@ function Get-StackStatus {
     return $status
 }
 
+function Test-Stack {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)] [string]$Name,
+        [string]$Tier = "00"
+    )
+    $status = Get-StackStatus -Name $Name -Tier $Tier
+    return ($status -ne "NOT_FOUND" -and $status -notlike "*ROLLBACK_FAILED*" -and $status -notlike "DELETE_FAILED")
+}
+
 function Show-AllStacks {
     Write-Step "BOOKFLOW Stack 전체 현황"
     aws cloudformation list-stacks --region $env:AWS_REGION `
