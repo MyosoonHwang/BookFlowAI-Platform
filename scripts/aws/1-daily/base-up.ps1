@@ -4,8 +4,8 @@
 #   올리는 것 (최소):
 #     Tier 10 (VPC 5 + CGW + Route 53)            ← 무료
 #     Tier 30 ECS Cluster (껍데기)                  ← 무료 (Task 없으면 과금 0)
-#     Tier 30 ALB Controller IRSA Role             ← 무료 (IAM)
 #     Tier 30 Ansible Node (Ubuntu 24 t3.nano)    ← ~$1/월 (RDS seed · Glue ops 용)
+#   ※ EKS Cluster · ALB IRSA · ESO IRSA 는 task-msa-pods.ps1 (OIDC 필요해서 EKS 후)
 #
 #   올리지 않는 것 (각 task 스크립트가 필요 시 deploy):
 #     Tier 20 (RDS/Redis/Kinesis)                  → task-data.ps1
@@ -20,7 +20,8 @@
 
 . (Join-Path $PSScriptRoot "..\_lib\deploy-stack.ps1")
 . (Join-Path $PSScriptRoot "..\_lib\check-stack.ps1")
-. (Join-Path $PSScriptRoot "..\utils\show-cross-cloud-exports.ps1" -ErrorAction SilentlyContinue)
+$exportsScript = Join-Path $PSScriptRoot "..\utils\show-cross-cloud-exports.ps1"
+if (Test-Path $exportsScript) { . $exportsScript }
 
 Write-Step "═══ 매일 아침 · Base 최소 인프라 ═══"
 
