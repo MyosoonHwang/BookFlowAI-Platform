@@ -1,0 +1,323 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: BOOKFLOW · Tier 99-serverless · 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
+
+# 7 Lambdas (V6.2 + Schema v3 · 비용산정 V1 의 6 Lambda + pos-ingestor):
+#   1. aladin-sync       (cron daily 04:00 KST · S3 Raw write)
+#   2. event-sync        (cron daily 03:00 KST · S3 Raw write)
+#   3. sns-gen           (cron 10min · S3 Raw write · 시뮬 데이터 생성)
+#   4. spike-detect      (cron 10min · VPC · RDS spike_events INSERT)
+#   5. forecast-trigger  (cron daily 04:00 · Step Functions invoke)
+#   6. secret-forwarder  (API Gateway POST · Secrets Manager rotate · Azure Function trigger)
+#   7. pos-ingestor      (Kinesis ESM · VPC · RDS inventory UPDATE · sales_realtime INSERT)
+#
+# 배포: SAM transform 사용 → CAPABILITY_AUTO_EXPAND 필요
+# 코드: inline placeholder · 실 코드는 추후 lambdas/* 폴더에 작성 후 sam build/deploy 또는 cfn package
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  StepFunctionsArn:
+    Type: String
+    Default: ''
+    Description: ETL3 Step Functions State Machine ARN · Tier 99-glue 후 update-stack 으로 주입
+
+Conditions:
+  HasStepFn: !Not [!Equals [!Ref StepFunctionsArn, '']]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Tracing: Active
+    Environment:
+      Variables:
+        PROJECT_NAME: !Ref ProjectName
+        REGION: !Ref AWS::Region
+
+Resources:
+  # ─── Lambda VPC SG (spike-detect · pos-ingestor 공용 · BookFlow AI VPC) ───
+  LambdaVpcSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-lambda-vpc-sg
+      GroupDescription: BOOKFLOW VPC Lambda - egress all (RDS via peering bookflow-ai-data)
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-bookflow-ai-id
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: egress all
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-lambda-vpc-sg' }]
+
+  # ─── 1. aladin-sync (cron daily · S3 Raw write) ───
+  AladinSyncFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-aladin-sync
+      Handler: index.lambda_handler
+      InlineCode: |
+        import json
+        import os
+        def lambda_handler(event, context):
+            print(f"[aladin-sync] placeholder · event={json.dumps(event)}")
+            return {"statusCode": 200, "body": "aladin-sync placeholder"}
+      Policies:
+        - S3WritePolicy:
+            BucketName: !ImportValue
+              Fn::Sub: ${ProjectName}-s3-raw-name
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-secrets-aladin-ttbkey-arn
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 19 * * ? *)'
+            Name: !Sub ${ProjectName}-aladin-sync-cron
+            Description: daily 04:00 KST (19:00 UTC)
+
+  # ─── 2. event-sync (cron daily · S3 Raw write) ───
+  EventSyncFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-event-sync
+      Handler: index.lambda_handler
+      InlineCode: |
+        import json
+        def lambda_handler(event, context):
+            print(f"[event-sync] placeholder · event={json.dumps(event)}")
+            return {"statusCode": 200, "body": "event-sync placeholder"}
+      Policies:
+        - S3WritePolicy:
+            BucketName: !ImportValue
+              Fn::Sub: ${ProjectName}-s3-raw-name
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-secrets-publicdata-arn
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 18 * * ? *)'
+            Name: !Sub ${ProjectName}-event-sync-cron
+            Description: daily 03:00 KST (18:00 UTC)
+
+  # ─── 3. sns-gen (cron 10min · 시뮬 데이터) ───
+  SnsGenFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-sns-gen
+      Handler: index.lambda_handler
+      InlineCode: |
+        import json
+        def lambda_handler(event, context):
+            print(f"[sns-gen] placeholder · event={json.dumps(event)}")
+            return {"statusCode": 200, "body": "sns-gen placeholder"}
+      Policies:
+        - S3WritePolicy:
+            BucketName: !ImportValue
+              Fn::Sub: ${ProjectName}-s3-raw-name
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-secrets-sns-gen-config-arn
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(10 minutes)'
+            Name: !Sub ${ProjectName}-sns-gen-cron
+
+  # ─── 4. spike-detect (cron 10min · VPC · RDS write) ───
+  SpikeDetectFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-spike-detect
+      Handler: index.lambda_handler
+      MemorySize: 512
+      Timeout: 60
+      InlineCode: |
+        import json
+        def lambda_handler(event, context):
+            print(f"[spike-detect] placeholder · event={json.dumps(event)}")
+            return {"statusCode": 200, "body": "spike-detect placeholder"}
+      VpcConfig:
+        SecurityGroupIds: [!Ref LambdaVpcSg]
+        SubnetIds:
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az1
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az2
+      Policies:
+        - VPCAccessPolicy: {}
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-secrets-rds-master-arn
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(10 minutes)'
+            Name: !Sub ${ProjectName}-spike-detect-cron
+
+  # ─── 5. forecast-trigger (cron daily · Step Functions invoke) ───
+  ForecastTriggerFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-forecast-trigger
+      Handler: index.lambda_handler
+      InlineCode: |
+        import json
+        import os
+        import boto3
+        def lambda_handler(event, context):
+            print(f"[forecast-trigger] placeholder · event={json.dumps(event)}")
+            sfn_arn = os.environ.get('STEP_FN_ARN', '')
+            if sfn_arn:
+                sfn = boto3.client('stepfunctions')
+                resp = sfn.start_execution(stateMachineArn=sfn_arn, input=json.dumps({"trigger": "cron"}))
+                return {"statusCode": 200, "executionArn": resp['executionArn']}
+            return {"statusCode": 200, "body": "STEP_FN_ARN 미설정 · placeholder"}
+      Environment:
+        Variables:
+          PROJECT_NAME: !Ref ProjectName
+          REGION: !Ref AWS::Region
+          STEP_FN_ARN: !If [HasStepFn, !Ref StepFunctionsArn, '']
+      Policies:
+        - !If
+          - HasStepFn
+          - StepFunctionsExecutionPolicy:
+              StateMachineName: !Select [6, !Split [':', !Ref StepFunctionsArn]]
+          - !Ref AWS::NoValue
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 19 * * ? *)'
+            Name: !Sub ${ProjectName}-forecast-trigger-cron
+            Description: daily 04:00 KST (forecast pipeline trigger)
+
+  # ─── 6. secret-forwarder (API Gateway · Azure Function 트리거) ───
+  SecretForwarderFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-secret-forwarder
+      Handler: index.lambda_handler
+      InlineCode: |
+        import json
+        def lambda_handler(event, context):
+            print(f"[secret-forwarder] placeholder · event={json.dumps(event)}")
+            return {"statusCode": 200, "body": json.dumps({"status": "placeholder"})}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:CreateSecret
+                - secretsmanager:UpdateSecret
+                - secretsmanager:PutSecretValue
+                - secretsmanager:GetSecretValue
+              Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/auth/*
+            - Effect: Allow
+              Action: kms:Decrypt
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-kms-eks-arn
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            Path: /secret
+            Method: post
+            ApiId: !Ref SecretForwarderApi
+
+  # ─── secret-forwarder 전용 HTTP API Gateway ───
+  SecretForwarderApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      Tags: { Name: !Sub '${ProjectName}-secret-forwarder-api' }
+
+  # ─── 7. pos-ingestor (Kinesis ESM · VPC · RDS write) ───
+  PosIngestorFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-pos-ingestor
+      Handler: index.lambda_handler
+      MemorySize: 512
+      Timeout: 60
+      ReservedConcurrentExecutions: 5
+      InlineCode: |
+        import json
+        import base64
+        def lambda_handler(event, context):
+            records = event.get('Records', [])
+            print(f"[pos-ingestor] placeholder · {len(records)} records from Kinesis")
+            for rec in records:
+                payload = base64.b64decode(rec['kinesis']['data']).decode('utf-8')
+                print(f"  payload: {payload[:200]}")
+            return {"batchItemFailures": []}
+      VpcConfig:
+        SecurityGroupIds: [!Ref LambdaVpcSg]
+        SubnetIds:
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az1
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az2
+      Policies:
+        - VPCAccessPolicy: {}
+        - KinesisStreamReadPolicy:
+            StreamName: !ImportValue
+              Fn::Sub: ${ProjectName}-kinesis-pos-events-name
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-secrets-rds-master-arn
+      Events:
+        Stream:
+          Type: Kinesis
+          Properties:
+            Stream: !ImportValue
+              Fn::Sub: ${ProjectName}-kinesis-pos-events-arn
+            BatchSize: 100
+            StartingPosition: LATEST
+            MaximumBatchingWindowInSeconds: 5
+            FunctionResponseTypes: [ReportBatchItemFailures]
+
+Outputs:
+  AladinSyncArn:
+    Value: !GetAtt AladinSyncFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-aladin-sync-arn' }
+  EventSyncArn:
+    Value: !GetAtt EventSyncFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-event-sync-arn' }
+  SnsGenArn:
+    Value: !GetAtt SnsGenFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-sns-gen-arn' }
+  SpikeDetectArn:
+    Value: !GetAtt SpikeDetectFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-spike-detect-arn' }
+  ForecastTriggerArn:
+    Value: !GetAtt ForecastTriggerFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-forecast-trigger-arn' }
+  SecretForwarderArn:
+    Value: !GetAtt SecretForwarderFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-secret-forwarder-arn' }
+  SecretForwarderApiUrl:
+    Value: !Sub 'https://${SecretForwarderApi}.execute-api.${AWS::Region}.amazonaws.com'
+    Export: { Name: !Sub '${ProjectName}-secret-forwarder-api-url' }
+  PosIngestorArn:
+    Value: !GetAtt PosIngestorFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-pos-ingestor-arn' }
+  LambdaVpcSgId:
+    Value: !Ref LambdaVpcSg
+    Export: { Name: !Sub '${ProjectName}-lambda-vpc-sg-id' }
