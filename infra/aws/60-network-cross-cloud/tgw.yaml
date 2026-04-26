@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 60 · Transit Gateway Hub + 4 VPC Attachments + Route Tables (Phase 3-4 cross-cloud · Ansible VPC 제외)
+
+# 사용 시점:
+#   Phase 1-2 (build/dev): TGW 미사용 · Peering (Tier 10) 으로 cross-VPC
+#   Phase 3-4 (시나리오/시연): TGW 활성 · 4 VPC + 2 VPN attachment 동시 사용
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  TgwAsn:
+    Type: Number
+    Default: 64512
+    Description: TGW Amazon-side BGP ASN (S2S VPN 협상용)
+
+Resources:
+  # ─── Transit Gateway Hub (자체 무료 · Attachment 만 과금) ───
+  Tgw:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      AmazonSideAsn: !Ref TgwAsn
+      AutoAcceptSharedAttachments: enable
+      DefaultRouteTableAssociation: disable
+      DefaultRouteTablePropagation: disable
+      DnsSupport: enable
+      VpnEcmpSupport: enable
+      MulticastSupport: disable
+      Description: BOOKFLOW Transit Gateway Hub (cross-cloud · Phase 3-4)
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw' }]
+
+  # ─── TGW Route Table (단일 RT · 모든 attachment 가 same RT 사용) ───
+  TgwRouteTable:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties:
+      TransitGatewayId: !Ref Tgw
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-rt' }]
+
+  # ─── VPC Attachment × 4 (Ansible VPC 제외 · Peering 으로 충분) ───
+  TgwAttachBookflowAi:
+    Type: AWS::EC2::TransitGatewayVpcAttachment
+    Properties:
+      TransitGatewayId: !Ref Tgw
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-bookflow-ai-id
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az1
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az2
+      Options:
+        DnsSupport: enable
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-attach-bookflow-ai' }]
+
+  TgwAttachSalesData:
+    Type: AWS::EC2::TransitGatewayVpcAttachment
+    Properties:
+      TransitGatewayId: !Ref Tgw
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-sales-data-id
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-sales-data-private-az1
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-sales-data-private-az2
+      Options:
+        DnsSupport: enable
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-attach-sales-data' }]
+
+  TgwAttachEgress:
+    Type: AWS::EC2::TransitGatewayVpcAttachment
+    Properties:
+      TransitGatewayId: !Ref Tgw
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-egress-id
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-egress-public-az1
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-egress-public-az2
+      Options:
+        DnsSupport: enable
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-attach-egress' }]
+
+  TgwAttachData:
+    Type: AWS::EC2::TransitGatewayVpcAttachment
+    Properties:
+      TransitGatewayId: !Ref Tgw
+      VpcId: !ImportValue
+        Fn::Sub: ${ProjectName}-vpc-data-id
+      SubnetIds:
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-data-private-az1
+        - !ImportValue
+          Fn::Sub: ${ProjectName}-subnet-data-private-az2
+      Options:
+        DnsSupport: enable
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-attach-data' }]
+
+  # ─── RT Association (4 VPC) ───
+  RtAssocBookflowAi:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachBookflowAi
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  RtAssocSalesData:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachSalesData
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  RtAssocEgress:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachEgress
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  RtAssocData:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachData
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  # ─── RT Propagation (4 VPC · 서로 라우팅 자동 학습) ───
+  RtPropBookflowAi:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachBookflowAi
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  RtPropSalesData:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachSalesData
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  RtPropEgress:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachEgress
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+  RtPropData:
+    Type: AWS::EC2::TransitGatewayRouteTablePropagation
+    Properties:
+      TransitGatewayAttachmentId: !Ref TgwAttachData
+      TransitGatewayRouteTableId: !Ref TgwRouteTable
+
+Outputs:
+  TgwId:
+    Value: !Ref Tgw
+    Export: { Name: !Sub '${ProjectName}-tgw-id' }
+  TgwArn:
+    Value: !GetAtt Tgw.Id
+    Export: { Name: !Sub '${ProjectName}-tgw-arn' }
+  TgwAsn:
+    Value: !Ref TgwAsn
+    Export: { Name: !Sub '${ProjectName}-tgw-asn' }
+  TgwRouteTableId:
+    Value: !Ref TgwRouteTable
+    Export: { Name: !Sub '${ProjectName}-tgw-rt-id' }
+  TgwAttachBookflowAiId:
+    Value: !Ref TgwAttachBookflowAi
+    Export: { Name: !Sub '${ProjectName}-tgw-attach-bookflow-ai-id' }
+  TgwAttachSalesDataId:
+    Value: !Ref TgwAttachSalesData
+    Export: { Name: !Sub '${ProjectName}-tgw-attach-sales-data-id' }
+  TgwAttachEgressId:
+    Value: !Ref TgwAttachEgress
+    Export: { Name: !Sub '${ProjectName}-tgw-attach-egress-id' }
+  TgwAttachDataId:
+    Value: !Ref TgwAttachData
+    Export: { Name: !Sub '${ProjectName}-tgw-attach-data-id' }

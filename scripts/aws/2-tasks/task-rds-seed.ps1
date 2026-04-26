@@ -24,6 +24,9 @@ if (-not (Test-Stack -Name "ansible-node" -Tier "30")) {
     Write-Err "Ansible Node 미배포 · base-up.ps1 먼저 실행"; exit 1
 }
 
+# Peering: Ansible CN → RDS (psql 접근)
+Deploy-Stack -Tier "10" -Name "peering-ansible-data" -Template "10-network-core/peering/ansible-data.yaml"
+
 # Ansible Node Instance ID 조회
 $instanceId = aws cloudformation describe-stacks --stack-name "$env:BOOKFLOW_STACK_PREFIX-30-ansible-node" `
     --region $env:AWS_REGION `
