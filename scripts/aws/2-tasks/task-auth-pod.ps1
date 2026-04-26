@@ -3,8 +3,6 @@
 #   전제: base-up.ps1 + task-msa-pods.ps1 (EKS 위에 Pod 배포)
 #   소요: ~10분 (NAT + VPN)
 #   비용: ~$1.50/일 (NAT $32/월 → 일 $1.07 + VPN)
-#
-#   ⚠️ Tier 50 nat-gateway · Tier 60 vpn-site-to-site 는 별도 작성 필요
 
 . (Join-Path $PSScriptRoot "..\_lib\deploy-stack.ps1")
 . (Join-Path $PSScriptRoot "..\_lib\check-stack.ps1")

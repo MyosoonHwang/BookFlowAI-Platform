@@ -3,8 +3,6 @@
 #   전제: base-up.ps1 + task-msa-pods.ps1 (forecast-svc EKS Pod 배포 후)
 #   소요: ~5분 (VPN tunnel 설정)
 #   비용: ~$1.50/일 (Site-to-Site VPN $36/월)
-#
-#   ⚠️ Tier 60 vpn-site-to-site 는 별도 작성 필요
 
 . (Join-Path $PSScriptRoot "..\_lib\deploy-stack.ps1")
 . (Join-Path $PSScriptRoot "..\_lib\check-stack.ps1")
