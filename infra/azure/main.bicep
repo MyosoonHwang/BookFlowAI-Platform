@@ -1,0 +1,141 @@
+// main.bicep
+// 전체 Azure 인프라 오케스트레이션
+// VPN Connection 은 포함하지 않음 — AWS TGW 구축 후 vpn-connection.bicep 별도 배포
+
+targetScope = 'resourceGroup'
+
+// ── 파라미터 ──────────────────────────────────────────────
+param environment string
+param location string
+param prefix string
+
+param vnetAddressPrefix string
+param gatewaySubnetPrefix string
+param servicesSubnetPrefix string
+param functionSubnetPrefix string
+
+param vpnBgpAsn int
+param logRetentionDays int
+
+param securityAdminObjectId string
+
+// ── 1. 관리 ID ────────────────────────────────────────────
+module identity 'modules/identity.bicep' = {
+  name: 'identity-deploy'
+  params: {
+    location: location
+    prefix: prefix
+  }
+}
+
+// ── 2. NSG ────────────────────────────────────────────────
+module nsg 'modules/nsg.bicep' = {
+  name: 'nsg-deploy'
+  params: {
+    location: location
+    prefix: prefix
+  }
+}
+
+// ── 3. VNet (NSG 참조) ────────────────────────────────────
+module vnet 'modules/vnet.bicep' = {
+  name: 'vnet-deploy'
+  dependsOn: [nsg]
+  params: {
+    location: location
+    prefix: prefix
+    vnetAddressPrefix: vnetAddressPrefix
+    gatewaySubnetPrefix: gatewaySubnetPrefix
+    servicesSubnetPrefix: servicesSubnetPrefix
+    functionSubnetPrefix: functionSubnetPrefix
+    servicesNsgId: nsg.outputs.servicesNsgId
+    functionNsgId: nsg.outputs.functionNsgId
+  }
+}
+
+// ── 4. Log Analytics (Monitor) ────────────────────────────
+module monitor 'modules/monitor.bicep' = {
+  name: 'monitor-deploy'
+  params: {
+    location: location
+    prefix: prefix
+    logRetentionDays: logRetentionDays
+  }
+}
+
+// ── 5. Key Vault (관리 ID, Monitor 참조) ─────────────────
+module keyvault 'modules/keyvault.bicep' = {
+  name: 'keyvault-deploy'
+  dependsOn: [identity, monitor]
+  params: {
+    location: location
+    prefix: prefix
+    logAnalyticsWorkspaceId: monitor.outputs.workspaceId
+    functionIdentityPrincipalId: identity.outputs.functionIdentityPrincipalId
+    logicappIdentityPrincipalId: identity.outputs.logicappIdentityPrincipalId
+    securityAdminObjectId: securityAdminObjectId
+  }
+}
+
+// ── 6. Function App (VNet, Key Vault, 관리 ID 참조) ───────
+module function 'modules/function.bicep' = {
+  name: 'function-deploy'
+  dependsOn: [keyvault, identity]
+  params: {
+    location: location
+    prefix: prefix
+    keyVaultUri: keyvault.outputs.keyVaultUri
+    functionIdentityId: identity.outputs.functionIdentityId
+    functionIdentityClientId: identity.outputs.functionIdentityClientId
+    logAnalyticsWorkspaceId: monitor.outputs.workspaceId
+  }
+}
+
+// ── 7. Event Grid (Key Vault, Function App 참조) ──────────
+module eventgrid 'modules/eventgrid.bicep' = {
+  name: 'eventgrid-deploy'
+  dependsOn: [keyvault, function]
+  params: {
+    location: location
+    prefix: prefix
+    keyVaultId: keyvault.outputs.keyVaultId
+  }
+}
+
+// ── 8. Logic Apps (관리 ID, Key Vault 참조) ───────────────
+module logicapp 'modules/logicapp.bicep' = {
+  name: 'logicapp-deploy'
+  dependsOn: [identity, keyvault]
+  params: {
+    location: location
+    prefix: prefix
+    logicappIdentityId: identity.outputs.logicappIdentityId
+    logicappIdentityClientId: identity.outputs.logicappIdentityClientId
+    keyVaultUri: keyvault.outputs.keyVaultUri
+    logAnalyticsWorkspaceId: monitor.outputs.workspaceId
+  }
+}
+
+// ── 9. VPN Gateway (VNet 참조) — Connection 은 별도 배포 ──
+module vpn 'modules/vpn.bicep' = {
+  name: 'vpn-deploy'
+  dependsOn: [vnet]
+  params: {
+    location: location
+    prefix: prefix
+    gatewaySubnetId: vnet.outputs.gatewaySubnetId
+    vpnBgpAsn: vpnBgpAsn
+  }
+}
+
+// ── 출력값 ───────────────────────────────────────────────
+output vnetId string = vnet.outputs.vnetId
+output keyVaultName string = keyvault.outputs.keyVaultName
+output keyVaultUri string = keyvault.outputs.keyVaultUri
+output functionAppName string = function.outputs.functionAppName
+
+// AWS 팀에 전달할 값
+output vpnActivePublicIp string = vpn.outputs.activePublicIp
+output vpnStandbyPublicIp string = vpn.outputs.standbyPublicIp
+output vpnBgpPeeringAddress string = vpn.outputs.bgpPeeringAddress
+output vpnBgpAsn int = vpn.outputs.bgpAsn
