@@ -26,9 +26,8 @@ if (-not (Test-Stack -Name "endpoints-bookflow-ai" -Tier "10")) {
     Deploy-Stack -Tier "10" -Name "endpoints-bookflow-ai" -Template "10-network-core/endpoints/endpoints-bookflow-ai.yaml"
 }
 
-# Tier 50 NAT (Egress VPC public · Auth Pod outbound to Azure)
-# Deploy-Stack -Tier "50" -Name "nat-gateway" -Template "50-network-traffic/nat-gateway.yaml"
-Write-Warn "Tier 50 nat-gateway 는 아직 작성 전"
+# Tier 50 NAT (Egress VPC public · Auth Pod outbound to Azure · TGW 활성 시 cross-VPC 전용)
+Deploy-Stack -Tier "50" -Name "nat-gateway" -Template "50-network-traffic/nat-gateway.yaml"
 
 # Tier 60 Azure VPN (Customer Gateway IP 필요 · Phase 2 부터 활성)
 # Deploy-Stack -Tier "60" -Name "vpn-site-to-site" -Template "60-network-cross-cloud/vpn-site-to-site.yaml" -Parameters @{ Provider = "azure" }

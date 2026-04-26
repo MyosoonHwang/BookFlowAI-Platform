@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 50 · NAT Gateway × 2 (Egress VPC Public · Multi-AZ HA · TGW 활성 시 cross-VPC 전용)
+
+# NAT 사용 시점:
+#   Phase 1-2 (build/dev): 만들어두지만 사용 안 됨 (Peering 으론 cross-VPC NAT 불가)
+#   Phase 3-4 (시나리오/시연): TGW Route 활성 후 BookFlow AI Pod (auth-pod) → TGW → 이 NAT → IGW → Azure Entra
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+
+Resources:
+  NatEipAz1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-nat-eip-az1' }]
+
+  NatEipAz2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-nat-eip-az2' }]
+
+  NatGatewayAz1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipAz1.AllocationId
+      SubnetId: !ImportValue
+        Fn::Sub: ${ProjectName}-subnet-egress-public-az1
+      ConnectivityType: public
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-nat-az1' }]
+
+  NatGatewayAz2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipAz2.AllocationId
+      SubnetId: !ImportValue
+        Fn::Sub: ${ProjectName}-subnet-egress-public-az2
+      ConnectivityType: public
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-nat-az2' }]
+
+Outputs:
+  NatGatewayAz1Id:
+    Value: !Ref NatGatewayAz1
+    Export: { Name: !Sub '${ProjectName}-nat-az1-id' }
+  NatGatewayAz2Id:
+    Value: !Ref NatGatewayAz2
+    Export: { Name: !Sub '${ProjectName}-nat-az2-id' }
+  NatEipAz1Address:
+    Value: !Ref NatEipAz1
+    Export: { Name: !Sub '${ProjectName}-nat-eip-az1' }
+  NatEipAz2Address:
+    Value: !Ref NatEipAz2
+    Export: { Name: !Sub '${ProjectName}-nat-eip-az2' }
