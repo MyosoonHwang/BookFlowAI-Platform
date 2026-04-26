@@ -29,7 +29,10 @@ Deploy-Stack -Tier "30" -Name "eks-cluster"             -Template "30-compute-cl
 # ALB Controller IRSA (OIDC 필요 → eks-cluster 후)
 Deploy-Stack -Tier "30" -Name "eks-alb-controller-irsa" -Template "30-compute-cluster/eks-alb-controller-irsa.yaml"
 
-# Node Group (EC2 t3.medium × 2)
+# ESO IRSA (auth-pod 가 Secrets Manager 에서 Entra Client Secret 등 가져옴)
+Deploy-Stack -Tier "30" -Name "eks-eso-irsa"            -Template "30-compute-cluster/eks-eso-irsa.yaml"
+
+# Node Group (EC2 t3.medium × 1 · MaxSize 2 autoscale)
 Deploy-Stack -Tier "40" -Name "eks-nodegroup" -Template "40-compute-runtime/eks-nodegroup.yaml"
 
 # Core Addons (vpc-cni · kube-proxy · coredns · ebs-csi · pod-identity)

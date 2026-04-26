@@ -18,15 +18,16 @@ Parameters:
     AllowedValues: [ON_DEMAND, SPOT]
   DesiredSize:
     Type: Number
-    Default: 2
+    Default: 1
     MinValue: 1
     MaxValue: 10
+    Description: 구축 phase 1 노드 default · 부하 시 2로 autoscale (Cluster Autoscaler 추가 시)
   MinSize:
     Type: Number
-    Default: 2
+    Default: 1
   MaxSize:
     Type: Number
-    Default: 4
+    Default: 2
   DiskSize:
     Type: Number
     Default: 20

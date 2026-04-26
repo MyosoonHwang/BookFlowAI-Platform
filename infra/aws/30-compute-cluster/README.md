@@ -4,12 +4,13 @@
 
 **EKS Control Plane · ECS Cluster · Ansible Control Node** — 매일 아침 올라가는 Compute 기반. 실제 Pod/Task/Instance 배치는 Tier 40.
 
-## Stack (4개)
+## Stack (5개)
 
 | YAML | 내용 | 위치 |
 |---|---|---|
 | `eks-cluster.yaml` | EKS Control Plane (Kubernetes 1.30) + OIDC + Cluster Role + Cluster SG + CW Log Group + Access Entry | BookFlow AI VPC Private |
 | `eks-alb-controller-irsa.yaml` | ALB Controller IRSA Role (IAM 만 · Pod 본체는 CI/CD 가 K8s yaml 로 apply) | IAM |
+| `eks-eso-irsa.yaml` | External Secrets Operator IRSA Role (auth-pod 가 Secrets Manager → K8s Secret sync) | IAM |
 | `ecs-cluster.yaml` | ECS Cluster + Fargate CP + Container Insights + CW Log Group | 클러스터 레벨 |
 | `ansible-node.yaml` | **Ansible 전용** Ubuntu 24 t3.nano EC2 + IAM Role + SG + cloud-init | Ansible VPC **Public** (SG ingress 차단) |
 

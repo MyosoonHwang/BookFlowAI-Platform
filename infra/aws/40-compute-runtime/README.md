@@ -8,12 +8,12 @@
 
 | YAML | 내용 | 위치 |
 |---|---|---|
-| `eks-nodegroup.yaml` | Managed Node Group (EC2 t3.medium × 2 ON_DEMAND · AL2023) + Worker Node IAM Role | BookFlow AI VPC Private |
+| `eks-nodegroup.yaml` | Managed Node Group (EC2 t3.medium × 1 default · MaxSize 2 autoscale · ON_DEMAND · AL2023) + Worker Node IAM Role | BookFlow AI VPC Private |
 | `eks-addons.yaml` | vpc-cni · kube-proxy · coredns · aws-ebs-csi-driver (IRSA) · pod-identity-agent | EKS cluster 레벨 |
 | `ecs-online-sim.yaml` | Online 판매 시뮬 (Fargate 0.25 vCPU · Kinesis put) | Sales Data VPC Private |
 | `ecs-offline-sim.yaml` | Offline 판매 시뮬 (Fargate 0.25 vCPU · Kinesis put) | Sales Data VPC Private |
 | `ecs-inventory-api.yaml` | 재고 조회 API (Fargate 0.25 vCPU · port 8080 · External ALB target) | Egress VPC Public |
-| `publisher-asg.yaml` | Launch Template (Ubuntu 24 + codedeploy-agent) + ASG t3.small × 2 | Egress VPC Public |
+| `publisher-asg.yaml` | Launch Template (Ubuntu 24 + codedeploy-agent) + ASG **t3.micro × 2** (비용산정 V1 일치 · Blue/Green 위해 최소 2) | Egress VPC Public |
 
 ## 🔑 CI/CD 연결 포인트
 
@@ -133,15 +133,15 @@ codedeploy-agent 가 EC2 에서 appspec.yml 실행 (UserData 에서 미리 insta
 
 | 자원 | 시간당 | 월 비용 |
 |---|---|---|
-| EKS Node Group t3.medium × 2 | $0.094 | $18.61 |
-| EBS gp3 20GB × 2 | $0.08/GB-월 | $3.20 |
-| ECS Fargate online-sim (0.25v · 0.5GB) | $0.012 | $2.45 |
-| ECS Fargate offline-sim | $0.012 | $2.45 |
-| ECS Fargate inventory-api | $0.012 | $2.45 |
-| Publisher ASG t3.small × 2 | $0.046 | $9.10 |
+| EKS Node Group t3.medium × 1 (default · MaxSize 2) | $0.047 | $9.30 |
+| EBS gp3 20GB × 1 | $0.08/GB-월 | $1.60 |
+| ECS Fargate online-sim (0.25v · 0.5GB · 12일 가정) | $0.012 | $1.30 |
+| ECS Fargate offline-sim (12일 가정) | $0.012 | $1.30 |
+| ECS Fargate inventory-api (12일 가정) | $0.012 | $1.30 |
+| Publisher ASG t3.micro × 2 | $0.0136 | $5.40 |
 | EBS gp3 16GB × 2 (Publisher) | $0.08/GB-월 | $2.56 |
 
-**합계 예상**: ~$41/월 (Tier 40)
+**합계 예상**: ~$23/월 (Tier 40 · 비용산정 V1 일치)
 
 ## 비고
 

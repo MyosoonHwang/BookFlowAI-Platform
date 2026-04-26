@@ -7,7 +7,8 @@ Parameters:
     Default: bookflow
   InstanceType:
     Type: String
-    Default: t3.small
+    Default: t3.micro
+    Description: 비용산정 V1 기준 t3.micro · 시연 시 트래픽 증가 시 t3.small 로 변경 가능
   UbuntuAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
