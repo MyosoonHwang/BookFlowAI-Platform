@@ -21,7 +21,7 @@
 |---|---|---|
 | **CFN (이 Tier)** | EKS/ECS 인프라 · IAM · IRSA · Ansible Node 인프라 | K8s 리소스 · Pod · Ingress · ALB 자체 |
 | **CI/CD (미래)** | K8s manifests 전체 (ALB Controller · Pod · Service · Ingress) · ECS 이미지 · Publisher 배포 | IAM/IRSA Role (CFN 담당) · 인프라 |
-| **Ansible Node** | RDS 시드 · 스키마 migration · Notion sync · Secrets 관리 | **K8s 관련 일체 무관** |
+| **Ansible Node** | RDS 시드 · 스키마 migration · Glue job 관리 · Secrets ops | **K8s 관련 일체 무관** |
 
 ## Internal ALB 생성 흐름 (V6.2 기반)
 
@@ -52,7 +52,7 @@ Internal ALB 자동 생성 (BookFlow AI VPC Private)
 
 **하는 일**:
 - RDS 시드 주입 · 스키마 migration (`psql` + Ansible playbook)
-- Notion 라이프사이클 관리 (Python + requests + Notion API)
+- Glue job 관리 (cicd/ansible/ · GHA → OIDC → SSM → CN → Ansible)
 - Secrets Manager 읽기 · 값 주입 ops
 
 **하지 않는 일**:
@@ -62,7 +62,7 @@ Internal ALB 자동 생성 (BookFlow AI VPC Private)
 
 **보안 모델 (Public Subnet + SG ingress block)**:
 - Subnet: Ansible VPC **Public** (10.4.0.0/24 · IGW 직결 · 인터넷 outbound 가능)
-- 이유: cloud-init 가 `apt`, `pip`, `git clone` 등 외부 인터넷 필요. Ansible 평상시 ops 도 Notion API · 외부 호출 필요.
+- 이유: cloud-init 가 `apt`, `pip`, `git clone` 등 외부 인터넷 필요. Ansible 평상시 ops 도 git pull · pip install 등 외부 호출 필요.
 - **SG 가 모든 ingress 차단** (egress only) → 보안적으로 Private 과 동일
 - 접속: **SSM Session Manager** 만 (IAM 인증 · Public IP 무관)
 - SSH/HTTP/HTTPS 등 어떤 inbound 포트도 안 열림

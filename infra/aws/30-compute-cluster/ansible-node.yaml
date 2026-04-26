@@ -74,7 +74,7 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-          Description: egress all (apt, pip, git clone, AWS API, Notion, etc.)
+          Description: egress all (apt, pip, git clone, AWS API, etc.)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ansible-node-sg' }]
 
   # ─── EC2 Instance (Ubuntu 24 · cloud-init · Ansible 전용) ───
@@ -108,20 +108,19 @@ Resources:
           apt-get update
           apt-get install -y git python3-pip python3-venv curl unzip jq postgresql-client
 
-          # ─── 2. Ansible + Python libs ───
+          # ─── 2. Ansible + Python libs (Glue 관리 · RDS seed/migration) ───
           pip3 install --break-system-packages \
             ansible ansible-core \
             boto3 botocore \
             psycopg2-binary \
-            requests \
-            kubernetes
+            requests
 
           # ─── 3. AWS CLI v2 ───
           curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscli.zip
           unzip -q /tmp/awscli.zip -d /tmp
           /tmp/aws/install
 
-          # ─── 4. Ansible Collections (AWS · PostgreSQL · Community) ───
+          # ─── 4. Ansible Collections (AWS · PostgreSQL · Glue 작업) ───
           ansible-galaxy collection install --force \
             amazon.aws \
             community.aws \
