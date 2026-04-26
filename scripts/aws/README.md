@@ -155,13 +155,13 @@ CloudFormation Stack은 **Outputs + Import** 관계 때문에 순서가 중요�
 36. client-vpn             ← Endpoint + Subnet Assoc + Auth Rule + ACM cert
 ```
 
-### Tier 99 Serverless / Glue (task-lambdas · 추후 task-glue)
+### Tier 99 Serverless / Glue (task-lambdas · task-glue)
 
 ```
-37. 99-lambdas (SAM)       ← 7 Lambdas (aladin-sync · event-sync · sns-gen · spike-detect · forecast-trigger · secret-forwarder · pos-ingestor)
-                              + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
+37. 99-lambdas (SAM)       ← 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
                               CAPABILITY_AUTO_EXPAND 필수
-38. 99-glue-catalog        ← Glue Database + 6 Jobs + Step Functions State Machine (추후 작성)
+38. 99-glue-catalog        ← Glue Database + 6 Jobs (Flex DPU) + IAM + BigQuery Connection
+39. 99-step-functions      ← ETL3 State Machine (Glue 6 Jobs orchestration · forecast-trigger Lambda 가 invoke)
 ```
 
 ---
@@ -181,6 +181,7 @@ CloudFormation Stack은 **Outputs + Import** 관계 때문에 순서가 중요�
 | `2-tasks/task-forecast.ps1` | Vertex AI 통신 | GCP HA VPN | +$1.50 |
 | `2-tasks/task-rds-seed.ps1` | DB 시드 주입 | (자원 없음 · Ansible playbook 트리거) | $0 |
 | `2-tasks/task-lambdas.ps1` | ETL · forecast · auth Lambda | 7 Lambdas + EventBridge + Kinesis ESM + API Gateway | ~$0 (free tier) |
+| `2-tasks/task-glue.ps1` | ETL3 Raw → Mart 정제 | Glue DB + 6 Jobs + Step Functions ETL3 + (lambdas 자동 SF ARN 주입) | ~$4 |
 | `2-tasks/task-client-vpn.ps1` | 3 담당자 VPN access | Client VPN Endpoint + Subnet Assoc + Auth | +$1.50 |
 | `2-tasks/task-full-stack.ps1` | **시연·통합 · wrapper** | data + msa-pods + etl-streaming + publisher 순차 실행 | ~$5.60 |
 | `2-tasks/task-scenario-ha.ps1` | HA 시나리오 시연 | RDS Multi-AZ + Redis Replication 전환 | +$0.30 |
