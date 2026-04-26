@@ -1,8 +1,11 @@
 # BOOKFLOW · 매일 아침 09:00 · Base 네트워크 + 기초 인프라 구축
 #   Tier 00 영구 자원은 이미 있다고 가정 (phase0-foundation.ps1 1회 실행 완료)
-#   올리는 것: Tier 10 (VPC 5 + CGW + Route 53) + Tier 20 (RDS/Redis/Kinesis · 구축 설정)
+#   올리는 것:
+#     Tier 10 (VPC 5 + CGW + Route 53)
+#     Tier 20 (RDS/Redis/Kinesis · 구축 설정)
+#     Tier 30 (EKS Control Plane + ECS Cluster + ALB Controller IRSA + Ansible Node)
 #   Endpoints · Peering은 각 task 스크립트가 필요 시 추가 deploy
-#   EKS/ECS/Compute는 task 별로 (30·40 Tier)
+#   Pod/Task/Node Group/Publisher ASG는 Tier 40 (task 별 또는 task-msa-pods.ps1)
 #   RDS/Redis 고가용 (Multi-AZ · Replication) 은 task-scenario-ha.ps1 에서 toggle
 
 . (Join-Path $PSScriptRoot "..\_lib\deploy-stack.ps1")
@@ -42,6 +45,15 @@ Deploy-Stack -Tier "20" -Name "rds"              -Template "20-data-persistent/r
 Deploy-Stack -Tier "20" -Name "redis"            -Template "20-data-persistent/redis.yaml" `
     -Parameters @{ EnableReplication = "false" }
 Deploy-Stack -Tier "20" -Name "kinesis"          -Template "20-data-persistent/kinesis.yaml"
+
+# ─────────────────────────────────────────────────
+# Tier 30 · Compute Cluster (EKS Control Plane + ECS + Ansible Node)
+# ─────────────────────────────────────────────────
+# EKS cluster 가장 오래 걸림 (약 10-15 분) · 순차 배포
+Deploy-Stack -Tier "30" -Name "eks-cluster"            -Template "30-compute-cluster/eks-cluster.yaml"
+Deploy-Stack -Tier "30" -Name "eks-alb-controller-irsa" -Template "30-compute-cluster/eks-alb-controller-irsa.yaml"
+Deploy-Stack -Tier "30" -Name "ecs-cluster"            -Template "30-compute-cluster/ecs-cluster.yaml"
+Deploy-Stack -Tier "30" -Name "ansible-node"           -Template "30-compute-cluster/ansible-node.yaml"
 
 Write-Step "═══ Base 배포 완료 ═══"
 Write-Info "Endpoints · Peering은 각 task 스크립트가 필요 시 배포."
