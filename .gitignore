@@ -99,3 +99,5 @@ terraform-provider-*.log
 
 # Temporary PDF processing images
 tmp_pdf_images/
+
+scripts/gcp/data/

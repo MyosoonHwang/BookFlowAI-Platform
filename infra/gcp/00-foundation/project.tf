@@ -46,6 +46,7 @@ locals {
     "storage.googleapis.com",
     "workflowexecutions.googleapis.com",
     "workflows.googleapis.com",
+    "servicenetworking.googleapis.com",
   ])
 }
 

@@ -3,7 +3,7 @@ resource "google_bigquery_dataset" "bookflow_dw" {
   dataset_id    = "bookflow_dw"
   friendly_name = "BOOKFLOW Data Warehouse"
   description   = "Analytics dataset for BOOKFLOW v6.2."
-  location      = "asia-northeast3"
+  location      = "asia-northeast1"
   # 1. 데이터셋 안의 테이블들을 한꺼번에 지울 수 있게 true로 변경
   delete_contents_on_destroy = true
 
