@@ -2,11 +2,11 @@
 -- Source workbook: C:\Users\1\Downloads\V3_BOOKFLOW_Data_Schema.xlsx
 -- Project: project-8ab6bf05-54d2-4f5d-b8d
 -- Dataset: bookflow_dw
--- Workbook location: asia-northeast3
+-- Workbook location: Tokyo (asia-northeast1)
 
 CREATE SCHEMA IF NOT EXISTS `project-8ab6bf05-54d2-4f5d-b8d.bookflow_dw`
 OPTIONS (
-  location = "asia-northeast3",
+  location = "asia-northeast1",
   description = "BOOKFLOW analytics data warehouse"
 );
 

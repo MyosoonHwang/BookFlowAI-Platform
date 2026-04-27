@@ -71,7 +71,7 @@ resource "google_cloud_scheduler_job" "staging_cleanup" {
   region      = local.region
   description = "Runs BOOKFLOW staging cleanup for objects older than 4 hours."
   schedule    = "0 * * * *"
-  time_zone   = "Asia/Seoul"
+  time_zone   = "Asia/Tokyo"
 
   http_target {
     http_method = "POST"

@@ -12,7 +12,7 @@ variable "region" {
 variable "bigquery_location" {
   description = "BigQuery dataset location."
   type        = string
-  default     = "asia-northeast3"
+  default     = "asia-northeast1"
 }
 
 variable "labels" {
