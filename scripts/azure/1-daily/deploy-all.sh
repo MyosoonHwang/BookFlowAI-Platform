@@ -288,8 +288,24 @@ echo ""
 echo "[3-2] Function 코드 배포"
 if [ -d "functions/sync-secret" ]; then
   if check_deployed "function-deploy"; then
+    # Function App SCM 준비될 때까지 최대 3분 대기
+    echo "  [대기] Function App 준비 확인 중..."
+    for i in $(seq 1 18); do
+      STATUS=$(az functionapp show \
+        --resource-group "$RESOURCE_GROUP" \
+        --name "func-${PREFIX}-sync" \
+        --query state --output tsv 2>/dev/null || echo "Unknown")
+      if [ "$STATUS" = "Running" ]; then
+        echo "  ✓ Function App 준비 완료 (${i}회 시도)"
+        break
+      fi
+      echo "  ... 대기 중 ($((i*10))s, 상태: $STATUS)"
+      sleep 10
+    done
+
     cd functions/sync-secret
-    func azure functionapp publish "func-${PREFIX}-sync" --python
+    # --build remote: Azure에서 빌드 → 로컬 Python 버전 불일치 문제 회피
+    func azure functionapp publish "func-${PREFIX}-sync" --python --build remote
     cd ../..
     echo "  완료: Function 코드 배포"
   fi
