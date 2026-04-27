@@ -96,3 +96,6 @@ override.tf.json
 .terraform.tfstate.lock.info
 terraform.log
 terraform-provider-*.log
+
+# Temporary PDF processing images
+tmp_pdf_images/

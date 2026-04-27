@@ -1,3 +1,8 @@
+# 현재 프로젝트의 숫자 번호(Project Number)를 가져오기 위한 데이터 소스
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 data "google_compute_network" "bookflow_vpc" {
   name    = local.vpc_name
   project = var.project_id

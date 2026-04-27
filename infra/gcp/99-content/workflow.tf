@@ -70,6 +70,7 @@ main:
         call: googleapis.aiplatform.v1.projects.locations.pipelineJobs.create
         args:
           parent: "projects/${var.project_id}/locations/${local.region}"
+          region: "${local.region}"
           body:
             displayName: "bookflow-existing-books-forecast"
             serviceAccount: "${google_service_account.vertex_pipeline.email}"
