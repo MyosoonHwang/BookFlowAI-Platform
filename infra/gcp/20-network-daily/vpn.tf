@@ -11,11 +11,14 @@ resource "google_compute_ha_vpn_gateway" "bookflow_aws_ha_vpn" {
 }
 
 resource "google_compute_external_vpn_gateway" "aws_tgw" {
-  name            = "bookflow-aws-tgw-external-gw"
-  project         = var.project_id
-  redundancy_type = "FOUR_IPS_REDUNDANCY"
+  name    = "bookflow-aws-tgw-external-gw"
+  project = var.project_id
+  # Changed from FOUR_IPS_REDUNDANCY: AWS TGW provides two VPN tunnel
+  # outside IPs for this HA VPN connection.
+  redundancy_type = "TWO_IPS_REDUNDANCY"
 
   dynamic "interface" {
+    # Keep exactly two AWS peer interfaces: id 0 and id 1.
     for_each = { for index, ip in var.aws_peer_ips : tostring(index) => ip }
     content {
       id         = tonumber(interface.key)
@@ -69,6 +72,9 @@ resource "google_compute_router_peer" "aws_peers" {
 }
 
 locals {
+  # Two-tunnel HA plan:
+  # - tunnel 0: GCP HA VPN interface 0 -> AWS external gateway interface 0
+  # - tunnel 1: GCP HA VPN interface 1 -> AWS external gateway interface 1
   default_bgp_sessions = {
     "0" = {
       vpn_gateway_interface           = 0
@@ -78,24 +84,10 @@ locals {
       advertised_route_priority       = 100
     }
     "1" = {
-      vpn_gateway_interface           = 0
+      vpn_gateway_interface           = 1
       peer_external_gateway_interface = 1
       router_ip_cidr                  = "169.254.22.1/30"
       peer_ip_address                 = "169.254.22.2"
-      advertised_route_priority       = 110
-    }
-    "2" = {
-      vpn_gateway_interface           = 1
-      peer_external_gateway_interface = 2
-      router_ip_cidr                  = "169.254.23.1/30"
-      peer_ip_address                 = "169.254.23.2"
-      advertised_route_priority       = 100
-    }
-    "3" = {
-      vpn_gateway_interface           = 1
-      peer_external_gateway_interface = 3
-      router_ip_cidr                  = "169.254.24.1/30"
-      peer_ip_address                 = "169.254.24.2"
       advertised_route_priority       = 110
     }
   }

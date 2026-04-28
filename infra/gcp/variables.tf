@@ -19,12 +19,12 @@ variable "aws_vpc_cidrs" {
 }
 
 variable "vpn_shared_secrets" {
-  description = "Pre-shared keys for the HA VPN tunnels."
+  description = "Pre-shared keys for the two HA VPN tunnels."
   type        = map(string)
   sensitive   = true
 }
 
 variable "bgp_sessions" {
-  description = "Per-tunnel BGP session settings."
+  description = "Per-tunnel BGP session settings for the two HA VPN tunnels."
   type        = any
 }
