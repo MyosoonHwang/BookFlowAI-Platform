@@ -84,24 +84,8 @@ Resources:
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpn-gcp' }]
 
   # VPN Connection 을 TGW 에 attach 하면 자동으로 TGW VPN Attachment 생성됨
-  # TGW RT propagation 추가 (BGP 로 학습된 cross-cloud CIDR 전파)
-  AzureVpnRtPropagation:
-    Type: AWS::EC2::TransitGatewayRouteTablePropagation
-    Condition: WithAzure
-    DependsOn: AzureVpnConnection
-    Properties:
-      TransitGatewayAttachmentId: !GetAtt AzureVpnConnection.VpnConnectionId
-      TransitGatewayRouteTableId: !ImportValue
-        Fn::Sub: ${ProjectName}-tgw-rt-id
-
-  GcpVpnRtPropagation:
-    Type: AWS::EC2::TransitGatewayRouteTablePropagation
-    Condition: WithGcp
-    DependsOn: GcpVpnConnection
-    Properties:
-      TransitGatewayAttachmentId: !GetAtt GcpVpnConnection.VpnConnectionId
-      TransitGatewayRouteTableId: !ImportValue
-        Fn::Sub: ${ProjectName}-tgw-rt-id
+  # 단 attachment id 는 VpnConnectionId 와 다름 - CFN 에서 직접 GetAtt 못함
+  # → RtPropagation/Association 은 cross_cloud.py 가 deploy 후 boto3 로 처리
 
 Outputs:
   AzureVpnConnectionId:

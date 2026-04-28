@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from scripts.aws.lib import Config, log
-from scripts.aws.tasks import base, foundation, full_stack, scenario_ha, wipe_all
+from scripts.aws.tasks import base, cross_cloud, foundation, full_stack, scenario_ha, wipe_all
 
 TASK_MODULES = {
     "data":           "data",
@@ -102,6 +102,11 @@ def main():
 
     sub.add_parser("base-up", help="base-up (Tier 10 + Tier 30 base)").set_defaults(func=cmd_base_up)
     sub.add_parser("base-down", help="base-down (Tier 10-99 전체)").set_defaults(func=cmd_base_down)
+
+    sub.add_parser("cross-cloud-up", help="cross-cloud minimum (4 VPC + CGW + TGW + VPN)").set_defaults(
+        func=lambda a: cross_cloud.deploy())
+    sub.add_parser("cross-cloud-down", help="cross-cloud minimum destroy").set_defaults(
+        func=lambda a: cross_cloud.destroy())
 
     sp = sub.add_parser("task", help="task <name> [--down] | --all")
     sp.add_argument("name", nargs="?", help=f"task name: {', '.join(TASK_MODULES.keys())}")
