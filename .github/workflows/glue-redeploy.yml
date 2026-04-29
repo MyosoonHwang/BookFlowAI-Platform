@@ -58,8 +58,8 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters "{\"commands\":[
               \"set -e\",
-              \"cd /opt/ansible && git pull origin main\",
-              \"ansible-playbook cicd/ansible/playbooks/glue-deploy.yml -e github_sha=${{ github.sha }}\"
+              \"cd /opt/bookflow && git pull origin main\",
+              \"ansible-playbook cicd/ansible/playbooks/glue-deploy.yml --roles-path cicd/ansible/roles -e github_sha=${{ github.sha }}\"
             ]}" \
             --timeout-seconds 600 \
             --region "${{ env.AWS_REGION }}" \
