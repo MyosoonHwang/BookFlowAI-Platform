@@ -38,4 +38,4 @@
           - "sha       : {{ github_sha | default('not-set') }}"
 
   roles:
-    - glue-scripts
+    - role: /opt/bookflow/cicd/ansible/roles/glue-scripts
