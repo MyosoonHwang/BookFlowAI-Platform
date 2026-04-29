@@ -20,10 +20,10 @@
 
 | # | 이름 | 종류 | Source repo / 브랜치 | 라이프사이클 | 담당 |
 |---|------|------|---------------------|-----|------|
-| 1 | **eks-pipeline** | CodePipeline | `BookFlowAI-Apps` / `eks-pods` → main | ⏰ 매일 | 영헌 |
-| 2 | **ecs-pipeline** | CodePipeline | `BookFlowAI-Apps` / `ecs-sims` → main | ⏰ 매일 | 영헌 |
-| 3 | **lambda-sam-pipeline** | CodePipeline | `BookFlowAI-Platform` / `aws` → main | ⏰ 매일 | 영헌 |
-| 4 | **publisher-codedeploy** | CodePipeline | `BookFlowAI-Apps` / `publisher` → main | ⏰ 매일 | 영헌 |
+| 1 | **eks-pipeline** | CodePipeline | `BookFlowAI-Apps` / `eks-pods` → main | 🟡 필요 시 | 영헌 |
+| 2 | **ecs-pipeline** | CodePipeline | `BookFlowAI-Apps` / `ecs-sims` → main | 🟡 필요 시 | 영헌 |
+| 3 | **lambda-sam-pipeline** | CodePipeline | `BookFlowAI-Platform` / `aws` → main | 🟡 필요 시 | 영헌 |
+| 4 | **publisher-codedeploy** | CodePipeline | `BookFlowAI-Apps` / `publisher` → main | 🟡 필요 시 | 영헌 |
 | 5 | **glue-redeploy** | GitHub Actions | `BookFlowAI-Apps` / `glue-jobs` → main | 🔒 영구 | 민지 |
 | 6 | **rds-redeploy** | GitHub Actions | `BookFlowAI-Platform` / `aws` → main | 🔒 영구 | 영헌 |
 
@@ -37,7 +37,7 @@ infra/aws/00-foundation/
   ├── codestar-connection.yaml   영구 · GitHub OAuth (이미 deploy)
   └── iam.yaml                   영구 · OIDC + GHA 2 role (이미 deploy)
 
-cicd/codepipeline/               # ⏰ 매일 destroy/create
+cicd/codepipeline/               # 🟡 필요 시 (코드 push 직전 deploy · 끝나면 destroy)
   ├── eks-pipeline.yaml          0 lines (TODO)
   ├── ecs-pipeline.yaml          0 lines (TODO)
   ├── lambda-sam-pipeline.yaml   0 lines (TODO)
@@ -144,7 +144,9 @@ aws ecs describe-services --cluster bookflow-ecs --services bookflow-online-sim 
 
 ---
 
-## 3. lambda-sam-pipeline (영헌)
+## 3. lambda-sam-pipeline (영헌) · **Optional**
+
+> **권장**: 평소 iteration 은 [로컬 `sam deploy` (Appendix A)](#appendix-a-lambda-로컬-sam-deploy-iteration-디폴트) 으로. 이 CodePipeline 은 시연/표준 CICD 데모용.
 
 ### 흐름
 ```
@@ -362,13 +364,63 @@ psql -h $RDS_ENDPOINT -U bookflow -d bookflow -c "SELECT COUNT(*) FROM branches"
 
 ## 비용 (참고 · 비용산정 V1)
 
-| 자원 | 라이프 | 일 비용 |
-|------|------|--------|
-| CodePipeline × 4 | ⏰ 매일 (첫 30일 free tier · V1 학프엔 효과적 $0) | $0 |
-| CodeBuild EC2 on-demand | ⏰ 매일 (\~분 단위) | $0.05~0.5/일 |
-| CodeBuild Lambda | ⏰ 매일 | $0.02/일 |
-| CodeBuild Docker 서버 × 2 | ⏰ 매일 | $0.12/일 |
-| CodeDeploy | ⏰ 매일 (온프레미스 인스턴스 4) | $0.8/일 |
+| 자원 | 라이프 | 비용 |
+|------|------|------|
+| CodePipeline × 4 | 🟡 필요 시 deploy (idle 시 $1/월 · 첫 30일 free) | 사실상 $0 |
+| CodeBuild | 트리거 시만 compute 과금 (분당) | 빌드당 \~$0.005 |
+| CodeDeploy | 트리거 시만 | 배포당 \~$0 |
 | GitHub Actions | 🔒 영구 (public 무료 · private 2000분/월 free) | $0 |
 
+**원칙**: V1 비용산정 의 "매일 destroy/create" 는 CodePipeline 비용을 보수적으로 잡은 거. 실제로는 idle 비용 없으므로 **CICD stack 은 코드 push 검증 필요할 때만 deploy** 하고 검증 끝나면 destroy. 매일 자동 destroy/create 는 학프 환경엔 과함.
+
 **합계 (CICD 카테고리)**: $10.52/월 (전체 비용의 5.2%)
+
+---
+
+## Appendix A · Lambda 로컬 sam deploy (iteration 디폴트)
+
+CodePipeline (#3) 은 표준 데모용. 평소 iteration 은 로컬 `sam deploy` 가 빠름 (~30초).
+
+### 사전 요구
+```bash
+pip install aws-sam-cli
+aws configure   # 계정 + region
+```
+
+### iteration cycle
+```bash
+cd "C:/Users/User/Desktop/kyobo project/BookFlowAI-Platform"
+
+# 1. Lambda 코드 수정 (예: infra/aws/99-serverless/lambdas/pos-ingestor/handler.py)
+
+# 2. SAM build + deploy
+sam build --template infra/aws/99-serverless/sam-template.yaml
+sam deploy \
+  --stack-name bookflow-99-lambdas \
+  --s3-bucket bookflow-cp-artifacts-${ACCOUNT_ID} \
+  --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+  --no-confirm-changeset \
+  --no-fail-on-empty-changeset
+
+# 3. 즉시 검증
+aws lambda invoke --function-name bookflow-pos-ingestor --payload '{}' /tmp/out.json
+cat /tmp/out.json
+aws logs tail /aws/lambda/bookflow-pos-ingestor --follow
+```
+
+### 첫 실행만 (`--guided`)
+```bash
+sam deploy --guided
+# stack name, region, capabilities 한 번 입력 → ./samconfig.toml 자동 저장
+```
+
+### 비교
+
+| 방식 | iteration 시간 | 적합 |
+|------|--------------|------|
+| 로컬 `sam deploy` | \~30초 | 일상 개발 |
+| GHA workflow | \~2-3분 (push → trigger → build → deploy) | 협업 자동화 |
+| CodePipeline (#3) | \~3-5분 (Source + Build + Deploy stage) | 시연용 |
+
+→ **개발 중 = 로컬, 시연 직전 = CodePipeline 한 번 띄워서 보여줌.**
+
