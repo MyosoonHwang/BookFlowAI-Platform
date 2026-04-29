@@ -3,19 +3,19 @@
 # Task 1: glue-jobs/ → S3 sync (S3 Gateway Endpoint 경유 · 무료)
 # Task 2: 6개 Glue Job StartJobRun (Glue Interface VPC Endpoint 경유)
 
-# ── Task 1: S3 sync ────────────────────────────────────────
+# ── Task 1: S3 sync (AWS CLI · amazon.aws.s3_sync 는 v11+ 에서 제거됨) ──
 - name: Glue 스크립트 → S3 sync
-  amazon.aws.s3_sync:
-    bucket: "{{ s3_bucket }}"
-    file_root: "{{ glue_scripts_root }}"
-    region: "{{ region }}"
-    mode: push
-    delete: false
+  command: >
+    aws s3 sync {{ glue_scripts_root }} s3://{{ s3_bucket }}/
+    --region {{ region }}
+    --exact-timestamps
+    --exclude '*/README.md'
   register: sync_result
+  changed_when: "sync_result.stdout != ''"
 
 - name: S3 sync 결과
   debug:
-    msg: "변경 파일 {{ sync_result.changed_files | default([]) | length }}개 → s3://{{ s3_bucket }}"
+    msg: "{{ sync_result.stdout_lines | default([]) }}"
 
 # ── Task 2: Glue Job StartJobRun ───────────────────────────
 - name: Glue Job 실행 (StartJobRun)
