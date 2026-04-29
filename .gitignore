@@ -11,6 +11,9 @@ _tmp_*
 *.tmp
 tmp/
 
+# ─── Local-only 임시 검증 task (일회성 · git push 안 함) ───
+scripts/aws/tasks/cicd_verify.py
+
 # ─── 개인별 설정 override ───
 scripts/aws/config/aws.local.ps1
 scripts/azure/config/azure.local.ps1

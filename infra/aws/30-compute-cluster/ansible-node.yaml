@@ -15,6 +15,11 @@ Parameters:
   GitRepoUrl:
     Type: String
     Default: https://github.com/MyosoonHwang/BookFlowAI-Platform.git
+    Description: Platform repo (Ansible playbook · /opt/bookflow)
+  GitAppsRepoUrl:
+    Type: String
+    Default: https://github.com/MyosoonHwang/BookFlowAI-Apps.git
+    Description: Apps repo (glue-jobs scripts · /opt/bookflow-apps)
 
 Resources:
   # ─── Ansible Node IAM Role (Ansible ops 권한 · K8s 와 무관) ───
@@ -188,6 +193,11 @@ Resources:
           mkdir -p /opt/bookflow
           git clone ${GitRepoUrl} /opt/bookflow || true
           chown -R ubuntu:ubuntu /opt/bookflow
+
+          # Apps repo clone (glue-jobs · ecs-sims · eks-pods · publisher source)
+          mkdir -p /opt/bookflow-apps
+          git clone ${GitAppsRepoUrl} /opt/bookflow-apps || true
+          chown -R ubuntu:ubuntu /opt/bookflow-apps
 
           # ─── 10. 로그 파일 권한 ───
           chmod 664 /var/log/ansible
