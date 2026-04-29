@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 00 · ECR Repositories (12개 · Pod 8 + ECS 3 + Publisher 1)
+Description: BOOKFLOW · Tier 00 · ECR Repositories (11개 · EKS Pod 7 + EKS CronJob 1 + ECS Service 3)
 
 Parameters:
   ProjectName:
@@ -18,10 +18,10 @@ Resources:
         LifecyclePolicyText: |
           { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
-  EcrDashboardBff:
+  EcrDashboardSvc:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Sub ${ProjectName}/dashboard-bff
+      RepositoryName: !Sub ${ProjectName}/dashboard-svc
       ImageScanningConfiguration: { ScanOnPush: true }
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
@@ -78,10 +78,10 @@ Resources:
         LifecyclePolicyText: |
           { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
-  EcrPublisherWatcher:
+  EcrPublishWatcher:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Sub ${ProjectName}/publisher-watcher
+      RepositoryName: !Sub ${ProjectName}/publish-watcher
       ImageScanningConfiguration: { ScanOnPush: true }
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
@@ -119,16 +119,8 @@ Resources:
         LifecyclePolicyText: |
           { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
-  # ─── Publisher EC2 앱 이미지 (1개) ───
-  EcrPublisher:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: !Sub ${ProjectName}/publisher
-      ImageScanningConfiguration: { ScanOnPush: true }
-      EncryptionConfiguration: { EncryptionType: AES256 }
-      LifecyclePolicy:
-        LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+  # Note: Publisher EC2 (Tier 40 publisher-asg) 는 Ubuntu 베어메탈에 nginx/앱 직접 설치 (UserData) ·
+  #       CodeDeploy Blue/Green 으로 S3 zip artifact 배포 → ECR 불필요 (V6.2 Slide 22)
 
 Outputs:
   EcrRegistryUri:
