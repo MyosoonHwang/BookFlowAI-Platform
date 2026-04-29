@@ -67,36 +67,14 @@ Resources:
       LoadBalancerInfo:
         TargetGroupPairInfoList:
           - TargetGroups:
-              - Name:
-                  Fn::Select:
-                    - 0
-                    - Fn::Split:
-                        - /
-                        - Fn::Select:
-                            - 1
-                            - Fn::Split:
-                                - targetgroup/
-                                - Fn::ImportValue:
-                                    Fn::Sub: ${ProjectName}-publisher-blue-tg-arn
-              - Name:
-                  Fn::Select:
-                    - 0
-                    - Fn::Split:
-                        - /
-                        - Fn::Select:
-                            - 1
-                            - Fn::Split:
-                                - targetgroup/
-                                - Fn::ImportValue:
-                                    Fn::Sub: ${ProjectName}-publisher-green-tg-arn
+              - Name: !Sub ${ProjectName}-publisher-blue-tg
+              - Name: !Sub ${ProjectName}-publisher-green-tg
             ProdTrafficRoute:
               ListenerArns:
-                - Fn::ImportValue:
-                    Fn::Sub: ${ProjectName}-alb-listener-prod-arn
+                - Fn::ImportValue: !Sub ${ProjectName}-alb-listener-prod-arn
             TestTrafficRoute:
               ListenerArns:
-                - Fn::ImportValue:
-                    Fn::Sub: ${ProjectName}-alb-listener-test-arn
+                - Fn::ImportValue: !Sub ${ProjectName}-alb-listener-test-arn
       AutoRollbackConfiguration:
         Enabled: true
         Events:
