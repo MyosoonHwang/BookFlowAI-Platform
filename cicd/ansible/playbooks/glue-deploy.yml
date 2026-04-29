@@ -1,8 +1,9 @@
 ---
 # cicd/ansible/playbooks/glue-deploy.yml
 # Glue 스크립트 S3 sync + Job StartJobRun
-# 실행 위치: Ansible CN (/opt/ansible) · localhost 연결
-# 호출: GHA SSM Send-Command → ansible-playbook glue-deploy.yml -e github_sha=<sha>
+# 실행 위치: Ansible CN (/opt/bookflow) · localhost 연결
+# Glue 스크립트 위치: /opt/bookflow-apps/glue-jobs (Apps repo clone · ansible-node UserData)
+# 호출: BookFlowAI-Apps GHA SSM Send-Command → ansible-playbook glue-deploy.yml -e github_sha=<sha>
 
 - name: Glue scripts redeploy
   hosts: localhost

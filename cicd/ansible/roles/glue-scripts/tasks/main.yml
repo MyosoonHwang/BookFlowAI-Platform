@@ -9,6 +9,7 @@
     aws s3 sync {{ glue_scripts_root }}/
     s3://{{ s3_bucket }}/
     --region {{ region }}
+    --no-progress
   register: sync_result
   changed_when: sync_result.stdout != ""
 
