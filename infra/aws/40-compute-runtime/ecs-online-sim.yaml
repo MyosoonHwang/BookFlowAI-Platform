@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 40 · ECS Online Sim (Fargate · Sales Data VPC Private · Kinesis put-record)
+Description: BOOKFLOW - Tier 40 - ECS Online Sim (Fargate - Sales Data VPC Private - Kinesis put-record)
 
 Parameters:
   ProjectName:
@@ -11,7 +11,7 @@ Parameters:
   ImageTag:
     Type: String
     Default: latest
-    Description: ECR image tag · CICD CodeBuild 가 :latest tag push · update-service --force-new-deployment 가 재 pull
+    Description: ECR image tag - CICD CodeBuild 가 :latest tag push - update-service --force-new-deployment 가 재 pull
   TaskCpu:
     Type: String
     Default: '256'
@@ -23,7 +23,7 @@ Parameters:
     Default: 1
 
 Resources:
-  # ─── Task Execution Role (ECR pull · CW logs · ECS 표준) ───
+  # ─── Task Execution Role (ECR pull - CW logs - ECS 표준) ───
   TaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -37,7 +37,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
-  # ─── Task Role (Kinesis put · Secrets Manager · workload IAM) ───
+  # ─── Task Role (Kinesis put - Secrets Manager - workload IAM) ───
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
@@ -68,7 +68,7 @@ Resources:
                 Action: secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/*
 
-  # ─── SG (egress only · Sales Data VPC) ───
+  # ─── SG (egress only - Sales Data VPC) ───
   TaskSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -79,7 +79,7 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-          Description: egress all (Kinesis · ECR · CW)
+          Description: egress all (Kinesis - ECR - CW)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ecs-${ServiceName}-sg' }]
 
   # ─── Task Definition (Fargate 0.25 vCPU / 0.5 GB) ───
@@ -114,7 +114,7 @@ Resources:
             - Name: AWS_REGION
               Value: !Ref AWS::Region
 
-  # ─── ECS Service (DesiredCount default 1 · CI/CD 가 rolling 으로 image update) ───
+  # ─── ECS Service (DesiredCount default 1 - CI/CD 가 rolling 으로 image update) ───
   Service:
     Type: AWS::ECS::Service
     Properties:

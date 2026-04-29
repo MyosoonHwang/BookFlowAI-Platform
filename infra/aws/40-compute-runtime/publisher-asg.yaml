@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 40 · Publisher ASG (Ubuntu 24 · t3.small × 2 · Egress VPC Public · CodeDeploy Blue/Green target)
+Description: BOOKFLOW - Tier 40 - Publisher ASG (Ubuntu 24 - t3.small × 2 - Egress VPC Public - CodeDeploy Blue/Green target)
 
 Parameters:
   ProjectName:
@@ -8,11 +8,11 @@ Parameters:
   InstanceType:
     Type: String
     Default: t3.micro
-    Description: 비용산정 V1 기준 t3.micro · 시연 시 트래픽 증가 시 t3.small 로 변경 가능
+    Description: 비용산정 V1 기준 t3.micro - 시연 시 트래픽 증가 시 t3.small 로 변경 가능
   UbuntuAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
-    Description: Ubuntu 24.04 LTS · region 별 최신 AMI · SSM public parameter
+    Description: Ubuntu 24.04 LTS - region 별 최신 AMI - SSM public parameter
   AppPort:
     Type: Number
     Default: 80
@@ -28,7 +28,7 @@ Parameters:
   TargetGroupArn:
     Type: String
     Default: ''
-    Description: Tier 50 External ALB Target Group ARN (Blue) · 비어있으면 미연결 (CFN 생성 시) · 추후 update-stack 으로 주입
+    Description: Tier 50 External ALB Target Group ARN (Blue) - 비어있으면 미연결 (CFN 생성 시) - 추후 update-stack 으로 주입
 
 Conditions:
   HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, '']]
@@ -81,7 +81,7 @@ Resources:
       InstanceProfileName: !Sub ${ProjectName}-publisher-profile
       Roles: [!Ref PublisherRole]
 
-  # ─── SG (ingress 80/443 from Egress VPC · ALB target) ───
+  # ─── SG (ingress 80/443 from Egress VPC - ALB target) ───
   PublisherSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -98,7 +98,7 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-          Description: egress all (apt · CodeDeploy agent · S3 · CW · Secrets)
+          Description: egress all (apt - CodeDeploy agent - S3 - CW - Secrets)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-publisher-sg' }]
 
   # ─── Launch Template (Ubuntu 24 + codedeploy-agent + app runtime placeholder) ───
@@ -152,7 +152,7 @@ Resources:
             systemctl enable codedeploy-agent
             systemctl start codedeploy-agent
 
-            # ─── 3. CloudWatch agent (선택 · ASG 메트릭) ───
+            # ─── 3. CloudWatch agent (선택 - ASG 메트릭) ───
             wget https://amazoncloudwatch-agent-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O /tmp/cw.deb
             dpkg -i -E /tmp/cw.deb || true
 
