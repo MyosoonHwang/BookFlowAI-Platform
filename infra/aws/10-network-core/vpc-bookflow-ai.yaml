@@ -27,6 +27,7 @@ Resources:
       VpcId: !Ref Vpc
       CidrBlock: 10.0.1.0/24
       AvailabilityZone: !Ref AzA
+      MapPublicIpOnLaunch: true   # 학프 build 단계 · EKS Node 가 IGW outbound (추후 NAT 로 교체)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-bookflow-ai-private-az1' }]
 
   PrivateAz2:
@@ -35,6 +36,7 @@ Resources:
       VpcId: !Ref Vpc
       CidrBlock: 10.0.2.0/24
       AvailabilityZone: !Ref AzC
+      MapPublicIpOnLaunch: true
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-bookflow-ai-private-az2' }]
 
   RouteTable:
@@ -42,6 +44,26 @@ Resources:
     Properties:
       VpcId: !Ref Vpc
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-bookflow-ai-private-rt' }]
+
+  # ─── IGW (학프 build 단계 · EKS Nodegroup outbound 용 · 추후 NAT 로 교체 가능) ───
+  Igw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-bookflow-ai-igw' }]
+
+  IgwAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref Igw
+
+  RouteToIgw:
+    Type: AWS::EC2::Route
+    DependsOn: IgwAttach
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Igw
 
   RtAssocAz1:
     Type: AWS::EC2::SubnetRouteTableAssociation
