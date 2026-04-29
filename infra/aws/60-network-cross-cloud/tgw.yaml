@@ -26,7 +26,7 @@ Resources:
       DnsSupport: enable
       VpnEcmpSupport: enable
       MulticastSupport: disable
-      Description: BOOKFLOW Transit Gateway Hub (cross-cloud · Phase 3-4)
+      Description: BOOKFLOW Transit Gateway Hub - cross-cloud (Phase 3-4)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw' }]
 
   # ─── TGW Route Table (단일 RT · 모든 attachment 가 same RT 사용) ───

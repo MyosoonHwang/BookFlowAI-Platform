@@ -3,6 +3,16 @@ from pathlib import Path
 
 import boto3
 
+# 자동 load scripts/aws/config/.env.local (gitignored · 팀 내부 공유)
+_env_path = Path(__file__).resolve().parent.parent / "config" / ".env.local"
+if _env_path.exists():
+    for _line in _env_path.read_text(encoding="utf-8").splitlines():
+        _line = _line.strip()
+        if not _line or _line.startswith("#") or "=" not in _line:
+            continue
+        _k, _v = _line.split("=", 1)
+        os.environ.setdefault(_k.strip(), _v.strip())
+
 
 class Config:
     REGION = os.environ.get("AWS_REGION", "ap-northeast-1")
