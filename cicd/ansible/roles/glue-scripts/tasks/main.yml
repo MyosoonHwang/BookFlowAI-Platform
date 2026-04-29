@@ -1,6 +1,37 @@
-# Glue scripts role · aws s3 sync · SHA256 검증 · start-job-run --dry-run
-# 라이프사이클: —
-# BOOKFLOW V6.2
+---
+# cicd/ansible/roles/glue-scripts/tasks/main.yml
+# Task 1: glue-jobs/ → S3 sync (S3 Gateway Endpoint 경유 · 무료)
+# Task 2: 6개 Glue Job StartJobRun (Glue Interface VPC Endpoint 경유)
 
-# TODO: 팀원이 실제 스펙 정의
-# 참고: docs/ARCHITECTURE.md · docs/DEPLOYMENT.md
+# ── Task 1: S3 sync ────────────────────────────────────────
+- name: Glue 스크립트 → S3 sync
+  amazon.aws.s3_sync:
+    bucket: "{{ s3_bucket }}"
+    file_root: "{{ glue_scripts_root }}"
+    region: "{{ region }}"
+    mode: push
+    delete: false
+  register: sync_result
+
+- name: S3 sync 결과
+  debug:
+    msg: "변경 파일 {{ sync_result.changed_files | default([]) | length }}개 → s3://{{ s3_bucket }}"
+
+# ── Task 2: Glue Job StartJobRun ───────────────────────────
+- name: Glue Job 실행 (StartJobRun)
+  command: >
+    aws glue start-job-run
+    --job-name bookflow-{{ item }}
+    --region {{ region }}
+    --arguments '{"--github_sha":"{{ github_sha | default("unknown") }}","--s3_bucket":"{{ s3_bucket }}"}'
+    --output json
+  loop: "{{ glue_jobs }}"
+  register: job_run_results
+  changed_when: true
+
+- name: Job Run ID 출력
+  debug:
+    msg: "bookflow-{{ item.item }} → JobRunId: {{ (item.stdout | from_json).JobRunId }}"
+  loop: "{{ job_run_results.results }}"
+  loop_control:
+    label: "{{ item.item }}"
