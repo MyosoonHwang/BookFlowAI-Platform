@@ -291,7 +291,7 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
       WorkerType: G.1X
@@ -325,7 +325,7 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
         '--bigquery_secret_arn': !ImportValue
