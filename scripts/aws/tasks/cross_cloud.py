@@ -39,6 +39,10 @@ def deploy() -> None:
     Stack(tier="60", name="tgw",
           template="60-network-cross-cloud/tgw.yaml").deploy()
 
+    # Tier 60 · VPC RT routes → TGW (cross-VPC + cross-cloud)
+    Stack(tier="60", name="tgw-vpc-routes",
+          template="60-network-cross-cloud/tgw-vpc-routes.yaml").deploy()
+
     # Tier 60 · Site-to-Site VPN
     vpn_params = {}
     if azure_ip != "0.0.0.0":
@@ -112,6 +116,7 @@ def _attach_vpn_to_tgw_rt() -> None:
 def destroy() -> None:
     log.step("=== cross-cloud destroy ===")
     Stack(tier="60", name="vpn-site-to-site", template="").destroy()
+    Stack(tier="60", name="tgw-vpc-routes", template="").destroy()
     Stack(tier="60", name="tgw", template="").destroy()
     Stack(tier="10", name="customer-gateway", template="").destroy()
     for name, _tmpl in reversed(VPCS):
