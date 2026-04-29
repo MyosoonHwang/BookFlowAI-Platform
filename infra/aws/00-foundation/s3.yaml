@@ -86,8 +86,20 @@ Resources:
         ObjectLockEnabled: Enabled
         Rule:
           DefaultRetention:
-            Mode: COMPLIANCE
+            # GOVERNANCE: 관리자(s3:BypassGovernanceRetention)는 만료 전 삭제 가능
+            # COMPLIANCE 는 root 도 90일간 삭제 불가 → 학프 환경엔 과함
+            Mode: GOVERNANCE
             Days: 90
+      LifecycleConfiguration:
+        Rules:
+          # Object Lock 만료(91일) 직후 자동 삭제 — 학프 종료 후 stray 자원 방지
+          - Id: ExpireAuditAfterRetention
+            Status: Enabled
+            ExpirationInDays: 91
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 91
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
 
   # CloudTrail이 audit bucket에 쓸 수 있게 Bucket Policy
   AuditBucketPolicy:
