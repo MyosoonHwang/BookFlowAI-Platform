@@ -10,7 +10,7 @@
 
   vars:
     region: ap-northeast-1
-    glue_scripts_root: /opt/ansible/glue-jobs
+    glue_scripts_root: /opt/bookflow/glue-jobs
     glue_jobs:
       - raw-pos-mart
       - raw-sns-mart
@@ -37,4 +37,4 @@
           - "sha       : {{ github_sha | default('not-set') }}"
 
   roles:
-    - glue-scripts
+    - role: /opt/bookflow/cicd/ansible/roles/glue-scripts
