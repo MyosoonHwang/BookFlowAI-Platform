@@ -10,7 +10,8 @@ Parameters:
     Default: offline-sim
   ImageTag:
     Type: String
-    Default: placeholder
+    Default: latest
+    Description: ECR image tag · CICD :latest pull
   TaskCpu:
     Type: String
     Default: '256'

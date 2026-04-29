@@ -10,8 +10,8 @@ Parameters:
     Default: online-sim
   ImageTag:
     Type: String
-    Default: placeholder
-    Description: ECR image tag · CI/CD 가 update-stack 으로 새 tag 주입
+    Default: latest
+    Description: ECR image tag · CICD CodeBuild 가 :latest tag push · update-service --force-new-deployment 가 재 pull
   TaskCpu:
     Type: String
     Default: '256'

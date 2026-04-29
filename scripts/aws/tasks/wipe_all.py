@@ -3,7 +3,7 @@
 ⚠️ 강력 confirmation 필요 · S3 객체 / ECR 이미지 사전 삭제 필요.
 """
 from ..lib import log
-from . import base, cicd_eks, foundation
+from . import base, cicd_ecs, cicd_eks, foundation
 
 
 def deploy() -> None:
@@ -18,11 +18,12 @@ def destroy() -> None:
         log.info("취소")
         return
 
-    log.info("1. cicd-eks-down (CICD pipeline · ImportValue 의존성 제거)")
-    try:
-        cicd_eks.destroy()
-    except Exception as e:
-        log.warn(f"  cicd_eks.destroy 실패 무시 후 진행: {e}")
+    log.info("1. cicd-eks-down · cicd-ecs-down (CICD pipeline · ImportValue 의존성 제거)")
+    for mod in (cicd_eks, cicd_ecs):
+        try:
+            mod.destroy()
+        except Exception as e:
+            log.warn(f"  {mod.__name__} destroy 실패 무시 후 진행: {e}")
 
     log.info("2. base-down (Tier 10-99)")
     base.destroy()
