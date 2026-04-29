@@ -7,11 +7,12 @@ Parameters:
     Default: bookflow
   GitHubFullRepositoryId:
     Type: String
-    Default: BookFlowAI/BookFlowAI-Apps
+    Default: MyosoonHwang/BookFlowAI-Apps
     Description: GitHub owner/repository for the application source.
   GitHubBranchName:
     Type: String
-    Default: publisher
+    Default: main
+    Description: Trigger branch (다른 pipeline 들과 일관성 · PR merge 시점 트리거)
   PublisherPath:
     Type: String
     Default: publisher/**
