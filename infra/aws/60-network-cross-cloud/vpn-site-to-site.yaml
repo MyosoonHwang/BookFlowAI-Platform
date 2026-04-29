@@ -57,9 +57,9 @@ Resources:
       VpnTunnelOptionsSpecifications: !If
         - WithAzurePsk
         - - PreSharedKey: !Ref AzurePresharedKey
-            TunnelInsideCidr: 169.254.100.0/30
+            TunnelInsideCidr: 169.254.21.4/30
           - PreSharedKey: !Ref AzurePresharedKey
-            TunnelInsideCidr: 169.254.100.4/30
+            TunnelInsideCidr: 169.254.21.8/30
         - !Ref AWS::NoValue
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpn-azure' }]
 
