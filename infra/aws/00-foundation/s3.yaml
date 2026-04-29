@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 00 · S3 Buckets (6개 · raw·mart·audit·tf-state·cp-artifacts·glue-scripts)
+Description: BOOKFLOW · Tier 00 · S3 Buckets (raw·mart·tf-state·cp-artifacts·glue-scripts · audit optional)
 
 Parameters:
   ProjectName:
@@ -9,9 +9,15 @@ Parameters:
     Type: String
     Description: Bucket 이름 유니크성 위해 account suffix (예. last 4 digits)
     Default: ''
+  EnableAuditBucket:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Audit bucket (CloudTrail · ObjectLock GOVERNANCE 90일) · cloudtrail/cloudwatch 사용 시만 true
 
 Conditions:
   HasSuffix: !Not [!Equals [!Ref AccountSuffix, '']]
+  WithAuditBucket: !Equals [!Ref EnableAuditBucket, 'true']
 
 Resources:
   # ─── Raw 데이터 (POS · SNS · 알라딘 · 공공데이터 · historical) ───
@@ -61,9 +67,10 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  # ─── Audit (CloudTrail 로그 · 감사 의무) ───
+  # ─── Audit (CloudTrail 로그 · 감사 의무 · EnableAuditBucket=true 시만) ───
   AuditBucket:
     Type: AWS::S3::Bucket
+    Condition: WithAuditBucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
@@ -104,6 +111,7 @@ Resources:
   # CloudTrail이 audit bucket에 쓸 수 있게 Bucket Policy
   AuditBucketPolicy:
     Type: AWS::S3::BucketPolicy
+    Condition: WithAuditBucket
     Properties:
       Bucket: !Ref AuditBucket
       PolicyDocument:
@@ -210,10 +218,12 @@ Outputs:
       Name: !Sub ${ProjectName}-s3-mart-arn
 
   AuditBucketName:
+    Condition: WithAuditBucket
     Value: !Ref AuditBucket
     Export:
       Name: !Sub ${ProjectName}-s3-audit-name
   AuditBucketArn:
+    Condition: WithAuditBucket
     Value: !GetAtt AuditBucket.Arn
     Export:
       Name: !Sub ${ProjectName}-s3-audit-arn
