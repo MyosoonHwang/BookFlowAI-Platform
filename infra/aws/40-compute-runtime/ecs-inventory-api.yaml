@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 40 · ECS Inventory API (Fargate · Egress VPC Public · External ALB target · RDS read)
+Description: BOOKFLOW - Tier 40 - ECS Inventory API (Fargate - Egress VPC Public - External ALB target - RDS read)
 
 Parameters:
   ProjectName:
@@ -11,7 +11,7 @@ Parameters:
   ImageTag:
     Type: String
     Default: latest
-    Description: ECR image tag · CICD :latest pull
+    Description: ECR image tag - CICD :latest pull
   ContainerPort:
     Type: Number
     Default: 8080
@@ -27,7 +27,7 @@ Parameters:
   TargetGroupArn:
     Type: String
     Default: ''
-    Description: Tier 50 External ALB Target Group ARN · 비어있으면 LoadBalancer 미연결 (CFN 생성 시) · 추후 update-stack 으로 주입
+    Description: Tier 50 External ALB Target Group ARN - 비어있으면 LoadBalancer 미연결 (CFN 생성 시) - 추후 update-stack 으로 주입
 
 Conditions:
   HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, '']]
@@ -65,7 +65,7 @@ Resources:
                 Action: secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/*
 
-  # ─── SG (egress all · ingress 8080 from Egress VPC CIDR · ALB 같은 VPC) ───
+  # ─── SG (egress all - ingress 8080 from Egress VPC CIDR - ALB 같은 VPC) ───
   TaskSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -82,7 +82,7 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-          Description: egress all (RDS via peering · ECR · CW · Secrets)
+          Description: egress all (RDS via peering - ECR - CW - Secrets)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ecs-${ServiceName}-sg' }]
 
   TaskDefinition:
@@ -127,7 +127,7 @@ Resources:
               Value: !ImportValue
                 Fn::Sub: ${ProjectName}-secrets-rds-master-arn
 
-  # ─── ECS Service · LoadBalancer 는 TargetGroup 있을 때만 연결 ───
+  # ─── ECS Service - LoadBalancer 는 TargetGroup 있을 때만 연결 ───
   Service:
     Type: AWS::ECS::Service
     Properties:

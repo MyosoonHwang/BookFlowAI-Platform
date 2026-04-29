@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 40 · ECS Offline Sim (Fargate · Sales Data VPC Private · Kinesis put-record)
+Description: BOOKFLOW - Tier 40 - ECS Offline Sim (Fargate - Sales Data VPC Private - Kinesis put-record)
 
 Parameters:
   ProjectName:
@@ -11,7 +11,7 @@ Parameters:
   ImageTag:
     Type: String
     Default: latest
-    Description: ECR image tag · CICD :latest pull
+    Description: ECR image tag - CICD :latest pull
   TaskCpu:
     Type: String
     Default: '256'
@@ -76,7 +76,7 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-          Description: egress all (Kinesis · ECR · CW)
+          Description: egress all (Kinesis - ECR - CW)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ecs-${ServiceName}-sg' }]
 
   TaskDefinition:
