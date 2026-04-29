@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 60 · VPC Route Table entries pointing to TGW (cross-VPC + cross-cloud)
+
+# 의존성:
+#   1. Tier 10 vpc-* (RouteTable export 들) 모두 생성됨
+#   2. Tier 60 tgw (tgw-id export) 생성됨
+#
+# 각 VPC RT 에 다음 routes 추가:
+#   - 다른 3개 VPC CIDR → TGW (cross-VPC 통신)
+#   - Azure VNet CIDR (default 172.16.0.0/16) → TGW (cross-cloud · BGP 광고와 별개로 명시)
+#   - GCP VPC CIDR (default 192.168.10.0/24) → TGW
+#
+# Note: Egress VPC 의 RT 는 0.0.0.0/0 → IGW 가 이미 존재 (more specific 가 우선이라 충돌 X)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  AzureVnetCidr:
+    Type: String
+    Default: 172.16.0.0/16
+    Description: Azure VNet CIDR (BGP 광고로 학습되지만 명시 route 안전망)
+  GcpVpcCidr:
+    Type: String
+    Default: 192.168.10.0/24
+    Description: GCP VPC CIDR (BGP 광고로 학습되지만 명시 route 안전망)
+
+Resources:
+  # ─── bookflow-ai VPC RT (10.0.0.0/16) → 다른 VPC + Azure + GCP ───
+  RtBookflowAiToSalesData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: 10.1.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtBookflowAiToEgress:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: 10.2.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtBookflowAiToData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: 10.3.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtBookflowAiToAzure:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: !Ref AzureVnetCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtBookflowAiToGcp:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+
+  # ─── sales-data VPC RT (10.1.0.0/16) → 다른 VPC + Azure + GCP ───
+  RtSalesDataToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
+      DestinationCidrBlock: 10.0.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtSalesDataToEgress:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
+      DestinationCidrBlock: 10.2.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtSalesDataToData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
+      DestinationCidrBlock: 10.3.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtSalesDataToAzure:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
+      DestinationCidrBlock: !Ref AzureVnetCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtSalesDataToGcp:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
+      DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+
+  # ─── egress VPC RT (10.2.0.0/16) → 다른 VPC + Azure + GCP ───
+  # Note: 0.0.0.0/0 → IGW 가 이미 존재 (more specific 가 우선이라 OK)
+  RtEgressToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: 10.0.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtEgressToSalesData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: 10.1.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtEgressToData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: 10.3.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtEgressToAzure:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: !Ref AzureVnetCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtEgressToGcp:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+
+  # ─── data VPC private RT (10.3.0.0/16) → 다른 VPC + Azure + GCP ───
+  RtDataPrivateToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: 10.0.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataPrivateToSalesData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: 10.1.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataPrivateToEgress:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: 10.2.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataPrivateToAzure:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: !Ref AzureVnetCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataPrivateToGcp:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+
+  # ─── data VPC db RT (RDS subnet) → 다른 VPC + Azure + GCP ───
+  # RDS 가 보통 응답만 하지만 안전망으로 같은 set 추가
+  RtDataDbToBookflowAi:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: 10.0.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataDbToSalesData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: 10.1.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataDbToEgress:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: 10.2.0.0/16
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataDbToAzure:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: !Ref AzureVnetCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataDbToGcp:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
