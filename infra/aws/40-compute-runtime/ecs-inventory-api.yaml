@@ -10,7 +10,8 @@ Parameters:
     Default: inventory-api
   ImageTag:
     Type: String
-    Default: placeholder
+    Default: latest
+    Description: ECR image tag · CICD :latest pull
   ContainerPort:
     Type: Number
     Default: 8080
