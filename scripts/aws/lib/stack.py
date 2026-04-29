@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from typing import Any
 
 import boto3
@@ -16,6 +17,7 @@ class Stack:
         template: str,
         parameters: dict[str, Any] | None = None,
         capabilities: list[str] | None = None,
+        template_root: "Path | None" = None,
     ):
         self.tier = tier
         self.name = name
@@ -23,7 +25,7 @@ class Stack:
         self.parameters = parameters or {}
         self.capabilities = capabilities or ["CAPABILITY_NAMED_IAM"]
         self.full_name = Config.stack_name(tier, name)
-        self.template_path = Config.template_path(template)
+        self.template_path = (template_root / template) if template_root else Config.template_path(template)
         self._cf = None
 
     @property

@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from scripts.aws.lib import Config, log
-from scripts.aws.tasks import base, cross_cloud, foundation, full_stack, scenario_ha, wipe_all
+from scripts.aws.tasks import base, cicd_eks, cross_cloud, foundation, full_stack, scenario_ha, wipe_all
 
 TASK_MODULES = {
     "data":           "data",
@@ -107,6 +107,11 @@ def main():
         func=lambda a: cross_cloud.deploy())
     sub.add_parser("cross-cloud-down", help="cross-cloud minimum destroy").set_defaults(
         func=lambda a: cross_cloud.destroy())
+
+    sub.add_parser("cicd-eks-up", help="CICD pipeline for EKS pods (CodePipeline + CodeBuild)").set_defaults(
+        func=lambda a: cicd_eks.deploy())
+    sub.add_parser("cicd-eks-down", help="CICD pipeline for EKS destroy").set_defaults(
+        func=lambda a: cicd_eks.destroy())
 
     sp = sub.add_parser("task", help="task <name> [--down] | --all")
     sp.add_argument("name", nargs="?", help=f"task name: {', '.join(TASK_MODULES.keys())}")

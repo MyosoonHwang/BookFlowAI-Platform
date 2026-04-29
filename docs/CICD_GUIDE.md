@@ -20,12 +20,12 @@
 
 | # | 이름 | 종류 | Source repo / 브랜치 | 라이프사이클 | 담당 |
 |---|------|------|---------------------|-----|------|
-| 1 | **eks-pipeline** | CodePipeline | `BookFlowAI-Apps` / `eks-pods` → main | 🟡 필요 시 | 영헌 |
-| 2 | **ecs-pipeline** | CodePipeline | `BookFlowAI-Apps` / `ecs-sims` → main | 🟡 필요 시 | 영헌 |
-| 3 | **lambda-sam-pipeline** | CodePipeline | `BookFlowAI-Platform` / `aws` → main | 🟡 필요 시 | 영헌 |
-| 4 | **publisher-codedeploy** | CodePipeline | `BookFlowAI-Apps` / `publisher` → main | 🟡 필요 시 | 영헌 |
-| 5 | **glue-redeploy** | GitHub Actions | `BookFlowAI-Apps` / `glue-jobs` → main | 🔒 영구 | 민지 |
-| 6 | **rds-redeploy** | GitHub Actions | `BookFlowAI-Platform` / `aws` → main | 🔒 영구 | 영헌 |
+| 1 | **eks-pipeline** | CodePipeline | `BookFlowAI-Apps` / `eks-pods` → main | 🟡 필요 시 | **영헌** |
+| 2 | **ecs-pipeline** | CodePipeline | `BookFlowAI-Apps` / `ecs-sims` → main | 🟡 필요 시 | **영헌** |
+| 3 | **lambda-sam-pipeline** *(Optional)* | CodePipeline | `BookFlowAI-Platform` / `aws` → main | 🟡 필요 시 | TBD (시연 직전) |
+| 4 | **publisher-codedeploy** | CodePipeline | `BookFlowAI-Apps` / `publisher` → main | 🟡 필요 시 | **우혁** |
+| 5 | **glue-redeploy** | GitHub Actions | `BookFlowAI-Apps` / `glue-jobs` → main | 🔒 영구 | **민지** |
+| 6 | **rds-redeploy** | GitHub Actions | `BookFlowAI-Platform` / `aws` → main | 🔒 영구 | **민지** (playbook 작성까지) |
 
 **WBS 큰 스코프 룰**: `전원 = CICD · 먼저끝`. 위 표는 영역 매칭 디폴트 — 진행 상황에 따라 재배분 가능.
 
@@ -176,7 +176,7 @@ aws lambda list-functions --query 'Functions[?starts_with(FunctionName,`bookflow
 
 ---
 
-## 4. publisher-codedeploy (영헌) · V6.2 Slide 22
+## 4. publisher-codedeploy (우혁) · V6.2 Slide 22
 
 ### 흐름 (PPT 7 단계 그대로)
 ```
@@ -303,7 +303,9 @@ aws glue get-job-runs --job-name bookflow-raw-pos-mart --query 'JobRuns[0].[JobR
 
 ---
 
-## 6. rds-redeploy · GitHub Actions (영헌) · V6.2 Slide 24
+## 6. rds-redeploy · GitHub Actions (민지 · playbook 작성까지) · V6.2 Slide 24
+
+> **Note**: SQL 파일 (`cicd/ansible/sql/*.sql`) 의 schema/seed 내용 자체는 영헌 (WBS "영헌=RDS 시드"). 민지는 GHA workflow + Ansible playbook 까지.
 
 ### 흐름 (PPT 7 단계 그대로)
 ```
@@ -346,12 +348,12 @@ psql -h $RDS_ENDPOINT -U bookflow -d bookflow -c "SELECT COUNT(*) FROM branches"
 
 각 파이프라인 = 1 PR. WBS "전원=CICD · 먼저끝" 룰 + 영역 매칭.
 
-- [ ] **#1 eks-pipeline** — 영헌
-- [ ] **#2 ecs-pipeline** — 영헌
-- [ ] **#3 lambda-sam-pipeline** — 영헌
-- [ ] **#4 publisher-codedeploy** — 영헌
-- [ ] **#5 glue-redeploy** — 민지 (Glue 본인 영역)
-- [ ] **#6 rds-redeploy** — 영헌 (RDS 시드 본인 영역)
+- [ ] **#1 eks-pipeline** — **영헌**
+- [ ] **#2 ecs-pipeline** — **영헌**
+- [ ] **#3 lambda-sam-pipeline** — *Optional* · 시연 직전 누구든 (디폴트 로컬 `sam deploy`)
+- [ ] **#4 publisher-codedeploy** — **우혁**
+- [ ] **#5 glue-redeploy** — **민지**
+- [ ] **#6 rds-redeploy** — **민지** (GHA + Ansible playbook 작성까지) · SQL 본문은 영헌
 
 ## 작성 순서 권장
 
