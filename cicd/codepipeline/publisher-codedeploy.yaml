@@ -65,16 +65,9 @@ Resources:
           Action: TERMINATE
           TerminationWaitTimeInMinutes: 5
       LoadBalancerInfo:
-        TargetGroupPairInfoList:
-          - TargetGroups:
-              - Name: !Sub ${ProjectName}-publisher-blue-tg
-              - Name: !Sub ${ProjectName}-publisher-green-tg
-            ProdTrafficRoute:
-              ListenerArns:
-                - Fn::ImportValue: !Sub ${ProjectName}-alb-listener-prod-arn
-            TestTrafficRoute:
-              ListenerArns:
-                - Fn::ImportValue: !Sub ${ProjectName}-alb-listener-test-arn
+        # EC2 ASG Blue/Green: TargetGroupInfoList (단일 TG · CodeDeploy 가 Green ASG 만들고 같은 TG 에 attach 후 swap)
+        TargetGroupInfoList:
+          - Name: !Sub ${ProjectName}-publisher-blue-tg
       AutoRollbackConfiguration:
         Enabled: true
         Events:
