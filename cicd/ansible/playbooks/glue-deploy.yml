@@ -10,7 +10,7 @@
 
   vars:
     region: ap-northeast-1
-    glue_scripts_root: /opt/bookflow/glue-jobs
+    glue_scripts_root: /opt/bookflow-apps/glue-jobs
     glue_jobs:
       - raw-pos-mart
       - raw-sns-mart
