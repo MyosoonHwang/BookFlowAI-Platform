@@ -3,29 +3,19 @@
 # Task 1: glue-jobs/ → S3 sync (S3 Gateway Endpoint 경유 · 무료)
 # Task 2: 6개 Glue Job StartJobRun (Glue Interface VPC Endpoint 경유)
 
-# ── Task 1: S3 sync (Ansible-native · amazon.aws.s3_sync 는 v11+ 제거됨 · s3_object loop 로 대체) ──
-- name: glue-jobs 의 .py 파일 목록 (README 제외)
-  find:
-    paths: "{{ glue_scripts_root }}"
-    patterns: "*.py"
-    recurse: true
-  register: glue_files
-
-- name: Glue 스크립트 → S3 업로드
-  amazon.aws.s3_object:
-    bucket: "{{ s3_bucket }}"
-    object: "{{ item.path | regex_replace('^' + glue_scripts_root + '/', '') }}"
-    src: "{{ item.path }}"
-    mode: put
-    region: "{{ region }}"
-  loop: "{{ glue_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
+# ── Task 1: S3 sync ────────────────────────────────────────
+- name: Glue 스크립트 → S3 sync
+  command: >
+    aws s3 sync {{ glue_scripts_root }}/
+    s3://{{ s3_bucket }}/
+    --region {{ region }}
+    --no-progress
   register: sync_result
+  changed_when: sync_result.stdout != ""
 
-- name: S3 업로드 결과
+- name: S3 sync 결과
   debug:
-    msg: "{{ glue_files.matched }}개 파일 → s3://{{ s3_bucket }}/"
+    msg: "{{ sync_result.stdout | default('변경 없음') }}"
 
 # ── Task 2: Glue Job StartJobRun ───────────────────────────
 - name: Glue Job 실행 (StartJobRun)
