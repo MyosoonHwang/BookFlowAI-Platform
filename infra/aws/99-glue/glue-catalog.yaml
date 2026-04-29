@@ -138,7 +138,7 @@ Resources:
       Command:
         Name: glueetl
         ScriptLocation: !Sub
-          - s3://${BucketName}/scripts/raw_pos_mart.py
+          - s3://${BucketName}/raw-pos-mart/pos_etl.py
           - BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-glue-scripts-name
         PythonVersion: '3'
@@ -155,9 +155,9 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--source_bucket': !ImportValue
+        '--RAW_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-raw-name
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
       WorkerType: G.1X
@@ -173,7 +173,7 @@ Resources:
       Command:
         Name: glueetl
         ScriptLocation: !Sub
-          - s3://${BucketName}/scripts/raw_sns_mart.py
+          - s3://${BucketName}/raw-sns-mart/sns_agg.py
           - BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-glue-scripts-name
         PythonVersion: '3'
@@ -189,9 +189,9 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--source_bucket': !ImportValue
+        '--RAW_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-raw-name
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
       WorkerType: G.1X
@@ -207,7 +207,7 @@ Resources:
       Command:
         Name: glueetl
         ScriptLocation: !Sub
-          - s3://${BucketName}/scripts/raw_aladin_mart.py
+          - s3://${BucketName}/raw-aladin-mart/aladin_etl.py
           - BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-glue-scripts-name
         PythonVersion: '3'
@@ -223,9 +223,9 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--source_bucket': !ImportValue
+        '--RAW_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-raw-name
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
       WorkerType: G.1X
@@ -241,7 +241,7 @@ Resources:
       Command:
         Name: glueetl
         ScriptLocation: !Sub
-          - s3://${BucketName}/scripts/raw_event_mart.py
+          - s3://${BucketName}/raw-event-mart/event_etl.py
           - BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-glue-scripts-name
         PythonVersion: '3'
@@ -257,9 +257,9 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--source_bucket': !ImportValue
+        '--RAW_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-raw-name
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
       WorkerType: G.1X
@@ -275,7 +275,7 @@ Resources:
       Command:
         Name: glueetl
         ScriptLocation: !Sub
-          - s3://${BucketName}/scripts/sales_daily_agg.py
+          - s3://${BucketName}/sales-daily-agg/sales_agg.py
           - BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-glue-scripts-name
         PythonVersion: '3'
@@ -291,7 +291,7 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
       WorkerType: G.1X
@@ -307,7 +307,7 @@ Resources:
       Command:
         Name: glueetl
         ScriptLocation: !Sub
-          - s3://${BucketName}/scripts/features_build.py
+          - s3://${BucketName}/features-build/features_build.py
           - BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-glue-scripts-name
         PythonVersion: '3'
@@ -325,7 +325,7 @@ Resources:
         '--enable-metrics': 'true'
         '--enable-continuous-cloudwatch-log': 'true'
         '--job-bookmark-option': job-bookmark-enable
-        '--target_bucket': !ImportValue
+        '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
         '--bigquery_secret_arn': !ImportValue
