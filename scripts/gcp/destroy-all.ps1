@@ -13,7 +13,7 @@ $env:CLOUDSDK_COMPUTE_REGION = $GcpConfig.Region
 Invoke-TerraformLayer -Config $GcpConfig -Layer "99-content" -Action "destroy"
 
 # 2. 네트워크 레이어 삭제 (배포를 안 했으므로 주석 처리)
-# Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily" -Action "destroy"
+Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily" -Action "destroy"
 
 # 3. 기초 레이어 삭제
 Invoke-TerraformLayer -Config $GcpConfig -Layer "00-foundation" -Action "destroy"
