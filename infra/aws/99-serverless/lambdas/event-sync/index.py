@@ -1,0 +1,182 @@
+"""
+event-sync Lambda
+매일 03:00 KST(UTC 18:00) → S3 Raw/events/{event_type}/ gzip JSON
+
+event_etl.py(BookFlowAI-Apps) 스키마 기준:
+event_id, event_type, title, start_date, end_date, location, isbn13_list, synced_at
+
+S3 경로: events/{event_type}/year=YYYY/month=MM/day=DD/
+event_type: book_fair, holiday, publisher_promo, author_signing
+"""
+import gzip
+import json
+import os
+import uuid
+from datetime import datetime, timedelta, timezone
+
+import boto3
+import requests
+
+REGION      = os.environ.get("AWS_REGION", "ap-northeast-1")
+HOLIDAY_URL = "http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo"
+
+# 도서행사 고정 일정
+BOOK_FAIRS = [
+    {"month": 2,  "title": "서울국제도서전 봄",        "duration": 5,  "location": "서울 코엑스"},
+    {"month": 6,  "title": "서울국제도서전",            "duration": 5,  "location": "서울 코엑스"},
+    {"month": 9,  "title": "부산국제도서전",            "duration": 4,  "location": "부산 벡스코"},
+    {"month": 10, "title": "대한출판문화협회 도서전",   "duration": 6,  "location": "서울 코엑스"},
+    {"month": 11, "title": "인천어린이책잔치",           "duration": 3,  "location": "인천 송도"},
+]
+
+# 출판사 프로모 고정 일정 (월별)
+PUBLISHER_PROMOS = [
+    {"month": 3,  "title": "봄 신학기 도서 특가",    "location": "전국 서점"},
+    {"month": 6,  "title": "여름 독서 캠페인",        "location": "전국 서점"},
+    {"month": 9,  "title": "가을 독서의 달",          "location": "전국 서점"},
+    {"month": 12, "title": "연말 베스트 도서 특집",   "location": "전국 서점"},
+]
+
+
+def _get_secret(sm, name: str) -> dict:
+    return json.loads(sm.get_secret_value(SecretId=name)["SecretString"])
+
+
+def _date_add(base: str, days: int) -> str:
+    d = datetime.strptime(base, "%Y%m%d") + timedelta(days=days)
+    return d.strftime("%Y-%m-%d")
+
+
+def _fmt(yyyymmdd: str) -> str:
+    try:
+        return datetime.strptime(str(yyyymmdd), "%Y%m%d").strftime("%Y-%m-%d")
+    except Exception:
+        return str(yyyymmdd)
+
+
+def collect_holidays(service_key: str, years: list[int]) -> list[dict]:
+    events = []
+    for year in years:
+        for month in range(1, 13):
+            try:
+                r = requests.get(
+                    HOLIDAY_URL,
+                    params={
+                        "serviceKey": service_key,
+                        "solYear":    year,
+                        "solMonth":   f"{month:02d}",
+                        "_type":      "json",
+                        "numOfRows":  50,
+                    },
+                    timeout=10,
+                )
+                body  = r.json().get("response", {}).get("body", {})
+                items = body.get("items", {}).get("item", [])
+                if isinstance(items, dict):
+                    items = [items]
+                for it in items:
+                    date_str = _fmt(it.get("locdate", ""))
+                    events.append({
+                        "event_id":    str(uuid.uuid4()),
+                        "event_type":  "holiday",
+                        "title":       it.get("dateName", ""),
+                        "start_date":  date_str,
+                        "end_date":    date_str,
+                        "location":    "대한민국",
+                        "isbn13_list": [],
+                    })
+            except Exception as e:
+                print(f"[event-sync] holiday API error {year}/{month}: {e}")
+    return events
+
+
+def collect_book_fairs(years: list[int]) -> list[dict]:
+    events = []
+    for year in years:
+        for bf in BOOK_FAIRS:
+            start = f"{year}{bf['month']:02d}01"
+            events.append({
+                "event_id":    str(uuid.uuid4()),
+                "event_type":  "book_fair",
+                "title":       bf["title"],
+                "start_date":  _fmt(start),
+                "end_date":    _date_add(start, bf["duration"] - 1),
+                "location":    bf["location"],
+                "isbn13_list": [],
+            })
+    return events
+
+
+def collect_publisher_promos(years: list[int]) -> list[dict]:
+    events = []
+    for year in years:
+        for pp in PUBLISHER_PROMOS:
+            start = f"{year}{pp['month']:02d}01"
+            events.append({
+                "event_id":    str(uuid.uuid4()),
+                "event_type":  "publisher_promo",
+                "title":       pp["title"],
+                "start_date":  _fmt(start),
+                "end_date":    _date_add(start, 29),
+                "location":    pp["location"],
+                "isbn13_list": [],
+            })
+    return events
+
+
+def collect_author_signings(years: list[int]) -> list[dict]:
+    # 합성 저자 사인회 (실제 API 없으므로 대표 일정 고정)
+    events = []
+    months = [4, 7, 10]
+    for year in years:
+        for month in months:
+            start = f"{year}{month:02d}15"
+            events.append({
+                "event_id":    str(uuid.uuid4()),
+                "event_type":  "author_signing",
+                "title":       f"{year}년 {month}월 작가 사인회",
+                "start_date":  _fmt(start),
+                "end_date":    _fmt(start),
+                "location":    "서울 교보문고 광화문점",
+                "isbn13_list": [],
+            })
+    return events
+
+
+def upload_by_type(s3, raw_bucket: str, events: list[dict],
+                   partition: str, now: datetime) -> None:
+    by_type: dict[str, list] = {}
+    for e in events:
+        et = e["event_type"]
+        by_type.setdefault(et, []).append(e)
+
+    synced_at = now.isoformat()
+    for etype, items in by_type.items():
+        for item in items:
+            item["synced_at"] = synced_at
+        ndjson = "\n".join(json.dumps(e, ensure_ascii=False) for e in items)
+        body   = gzip.compress(ndjson.encode("utf-8"))
+        key    = f"events/{etype}/{partition}/events_{now.strftime('%H%M%S')}.json.gz"
+        s3.put_object(Bucket=raw_bucket, Key=key, Body=body, ContentEncoding="gzip")
+        print(f"[event-sync] {etype}: {len(items)}건 → s3://{raw_bucket}/{key}")
+
+
+def lambda_handler(event, context):
+    sm         = boto3.client("secretsmanager", region_name=REGION)
+    s3         = boto3.client("s3",             region_name=REGION)
+    raw_bucket = os.environ["RAW_BUCKET"]
+    secret     = _get_secret(sm, "bookflow/publicdata")
+    service_key = secret["service_key"]
+
+    now       = datetime.now(timezone.utc)
+    years     = [now.year, now.year + 1]
+    partition = f"year={now.year}/month={now.month:02d}/day={now.day:02d}"
+
+    all_events: list[dict] = []
+    all_events += collect_holidays(service_key, years)
+    all_events += collect_book_fairs(years)
+    all_events += collect_publisher_promos(years)
+    all_events += collect_author_signings(years)
+
+    upload_by_type(s3, raw_bucket, all_events, partition, now)
+    return {"statusCode": 200, "total": len(all_events)}
