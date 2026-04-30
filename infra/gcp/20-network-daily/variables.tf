@@ -6,7 +6,6 @@ variable "aws_vpc_cidrs" {
 variable "aws_peer_ips" {
   description = "AWS VPN public peer IPs exposed for the two TGW tunnel endpoints."
   type        = list(string)
-  default     = ["1.1.1.1", "2.2.2.2"]
 
   validation {
     condition     = length(var.aws_peer_ips) == 2
@@ -20,9 +19,8 @@ variable "aws_tgw_bgp_asn" {
 }
 
 variable "vpn_shared_secret" {
-  description = "Pre-shared key reused by the HA VPN tunnels for local collaboration only."
+  description = "Pre-shared key reused by the HA VPN tunnels. Must match the AWS GcpPresharedKey parameter."
   type        = string
-  default     = "dummy-shared-secret-change-me"
   sensitive   = true
 }
 
@@ -49,7 +47,12 @@ variable "bgp_sessions" {
   }
 }
 
-variable "psc_endpoint_ip" {
-  description = "Internal IP used by the Private Service Connect endpoint for Google APIs."
+variable "gcp_routed_cidr" {
+  description = "GCP CIDR that AWS routes toward the TGW/VPN path. Must contain psc_endpoint_ip for AWS-to-PSC access."
   type        = string
+}
+
+variable "psc_endpoint_host_offset" {
+  description = "Host offset inside gcp_routed_cidr used for the Google APIs Private Service Connect endpoint."
+  type        = number
 }

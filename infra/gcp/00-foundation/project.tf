@@ -21,6 +21,11 @@ variable "zone" {
   default     = "asia-northeast1-a"
 }
 
+variable "bigquery_location" {
+  description = "BigQuery dataset location for BOOKFLOW data warehouse resources."
+  type        = string
+}
+
 variable "vpc_cidr" {
   description = "GCP internal CIDR range allowed by the BOOKFLOW foundation firewall."
   type        = string

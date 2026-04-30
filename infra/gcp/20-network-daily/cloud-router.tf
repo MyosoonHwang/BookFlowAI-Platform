@@ -1,7 +1,6 @@
 variable "gcp_router_asn" {
   description = "Private ASN for the GCP Cloud Router."
   type        = number
-  default     = 64514
 }
 
 resource "google_compute_router" "bookflow_aws_router" {
