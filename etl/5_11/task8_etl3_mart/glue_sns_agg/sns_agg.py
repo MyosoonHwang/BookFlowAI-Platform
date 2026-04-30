@@ -1,12 +1,12 @@
-"""
+﻿"""
 [5/11~5/13] Task8 ETL3 · [Glue] sns_agg.py
 S3 Raw sns/ (GZIP NDJSON) → S3 Mart sns_mentions/ (Parquet)
 mention_count ≥ 10 → is_spike_seed = True
-파티션: mention_date
+: mention_date
 
-BookFlowAI-Apps/glue-jobs/raw-sns-mart/sns_agg.py 기준
+BookFlowAI-Apps/glue-jobs/raw-sns-mart/sns_agg.py 
 Args: JOB_NAME, RAW_BUCKET, MART_BUCKET
-컬럼: mention_id, isbn13, platform, mention_count, sentiment_score, collected_at
+: mention_id, isbn13, platform, mention_count, sentiment_score, collected_at
 """
 import sys
 

@@ -1,16 +1,16 @@
-"""
-[4/30] 알라딘 외부 API 데이터 수집 스크립트
-Task 7 ETL2 · aladin-sync 로컬 실행 버전
+﻿"""
+[4/30]   API   
+Task 7 ETL2 · aladin-sync   
 
-실행:
+:
     pip install requests python-dotenv boto3
     export ALADIN_TTB_KEY=ttbxxxxxxxx
-    python aladin_fetch.py                     # 로컬 저장
-    python aladin_fetch.py --upload-s3 --bucket my-raw-bucket   # S3도 업로드
+    python aladin_fetch.py                     #  
+    python aladin_fetch.py --upload-s3 --bucket my-raw-bucket   # S3 
 
-출력:
-    ./output/aladin_YYYYMMDD_HHMMSS.ndjson.gz  (S3 Raw 동일 포맷)
-    ./output/aladin_YYYYMMDD_HHMMSS.csv        (검수용)
+:
+    ./output/aladin_YYYYMMDD_HHMMSS.ndjson.gz  (S3 Raw  )
+    ./output/aladin_YYYYMMDD_HHMMSS.csv        ()
 """
 import argparse
 import csv
@@ -31,21 +31,21 @@ except ImportError:
 
 ALADIN_BASE = "http://www.aladin.co.kr/ttb/api/ItemList.aspx"
 
-# 수집 대상: (QueryType, CategoryId, 설명)
+#  : (QueryType, CategoryId, )
 FETCH_TARGETS = [
-    ("Bestseller",      0,  "전체 베스트셀러"),
-    ("Bestseller",      1,  "소설 베스트셀러"),
-    ("Bestseller",      2,  "시/에세이 베스트셀러"),
-    ("Bestseller",      4,  "인문 베스트셀러"),
-    ("Bestseller",      8,  "경영 베스트셀러"),
-    ("ItemNewSpecial",  0,  "전체 신간 특선"),
-    ("ItemNewSpecial",  1,  "소설 신간"),
-    ("ItemNewSpecial",  2,  "시/에세이 신간"),
-    ("ItemNewAll",      0,  "전체 신간"),
+    ("Bestseller",      0,  " "),
+    ("Bestseller",      1,  " "),
+    ("Bestseller",      2,  "/ "),
+    ("Bestseller",      4,  " "),
+    ("Bestseller",      8,  " "),
+    ("ItemNewSpecial",  0,  "  "),
+    ("ItemNewSpecial",  1,  " "),
+    ("ItemNewSpecial",  2,  "/ "),
+    ("ItemNewAll",      0,  " "),
 ]
 
 MAX_RESULTS_PER_PAGE = 50
-MAX_PAGES = 4  # 최대 200건/카테고리
+MAX_PAGES = 4  #  200/
 
 
 def fetch_aladin_page(ttbkey: str, query_type: str, category_id: int,
@@ -67,10 +67,10 @@ def fetch_aladin_page(ttbkey: str, query_type: str, category_id: int,
         data = r.json()
         return data.get("item", [])
     except requests.RequestException as e:
-        print(f"  [!] API 오류 type={query_type} cat={category_id} page={page}: {e}")
+        print(f"  [!] API  type={query_type} cat={category_id} page={page}: {e}")
         return []
     except (ValueError, KeyError) as e:
-        print(f"  [!] 응답 파싱 오류: {e}")
+        print(f"  [!]   : {e}")
         return []
 
 
@@ -105,7 +105,7 @@ def collect_all(ttbkey: str) -> list[dict]:
 
     total_api_calls = 0
     for query_type, category_id, desc in FETCH_TARGETS:
-        print(f"  수집 중: {desc} (type={query_type}, cat={category_id})")
+        print(f"   : {desc} (type={query_type}, cat={category_id})")
         page_books = 0
         for page in range(1, MAX_PAGES + 1):
             items = fetch_aladin_page(ttbkey, query_type, category_id, page)
@@ -125,9 +125,9 @@ def collect_all(ttbkey: str) -> list[dict]:
             if len(items) < MAX_RESULTS_PER_PAGE:
                 break
 
-            time.sleep(0.3)  # API rate limit 준수
+            time.sleep(0.3)  # API rate limit 
 
-        print(f"    → 신규 {page_books}권 (총 {len(books)}권, API {total_api_calls}회)")
+        print(f"    →  {page_books} ( {len(books)}, API {total_api_calls})")
 
     return books
 
@@ -136,13 +136,13 @@ def save_local(books: list[dict], output_dir: Path) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # NDJSON gzip (S3 Raw 동일 포맷)
+    # NDJSON gzip (S3 Raw  )
     ndjson_path = output_dir / f"aladin_{ts}.ndjson.gz"
     ndjson_body = "\n".join(json.dumps(b, ensure_ascii=False) for b in books)
     with gzip.open(ndjson_path, "wb") as f:
         f.write(ndjson_body.encode("utf-8"))
 
-    # CSV (검수용)
+    # CSV ()
     csv_path = output_dir / f"aladin_{ts}.csv"
     if books:
         fieldnames = list(books[0].keys())
@@ -169,7 +169,7 @@ def upload_s3(books: list[dict], bucket: str, now: datetime) -> str:
 
 def print_stats(books: list[dict]) -> None:
     if not books:
-        print("수집된 도서 없음")
+        print("  ")
         return
     query_types = {}
     for b in books:
@@ -182,53 +182,53 @@ def print_stats(books: list[dict]) -> None:
     top5 = sorted(publishers.items(), key=lambda x: -x[1])[:5]
 
     print(f"\n{'='*50}")
-    print(f"총 수집 도서: {len(books)}권")
-    print(f"QueryType별:")
+    print(f"  : {len(books)}")
+    print(f"QueryType:")
     for qt, cnt in query_types.items():
-        print(f"  {qt}: {cnt}권")
-    print(f"출판사 Top5:")
+        print(f"  {qt}: {cnt}")
+    print(f" Top5:")
     for pub, cnt in top5:
-        print(f"  {pub}: {cnt}권")
+        print(f"  {pub}: {cnt}")
     avg_price = sum(b["price"] for b in books) / len(books)
-    print(f"평균 판매가: {avg_price:,.0f}원")
+    print(f" : {avg_price:,.0f}")
     print(f"{'='*50}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="알라딘 API 도서 데이터 수집")
+    parser = argparse.ArgumentParser(description=" API   ")
     parser.add_argument("--ttbkey",     default=os.environ.get("ALADIN_TTB_KEY", ""),
-                        help="알라딘 TTBKey (env: ALADIN_TTB_KEY)")
+                        help=" TTBKey (env: ALADIN_TTB_KEY)")
     parser.add_argument("--upload-s3",  action="store_true",
-                        help="S3 업로드 (--bucket 필요)")
+                        help="S3  (--bucket )")
     parser.add_argument("--bucket",     default=os.environ.get("RAW_BUCKET", ""),
-                        help="S3 버킷명 (env: RAW_BUCKET)")
+                        help="S3  (env: RAW_BUCKET)")
     parser.add_argument("--output-dir", default="./output",
-                        help="로컬 저장 디렉토리 (기본: ./output)")
+                        help="   (: ./output)")
     args = parser.parse_args()
 
     if not args.ttbkey:
-        print("[오류] ALADIN_TTB_KEY 환경변수 또는 --ttbkey 필요")
-        print("       알라딘 개발자 센터에서 TTBKey 발급: https://www.aladin.co.kr/ttb/wblog_list.aspx")
+        print("[] ALADIN_TTB_KEY   --ttbkey ")
+        print("          TTBKey : https://www.aladin.co.kr/ttb/wblog_list.aspx")
         return 1
 
-    print(f"[알라딘 API 수집 시작] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"수집 대상: {len(FETCH_TARGETS)}개 카테고리 × 최대 {MAX_PAGES}페이지")
+    print(f"[ API  ] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f" : {len(FETCH_TARGETS)}  ×  {MAX_PAGES}")
 
     now = datetime.now(timezone.utc)
     books = collect_all(args.ttbkey)
 
     if not books:
-        print("[오류] 수집된 도서가 없습니다. TTBKey를 확인하세요.")
+        print("[]   . TTBKey .")
         return 1
 
     ndjson_path, csv_path = save_local(books, Path(args.output_dir))
-    print(f"\n[로컬 저장 완료]")
+    print(f"\n[  ]")
     print(f"  NDJSON: {ndjson_path}")
     print(f"  CSV:    {csv_path}")
 
     if args.upload_s3:
         if not args.bucket:
-            print("[오류] S3 업로드 시 --bucket 필요")
+            print("[] S3   --bucket ")
             return 1
         s3_uri = upload_s3(books, args.bucket, now)
         print(f"  S3:     {s3_uri}")

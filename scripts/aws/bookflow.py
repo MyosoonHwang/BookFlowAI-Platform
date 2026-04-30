@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """BookFlow AWS deploy CLI.
 
 Usage:
@@ -96,12 +96,12 @@ def main():
     p = argparse.ArgumentParser(prog="bookflow")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    sp = sub.add_parser("phase0", help="Tier 00 foundation (영구)")
+    sp = sub.add_parser("phase0", help="Tier 00 foundation ()")
     sp.add_argument("--down", action="store_true")
     sp.set_defaults(func=cmd_phase0)
 
     sub.add_parser("base-up", help="base-up (Tier 10 + Tier 30 base)").set_defaults(func=cmd_base_up)
-    sub.add_parser("base-down", help="base-down (Tier 10-99 전체)").set_defaults(func=cmd_base_down)
+    sub.add_parser("base-down", help="base-down (Tier 10-99 )").set_defaults(func=cmd_base_down)
 
     sub.add_parser("cross-cloud-up", help="cross-cloud minimum (4 VPC + CGW + TGW + VPN)").set_defaults(
         func=lambda a: cross_cloud.deploy())
@@ -129,7 +129,7 @@ def main():
     sp.add_argument("--revert", action="store_true")
     sp.set_defaults(func=cmd_scenario)
 
-    sub.add_parser("wipe-all", help="모든 자원 destroy (Tier 00 포함)").set_defaults(func=cmd_wipe_all)
+    sub.add_parser("wipe-all", help="  destroy (Tier 00 )").set_defaults(func=cmd_wipe_all)
     sub.add_parser("status", help="list bookflow stacks").set_defaults(func=cmd_status)
 
     args = p.parse_args()

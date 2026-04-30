@@ -1,40 +1,40 @@
-#!/bin/bash
+﻿#!/bin/bash
 # scripts/deploy-all.sh
-# Day 1~3 통합 배포 스크립트 (스택별 구성, idempotent)
-# 중단 후 재실행해도 완료된 스택은 자동 스킵됩니다.
+# Day 1~3    ( , idempotent)
+#       .
 
 set -e
-export MSYS_NO_PATHCONV=1   # Git Bash 경로 자동변환 방지
+export MSYS_NO_PATHCONV=1   # Git Bash   
 
 RESOURCE_GROUP="rg-bookflow"
 LOCATION="japanwest"
 PREFIX="bookflow"
 
-# ── 공통 함수 ─────────────────────────────────────────────
+# ──   ─────────────────────────────────────────────
 
-# 1. Bicep 문법 검사 (로컬, az bicep build)
+# 1. Bicep   (, az bicep build)
 validate_bicep_syntax() {
   local template=$1
-  echo "  [검증] 문법 검사: $template"
+  echo "  []  : $template"
   if ! az bicep build --file "$template" --outfile /dev/null 2>/tmp/bicep_err; then
-    echo "  ✗ Bicep 문법 오류:"
+    echo "  ✗ Bicep  :"
     cat /tmp/bicep_err | sed 's/^/    /'
     return 1
   fi
-  echo "  ✓ 문법 이상 없음"
+  echo "  ✓   "
 }
 
-# 2. Azure 배포 사전 검증 (az deployment group validate)
+# 2. Azure    (az deployment group validate)
 validate_deployment() {
   local deploy_name=$1
   shift
-  echo "  [검증] Azure 배포 검증: $deploy_name"
+  echo "  [] Azure  : $deploy_name"
   local result
   if ! result=$(az deployment group validate \
     --resource-group "$RESOURCE_GROUP" \
     --output json \
     "$@" 2>&1); then
-    echo "  ✗ 배포 검증 실패:"
+    echo "  ✗   :"
     echo "$result" | python3 -c "
 import sys, json
 try:
@@ -47,10 +47,10 @@ except:
 " 2>/dev/null || echo "$result" | sed 's/^/    /'
     return 1
   fi
-  echo "  ✓ 배포 검증 통과"
+  echo "  ✓   "
 }
 
-# ARM 배포가 이미 성공했는지 확인
+# ARM    
 check_deployed() {
   local name=$1
   local state
@@ -62,13 +62,13 @@ check_deployed() {
   [ "$state" = "Succeeded" ]
 }
 
-# 스킵 또는 검증 후 배포 실행
+#      
 deploy_stack() {
   local deploy_name=$1
   local template_file=""
   local args=("$@")
 
-  # --template-file 값 추출 (검증에 사용)
+  # --template-file   ( )
   for i in "${!args[@]}"; do
     if [ "${args[$i]}" = "--template-file" ]; then
       template_file="${args[$((i+1))]}"
@@ -76,11 +76,11 @@ deploy_stack() {
   done
 
   if check_deployed "$deploy_name"; then
-    echo "  스킵: $deploy_name 이미 배포 완료"
+    echo "  : $deploy_name   "
     return 0
   fi
 
-  # 문법 + Azure 검증
+  #  + Azure 
   [ -n "$template_file" ] && validate_bicep_syntax "$template_file" || return 1
   validate_deployment "$deploy_name" "${args[@]:1}" || return 1
 
@@ -89,18 +89,18 @@ deploy_stack() {
     --name "$deploy_name" \
     --output table \
     "${args[@]:1}"
-  echo "  완료: $deploy_name"
+  echo "  : $deploy_name"
 }
 
-# ── 시작 ──────────────────────────────────────────────────
+# ──  ──────────────────────────────────────────────────
 echo "========================================"
-echo " BOOKFLOW Azure 통합 배포 (Day 1~3)"
+echo " BOOKFLOW Azure   (Day 1~3)"
 echo "========================================"
 echo ""
-echo "[0] 현재 구독 확인"
+echo "[0]   "
 az account show --output table
 echo ""
-echo "위 구독으로 진행합니다. 계속하려면 Enter, 중단하려면 Ctrl+C"
+echo "  .  Enter,  Ctrl+C"
 read
 
 MY_OBJECT_ID=$(az ad signed-in-user show --query id --output tsv)
@@ -115,12 +115,12 @@ echo "════════════════════════�
 
 # Resource Group
 echo ""
-echo "[1-1] Resource Group 생성/확인"
+echo "[1-1] Resource Group /"
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output table
 
 # Identity
 echo ""
-echo "[1-2] 관리 ID 배포"
+echo "[1-2]  ID "
 deploy_stack "identity-deploy" \
   --template-file modules/identity.bicep \
   --parameters location="$LOCATION" prefix="$PREFIX"
@@ -154,7 +154,7 @@ echo "  LogicApp Identity ID: $LOGICAPP_IDENTITY_ID"
 
 # NSG
 echo ""
-echo "[1-3] NSG 배포"
+echo "[1-3] NSG "
 deploy_stack "nsg-deploy" \
   --template-file modules/nsg.bicep \
   --parameters location="$LOCATION" prefix="$PREFIX"
@@ -170,7 +170,7 @@ FUNCTION_NSG_ID=$(az network nsg show \
 
 # Monitor
 echo ""
-echo "[1-4] Log Analytics Workspace 배포"
+echo "[1-4] Log Analytics Workspace "
 deploy_stack "monitor-deploy" \
   --template-file modules/monitor.bicep \
   --parameters location="$LOCATION" prefix="$PREFIX" logRetentionDays=90
@@ -183,7 +183,7 @@ echo "  Log Analytics ID: $LOG_ANALYTICS_ID"
 
 # VNet
 echo ""
-echo "[1-5] VNet 배포"
+echo "[1-5] VNet "
 deploy_stack "vnet-deploy" \
   --template-file modules/vnet.bicep \
   --parameters location="$LOCATION" \
@@ -206,16 +206,16 @@ FUNCTION_SUBNET_ID=$(az network vnet subnet show \
   --name snet-function \
   --query id --output tsv)
 
-# GatewaySubnet NSG 없음 검증
+# GatewaySubnet NSG  
 GATEWAY_NSG=$(az network vnet subnet show \
   --resource-group "$RESOURCE_GROUP" \
   --vnet-name "vnet-${PREFIX}" \
   --name GatewaySubnet \
   --query networkSecurityGroup --output tsv 2>/dev/null || echo "")
 if [ -z "$GATEWAY_NSG" ]; then
-  echo "  ✓ GatewaySubnet NSG 없음 확인"
+  echo "  ✓ GatewaySubnet NSG  "
 else
-  echo "  ✗ 경고: GatewaySubnet 에 NSG 연결됨"
+  echo "  ✗ : GatewaySubnet  NSG "
 fi
 
 # ════════════════════════════════════════════
@@ -227,18 +227,18 @@ echo " [STACK 2] Security"
 echo "════════════════════════════════════════"
 
 echo ""
-echo "[2-1] Key Vault 배포"
+echo "[2-1] Key Vault "
 SECURITY_ADMIN_OBJECT_ID="$MY_OBJECT_ID"
 
-# Soft-delete 상태인 Key Vault 복구 (purge protection 활성화로 삭제 불가)
+# Soft-delete  Key Vault  (purge protection   )
 KV_NAME="kv-${PREFIX}"
 DELETED_KV=$(az keyvault list-deleted \
   --query "[?name=='${KV_NAME}'].name" \
   --output tsv 2>/dev/null || echo "")
 if [ -n "$DELETED_KV" ]; then
-  echo "  [복구] 소프트 삭제된 Key Vault 발견: $KV_NAME → 복구 중..."
+  echo "  []   Key Vault : $KV_NAME →  ..."
   az keyvault recover --name "$KV_NAME" --location "$LOCATION"
-  echo "  ✓ Key Vault 복구 완료"
+  echo "  ✓ Key Vault  "
 fi
 
 deploy_stack "keyvault-deploy" \
@@ -269,7 +269,7 @@ echo " [STACK 3] Compute"
 echo "════════════════════════════════════════"
 
 echo ""
-echo "[3-1] Function App 배포"
+echo "[3-1] Function App "
 deploy_stack "function-deploy" \
   --template-file modules/function.bicep \
   --parameters location="$LOCATION" \
@@ -285,32 +285,32 @@ FUNCTION_APP_ID=$(az functionapp show \
   --query id --output tsv)
 
 echo ""
-echo "[3-2] Function 코드 배포"
+echo "[3-2] Function  "
 if [ -d "functions/sync-secret" ]; then
   if check_deployed "function-deploy"; then
-    # Function App SCM 준비될 때까지 최대 3분 대기
-    echo "  [대기] Function App 준비 확인 중..."
+    # Function App SCM    3 
+    echo "  [] Function App   ..."
     for i in $(seq 1 18); do
       STATUS=$(az functionapp show \
         --resource-group "$RESOURCE_GROUP" \
         --name "func-${PREFIX}-sync" \
         --query state --output tsv 2>/dev/null || echo "Unknown")
       if [ "$STATUS" = "Running" ]; then
-        echo "  ✓ Function App 준비 완료 (${i}회 시도)"
+        echo "  ✓ Function App   (${i} )"
         break
       fi
-      echo "  ... 대기 중 ($((i*10))s, 상태: $STATUS)"
+      echo "  ...   ($((i*10))s, : $STATUS)"
       sleep 10
     done
 
     cd functions/sync-secret
-    # --build remote: Azure에서 빌드 → 로컬 Python 버전 불일치 문제 회피
+    # --build remote: Azure  →  Python    
     func azure functionapp publish "func-${PREFIX}-sync" --python --build remote
     cd ../..
-    echo "  완료: Function 코드 배포"
+    echo "  : Function  "
   fi
 else
-  echo "  스킵: functions/sync-secret 폴더 없음"
+  echo "  : functions/sync-secret  "
 fi
 
 # ════════════════════════════════════════════
@@ -322,7 +322,7 @@ echo " [STACK 4] Integration"
 echo "════════════════════════════════════════"
 
 echo ""
-echo "[4-1] Event Grid 배포"
+echo "[4-1] Event Grid "
 deploy_stack "eventgrid-deploy" \
   --template-file modules/eventgrid.bicep \
   --parameters location="$LOCATION" \
@@ -338,7 +338,7 @@ echo " [STACK 5] Automation"
 echo "════════════════════════════════════════"
 
 echo ""
-echo "[5-1] Logic Apps 배포"
+echo "[5-1] Logic Apps "
 deploy_stack "logicapp-deploy" \
   --template-file modules/logicapp.bicep \
   --parameters location="$LOCATION" \
@@ -349,19 +349,19 @@ deploy_stack "logicapp-deploy" \
               logAnalyticsWorkspaceId="$LOG_ANALYTICS_ID"
 
 # ════════════════════════════════════════════
-# STACK 6: Network (VPN Gateway, 30~45분)
+# STACK 6: Network (VPN Gateway, 30~45)
 # ════════════════════════════════════════════
 echo ""
 echo "════════════════════════════════════════"
 echo " [STACK 6] Network (VPN Gateway)"
 echo "════════════════════════════════════════"
 echo ""
-echo "VPN Gateway 배포는 30~45분 소요됩니다."
-echo "계속하려면 Enter, 건너뛰려면 Ctrl+C 후 나중에 재실행하세요"
+echo "VPN Gateway  30~45 ."
+echo " Enter,  Ctrl+C   "
 read
 
 echo ""
-echo "[6-1] VPN Gateway 배포"
+echo "[6-1] VPN Gateway "
 deploy_stack "vpn-deploy" \
   --template-file modules/vpn.bicep \
   --parameters location="$LOCATION" \
@@ -388,35 +388,35 @@ BGP_PEERING=$(az network vnet-gateway show \
 
 echo ""
 echo "========================================"
-echo " AWS 팀에 전달할 값"
+echo " AWS   "
 echo "========================================"
-echo "  Active 공인 IP:  $ACTIVE_IP"
-echo "  Standby 공인 IP: $STANDBY_IP"
+echo "  Active  IP:  $ACTIVE_IP"
+echo "  Standby  IP: $STANDBY_IP"
 echo "  BGP ASN:         $BGP_ASN"
 echo "  BGP Peering IP:  $BGP_PEERING"
 echo "========================================"
 
 # ════════════════════════════════════════════
-# 최종 검증
+#  
 # ════════════════════════════════════════════
 echo ""
 echo "════════════════════════════════════════"
-echo " 최종 검증"
+echo "  "
 echo "════════════════════════════════════════"
 
 echo ""
-echo "[검증 1] 전체 리소스 목록"
+echo "[ 1]   "
 az resource list \
   --resource-group "$RESOURCE_GROUP" \
   --query "[].{type:type, name:name}" \
   --output table
 
 echo ""
-echo "[검증 2] Key Vault RBAC 확인"
+echo "[ 2] Key Vault RBAC "
 az role assignment list --scope "$KV_ID" --output table
 
 echo ""
-echo "[검증 3] Logic Apps 상태"
+echo "[ 3] Logic Apps "
 az logic workflow list \
   --resource-group "$RESOURCE_GROUP" \
   --query "[].{name:name, state:state}" \
@@ -424,11 +424,11 @@ az logic workflow list \
 
 echo ""
 echo "========================================"
-echo " 전체 배포 완료"
+echo "   "
 echo "========================================"
 echo ""
-echo "수동으로 남은 작업:"
-echo "  1. Azure Portal → la-${PREFIX}-notification: Teams·Outlook 커넥터 인증"
-echo "  2. Azure Portal → la-${PREFIX}-secret-rotation: Outlook 커넥터 인증"
-echo "  3. Entra ID 앱 등록: bash scripts/entra-setup.sh"
-echo "  4. VPN 연결 시: bash scripts/vpn-connect.sh"
+echo "  :"
+echo "  1. Azure Portal → la-${PREFIX}-notification: Teams·Outlook  "
+echo "  2. Azure Portal → la-${PREFIX}-secret-rotation: Outlook  "
+echo "  3. Entra ID  : bash scripts/entra-setup.sh"
+echo "  4. VPN  : bash scripts/vpn-connect.sh"

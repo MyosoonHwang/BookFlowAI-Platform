@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW - Publisher EC2 Blue/Green CodePipeline and CodeDeploy
 
 Parameters:
@@ -12,7 +12,7 @@ Parameters:
   GitHubBranchName:
     Type: String
     Default: main
-    Description: Trigger branch (다른 pipeline 들과 일관성 · PR merge 시점 트리거)
+    Description: Trigger branch ( pipeline   · PR merge  )
   PublisherPath:
     Type: String
     Default: publisher/**
@@ -32,7 +32,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
       Policies:
-        # Blue/Green COPY_AUTO_SCALING_GROUP 패턴은 ASG 신규 생성/수정 권한 필요 (AWSCodeDeployRole 만으로 부족)
+        # Blue/Green COPY_AUTO_SCALING_GROUP  ASG  /   (AWSCodeDeployRole  )
         - PolicyName: BlueGreenAsgOperations
           PolicyDocument:
             Version: '2012-10-17'
@@ -97,7 +97,7 @@ Resources:
           Action: TERMINATE
           TerminationWaitTimeInMinutes: 5
       LoadBalancerInfo:
-        # EC2 ASG Blue/Green: TargetGroupInfoList (단일 TG · CodeDeploy 가 Green ASG 만들고 같은 TG 에 attach 후 swap)
+        # EC2 ASG Blue/Green: TargetGroupInfoList ( TG · CodeDeploy  Green ASG   TG  attach  swap)
         TargetGroupInfoList:
           - Name: !Sub ${ProjectName}-publisher-blue-tg
       AutoRollbackConfiguration:

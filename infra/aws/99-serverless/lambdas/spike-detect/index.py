@@ -1,7 +1,7 @@
-"""
+﻿"""
 spike-detect Lambda
-10분 cron · 최근 1시간 SNS 데이터 집계 → Poisson Z-score ≥ 3.0 → RDS spike_events INSERT
-VPC 내부 실행 (BookFlowAI VPC · RDS 직접 연결)
+10 cron ·  1 SNS   → Poisson Z-score ≥ 3.0 → RDS spike_events INSERT
+VPC   (BookFlowAI VPC · RDS  )
 """
 import gzip
 import json
@@ -32,7 +32,7 @@ def _db_connect(secret: dict):
 
 
 def _read_sns_last_hour(s3, bucket: str, now: datetime) -> dict:
-    """최근 1~2시간 S3 SNS 레코드 → isbn13별 mention_count 반환"""
+    """ 1~2 S3 SNS  → isbn13 mention_count """
     counts: dict[str, int] = {}
     for delta in (0, 1):
         h = now - timedelta(hours=delta)

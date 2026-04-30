@@ -1,11 +1,11 @@
-"""
+﻿"""
 [4/30] Task7 ETL2 · event-sync Lambda
-매일 03:00 KST(UTC 18:00)
+ 03:00 KST(UTC 18:00)
 
-event_etl.py(BookFlowAI-Apps) 스키마 기준:
+event_etl.py(BookFlowAI-Apps)  :
 event_id, event_type, title, start_date, end_date, location, isbn13_list, synced_at
 
-S3 경로: events/{event_type}/year=YYYY/month=MM/day=DD/
+S3 : events/{event_type}/year=YYYY/month=MM/day=DD/
 event_type: book_fair, holiday, publisher_promo, author_signing
 """
 import gzip
@@ -21,18 +21,18 @@ REGION      = os.environ.get("AWS_REGION", "ap-northeast-1")
 HOLIDAY_URL = "http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo"
 
 BOOK_FAIRS = [
-    {"month": 2,  "title": "서울국제도서전 봄",        "duration": 5,  "location": "서울 코엑스"},
-    {"month": 6,  "title": "서울국제도서전",            "duration": 5,  "location": "서울 코엑스"},
-    {"month": 9,  "title": "부산국제도서전",            "duration": 4,  "location": "부산 벡스코"},
-    {"month": 10, "title": "대한출판문화협회 도서전",   "duration": 6,  "location": "서울 코엑스"},
-    {"month": 11, "title": "인천어린이책잔치",           "duration": 3,  "location": "인천 송도"},
+    {"month": 2,  "title": " ",        "duration": 5,  "location": " "},
+    {"month": 6,  "title": "",            "duration": 5,  "location": " "},
+    {"month": 9,  "title": "",            "duration": 4,  "location": " "},
+    {"month": 10, "title": " ",   "duration": 6,  "location": " "},
+    {"month": 11, "title": "",           "duration": 3,  "location": " "},
 ]
 
 PUBLISHER_PROMOS = [
-    {"month": 3,  "title": "봄 신학기 도서 특가",    "location": "전국 서점"},
-    {"month": 6,  "title": "여름 독서 캠페인",        "location": "전국 서점"},
-    {"month": 9,  "title": "가을 독서의 달",          "location": "전국 서점"},
-    {"month": 12, "title": "연말 베스트 도서 특집",   "location": "전국 서점"},
+    {"month": 3,  "title": "   ",    "location": " "},
+    {"month": 6,  "title": "  ",        "location": " "},
+    {"month": 9,  "title": "  ",          "location": " "},
+    {"month": 12, "title": "   ",   "location": " "},
 ]
 
 
@@ -74,7 +74,7 @@ def collect_holidays(service_key: str, years: list[int]) -> list[dict]:
                         "title":       it.get("dateName", ""),
                         "start_date":  date_str,
                         "end_date":    date_str,
-                        "location":    "대한민국",
+                        "location":    "",
                         "isbn13_list": [],
                     })
             except Exception as e:
@@ -117,10 +117,10 @@ def collect_author_signings(years: list[int]) -> list[dict]:
         {
             "event_id":    str(uuid.uuid4()),
             "event_type":  "author_signing",
-            "title":       f"{y}년 {m}월 작가 사인회",
+            "title":       f"{y} {m}  ",
             "start_date":  _fmt(f"{y}{m:02d}15"),
             "end_date":    _fmt(f"{y}{m:02d}15"),
-            "location":    "서울 교보문고 광화문점",
+            "location":    "  ",
             "isbn13_list": [],
         }
         for y in years for m in [4, 7, 10]
@@ -155,6 +155,6 @@ def lambda_handler(event, context):
         body   = gzip.compress(ndjson.encode("utf-8"))
         key    = f"events/{etype}/{partition}/events_{now.strftime('%H%M%S')}.json.gz"
         s3.put_object(Bucket=raw_bucket, Key=key, Body=body, ContentEncoding="gzip")
-        print(f"[event-sync] {etype}: {len(items)}건 → {key}")
+        print(f"[event-sync] {etype}: {len(items)} → {key}")
 
     return {"statusCode": 200, "total": len(all_events)}

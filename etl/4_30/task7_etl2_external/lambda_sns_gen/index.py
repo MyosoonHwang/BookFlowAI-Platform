@@ -1,8 +1,8 @@
-"""
+﻿"""
 [4/30 ~ 5/4] Task7 ETL2 · sns-gen Lambda
-10분 cron
+10 cron
 
-sns_agg.py(BookFlowAI-Apps) 스키마 기준:
+sns_agg.py(BookFlowAI-Apps)  :
 mention_id, isbn13, platform, mention_count, sentiment_score, collected_at
 """
 import gzip
@@ -22,14 +22,14 @@ SENTIMENTS   = ["positive", "neutral", "negative"]
 SENT_WEIGHTS = [0.65, 0.25, 0.10]
 
 TEMPLATES = [
-    "{title} 읽는 중인데 완전 내 스타일이다",
-    "{title} 드디어 완독! {author} 작가 최고",
-    "{title} 서점에서 봤는데 살까 말까 고민중",
-    "{title} 독서모임 다음 달 추천 도서로 골랐어",
-    "{author} 신작 {title} 어떤지 아는 사람?",
-    "{title} 완전 재밌다 밤새 읽었어",
-    "요즘 {title} 화제더라 읽어봤어?",
-    "{title} 회사 동료한테 선물했더니 좋아함",
+    "{title}     ",
+    "{title}  ! {author}  ",
+    "{title}     ",
+    "{title}      ",
+    "{author}  {title}   ?",
+    "{title}    ",
+    " {title}  ?",
+    "{title}    ",
 ]
 
 

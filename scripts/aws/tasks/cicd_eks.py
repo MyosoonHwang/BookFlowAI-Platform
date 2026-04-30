@@ -1,18 +1,18 @@
-"""cicd-eks · CodePipeline + CodeBuild for BookFlowAI-Apps eks-pods
+﻿"""cicd-eks · CodePipeline + CodeBuild for BookFlowAI-Apps eks-pods
 
-Stack 이름: bookflow-cicd-eks
+Stack : bookflow-cicd-eks
 Template:  cicd/codepipeline/eks-pipeline.yaml
 
-Deploy 흐름:
+Deploy :
   1. eks-pipeline stack create
-  2. CodeBuildRoleArn 출력 → eks-cluster stack 에 update-stack 으로 주입 (Access Entry 활성화)
+  2. CodeBuildRoleArn  → eks-cluster stack  update-stack   (Access Entry )
 
-사전 조건:
-  - Tier 00 codestar-connection · ecr · iam (이미 deploy)
-  - Tier 30 eks-cluster (현재 ACTIVE 상태)
-  - BookFlowAI-Apps repo 의 main 브랜치에 eks-pods/ 와 buildspec.yml 존재
+ :
+  - Tier 00 codestar-connection · ecr · iam ( deploy)
+  - Tier 30 eks-cluster ( ACTIVE )
+  - BookFlowAI-Apps repo  main  eks-pods/  buildspec.yml 
 
-라이프사이클: 🟡 필요 시 deploy
+: 🟡   deploy
 """
 import boto3
 
@@ -34,16 +34,16 @@ def deploy() -> None:
     )
     cicd_stack.deploy()
 
-    # 2. CodeBuild role ARN 추출 → eks-cluster 에 주입
+    # 2. CodeBuild role ARN  → eks-cluster  
     out = cicd_stack.outputs()
     cb_role_arn = out.get("CodeBuildRoleArn")
     if not cb_role_arn:
-        log.warn("CodeBuildRoleArn output 없음 · Access Entry 수동 설정 필요")
+        log.warn("CodeBuildRoleArn output  · Access Entry   ")
         return
 
     log.info(f"CodeBuildRoleArn: {cb_role_arn}")
 
-    # 3. eks-cluster stack 에 update-stack (CiCdRoleArn 주입 → AccessEntry 활성화)
+    # 3. eks-cluster stack  update-stack (CiCdRoleArn  → AccessEntry )
     cf = boto3.client("cloudformation", region_name=Config.REGION)
     cluster_stack_name = Config.stack_name("30", "eks-cluster")
 
@@ -57,7 +57,7 @@ def deploy() -> None:
             return
     except cf.exceptions.ClientError as e:
         if "does not exist" in str(e):
-            log.warn(f"  {cluster_stack_name} 미존재 · Access Entry 주입 skip (cluster deploy 후 재실행)")
+            log.warn(f"  {cluster_stack_name}  · Access Entry  skip (cluster deploy  )")
             return
         raise
 
@@ -68,7 +68,7 @@ def deploy() -> None:
         Parameters=[
             {"ParameterKey": "CiCdRoleArn", "ParameterValue": cb_role_arn,
              "UsePreviousValue": False},
-            # 다른 모든 parameter 는 그대로 유지
+            #   parameter   
             *[{"ParameterKey": p["ParameterKey"], "UsePreviousValue": True}
               for p in existing_params if p["ParameterKey"] != "CiCdRoleArn"],
         ],
@@ -80,13 +80,13 @@ def deploy() -> None:
     )
     log.success(f"  {cluster_stack_name} CiCdRoleArn injected (Access Entry active)")
 
-    log.step("=== cicd-eks deploy 완료 ===")
+    log.step("=== cicd-eks deploy  ===")
 
 
 def destroy() -> None:
     log.step("=== cicd-eks destroy ===")
 
-    # 1. eks-cluster 의 CiCdRoleArn 비우기 (Access Entry 제거 · stack 미존재면 skip)
+    # 1. eks-cluster  CiCdRoleArn  (Access Entry  · stack  skip)
     cf = boto3.client("cloudformation", region_name=Config.REGION)
     cluster_stack_name = Config.stack_name("30", "eks-cluster")
     try:
@@ -113,11 +113,11 @@ def destroy() -> None:
             )
     except cf.exceptions.ClientError as e:
         if "does not exist" in str(e):
-            log.info(f"  {cluster_stack_name} 미존재 · cluster cleanup skip")
+            log.info(f"  {cluster_stack_name}  · cluster cleanup skip")
         else:
             raise
 
-    # 2. CICD stack 삭제
+    # 2. CICD stack 
     Stack(tier="cicd", name="eks", template="").destroy()
 
-    log.step("=== cicd-eks destroy 완료 ===")
+    log.step("=== cicd-eks destroy  ===")

@@ -1,9 +1,9 @@
-"""
+﻿"""
 [4/30] Task6 ETL1 · ECS① offline-sim
-오프라인(매장) POS 판매 시뮬레이터 → Kinesis bookflow-pos-events
-채널: OFFLINE, location_id 3-14 (지점 12개)
+() POS   → Kinesis bookflow-pos-events
+: OFFLINE, location_id 3-14 ( 12)
 
-페이로드: pos_etl.py(BookFlowAI-Apps) 스키마 기준
+: pos_etl.py(BookFlowAI-Apps)  
 tx_id, isbn13, qty, unit_price, total_price, channel, location_id, ts
 """
 import json
@@ -46,7 +46,7 @@ def make_record() -> dict:
 
 
 def main() -> None:
-    print(f"[offline-sim] 시작 → stream={STREAM_NAME}", flush=True)
+    print(f"[offline-sim]  → stream={STREAM_NAME}", flush=True)
     while True:
         rec = make_record()
         try:
@@ -61,7 +61,7 @@ def main() -> None:
                 flush=True,
             )
         except Exception as e:
-            print(f"[offline-sim] 오류: {e}", flush=True)
+            print(f"[offline-sim] : {e}", flush=True)
         time.sleep(random.uniform(*INTERVAL))
 
 

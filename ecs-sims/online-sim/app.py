@@ -1,6 +1,6 @@
-"""
-online-sim: 온라인 POS 판매 시뮬레이터 → Kinesis bookflow-pos-events
-채널: ONLINE_APP(70%) / ONLINE_WEB(30%), location_id 1-2
+﻿"""
+online-sim:  POS   → Kinesis bookflow-pos-events
+: ONLINE_APP(70%) / ONLINE_WEB(30%), location_id 1-2
 """
 import json, os, random, time, uuid
 from datetime import datetime, timezone
@@ -8,7 +8,7 @@ import boto3
 
 STREAM_NAME = os.environ.get("KINESIS_STREAM_NAME", "bookflow-pos-events")
 REGION      = os.environ.get("AWS_REGION", "ap-northeast-1")
-INTERVAL    = (10, 30)   # 초
+INTERVAL    = (10, 30)   # 
 
 ISBNS = [
     "9788936434120","9791165341909","9788997253203","9788932919126","9788998441067",
@@ -36,7 +36,7 @@ def make_record() -> dict:
 
 
 def main() -> None:
-    print(f"[online-sim] 시작 → stream={STREAM_NAME}", flush=True)
+    print(f"[online-sim]  → stream={STREAM_NAME}", flush=True)
     while True:
         rec = make_record()
         kinesis.put_record(

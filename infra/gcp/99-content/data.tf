@@ -1,4 +1,4 @@
-# 현재 프로젝트의 숫자 번호(Project Number)를 가져오기 위한 데이터 소스
+﻿#    (Project Number)    
 data "google_project" "project" {
   project_id = var.project_id
 }

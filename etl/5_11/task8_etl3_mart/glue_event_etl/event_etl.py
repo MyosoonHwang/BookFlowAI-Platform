@@ -1,12 +1,12 @@
-"""
+﻿"""
 [5/11~5/12] Task8 ETL3 · [Glue] event_etl.py
-S3 Raw events/ (GZIP NDJSON, 4종 이벤트) → S3 Mart calendar_events/ (Parquet)
-파티션: event_type
-이벤트 타입: book_fair, holiday, publisher_promo, author_signing
+S3 Raw events/ (GZIP NDJSON, 4 ) → S3 Mart calendar_events/ (Parquet)
+: event_type
+ : book_fair, holiday, publisher_promo, author_signing
 
-BookFlowAI-Apps/glue-jobs/raw-event-mart/event_etl.py 기준
+BookFlowAI-Apps/glue-jobs/raw-event-mart/event_etl.py 
 Args: JOB_NAME, RAW_BUCKET, MART_BUCKET
-컬럼: event_id, event_type, title, start_date, end_date, event_location, isbn13_list, synced_at
+: event_id, event_type, title, start_date, end_date, event_location, isbn13_list, synced_at
 """
 import sys
 from functools import reduce

@@ -1,12 +1,12 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 99-glue · ETL3 Step Functions State Machine (Glue 6 Jobs orchestration)
 
-# 동작:
-#   매일 04:00 KST · forecast-trigger Lambda 가 invoke
+# :
+#    04:00 KST · forecast-trigger Lambda  invoke
 #   [Parallel: 4 raw_*_mart] → sales_daily_agg → features_build → DONE
-#   실패 시 SNS 알림 (선택)
+#     SNS  ()
 #
-# 비용산정 V1: Step Functions 프리티어 (4,000 transitions/월) 내 · ~500 transitions/월
+#  V1: Step Functions  (4,000 transitions/)  · ~500 transitions/
 
 Parameters:
   ProjectName:

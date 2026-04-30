@@ -1,8 +1,8 @@
-"""
+﻿"""
 sns-gen Lambda
-10분 cron · 70 ISBN 합성 SNS 멘션 생성 → S3 Raw/sns/ gzip JSON
+10 cron · 70 ISBN  SNS   → S3 Raw/sns/ gzip JSON
 
-sns_agg.py(BookFlowAI-Apps) 스키마 기준:
+sns_agg.py(BookFlowAI-Apps)  :
 mention_id, isbn13, platform, mention_count, sentiment_score, collected_at
 """
 import gzip
@@ -19,7 +19,7 @@ REGION = os.environ.get("AWS_REGION", "ap-northeast-1")
 
 PLATFORMS = ["twitter", "instagram", "blog", "community", "bookstore_review"]
 
-# sentiment → sentiment_score 매핑 (sns_agg.py가 double 기대)
+# sentiment → sentiment_score  (sns_agg.py double )
 SENTIMENT_SCORES = {
     "positive": round(random.uniform(0.6, 1.0), 2),
     "neutral":  round(random.uniform(0.3, 0.6), 2),
@@ -29,18 +29,18 @@ SENTIMENTS   = ["positive", "neutral", "negative"]
 SENT_WEIGHTS = [0.65, 0.25, 0.10]
 
 TEMPLATES = [
-    "{title} 읽는 중인데 완전 내 스타일이다",
-    "{title} 드디어 완독! {author} 작가 최고",
-    "{title} 서점에서 봤는데 살까 말까 고민중",
-    "{title} 독서모임 다음 달 추천 도서로 골랐어",
-    "{title} 읽고 싶은데 도서관 대기가 너무 길어",
-    "{author} 신작 {title} 어떤지 아는 사람?",
-    "{title} 완전 재밌다 밤새 읽었어",
-    "{title} 생각보다 별로였어... 기대가 컸나봐",
-    "요즘 {title} 화제더라 읽어봤어?",
-    "{title} 회사 동료한테 선물했더니 좋아함",
-    "{title} e북으로 읽고 있는데 종이책으로 사고 싶다",
-    "{author} 책은 {title}도 다 읽었어 팬이야",
+    "{title}     ",
+    "{title}  ! {author}  ",
+    "{title}     ",
+    "{title}      ",
+    "{title}      ",
+    "{author}  {title}   ?",
+    "{title}    ",
+    "{title}  ...  ",
+    " {title}  ?",
+    "{title}    ",
+    "{title} e     ",
+    "{author}  {title}   ",
 ]
 
 SPIKE_PROB     = 0.05
@@ -98,7 +98,7 @@ def lambda_handler(event, context):
         sentiment = random.choices(SENTIMENTS, SENT_WEIGHTS)[0]
         tmpl      = random.choice(TEMPLATES)
 
-        # sns_agg.py 스키마: mention_id, isbn13, platform, mention_count, sentiment_score, collected_at
+        # sns_agg.py : mention_id, isbn13, platform, mention_count, sentiment_score, collected_at
         records.append({
             "mention_id":      str(uuid.uuid4()),
             "isbn13":          isbn13,
@@ -108,7 +108,7 @@ def lambda_handler(event, context):
             "sentiment":       sentiment,
             "sentiment_score": _sentiment_score(sentiment),
             "is_spike_seed":   is_spike,
-            "collected_at":    now.isoformat(),   # sns_agg.py 기준
+            "collected_at":    now.isoformat(),   # sns_agg.py 
             "is_synthetic":    True,
         })
 

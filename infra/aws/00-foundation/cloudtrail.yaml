@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 00 · CloudTrail (Management events · S3 저장 · KMS 암호화)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 00 · CloudTrail (Management events · S3  · KMS )
 
 Parameters:
   ProjectName:

@@ -1,7 +1,7 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   BOOKFLOW · Tier 10 · VPC Peering · Ansible ↔ Data
-  Ansible CN → RDS (schema/seed/grants SQL 실행) · RDS 스키마 GitOps 관리
+  Ansible CN → RDS (schema/seed/grants SQL ) · RDS  GitOps 
 
 Parameters:
   ProjectName:

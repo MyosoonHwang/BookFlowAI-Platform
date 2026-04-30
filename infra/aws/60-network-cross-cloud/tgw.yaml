@@ -1,9 +1,9 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 60 · Transit Gateway Hub + 4 VPC Attachments + Route Tables (Phase 3-4 cross-cloud · Ansible VPC 제외)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 60 · Transit Gateway Hub + 4 VPC Attachments + Route Tables (Phase 3-4 cross-cloud · Ansible VPC )
 
-# 사용 시점:
-#   Phase 1-2 (build/dev): TGW 미사용 · Peering (Tier 10) 으로 cross-VPC
-#   Phase 3-4 (시나리오/시연): TGW 활성 · 4 VPC + 2 VPN attachment 동시 사용
+#  :
+#   Phase 1-2 (build/dev): TGW  · Peering (Tier 10)  cross-VPC
+#   Phase 3-4 (/): TGW  · 4 VPC + 2 VPN attachment  
 
 Parameters:
   ProjectName:
@@ -12,10 +12,10 @@ Parameters:
   TgwAsn:
     Type: Number
     Default: 64512
-    Description: TGW Amazon-side BGP ASN (S2S VPN 협상용)
+    Description: TGW Amazon-side BGP ASN (S2S VPN )
 
 Resources:
-  # ─── Transit Gateway Hub (자체 무료 · Attachment 만 과금) ───
+  # ─── Transit Gateway Hub (  · Attachment  ) ───
   Tgw:
     Type: AWS::EC2::TransitGateway
     Properties:
@@ -29,14 +29,14 @@ Resources:
       Description: BOOKFLOW Transit Gateway Hub - cross-cloud (Phase 3-4)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw' }]
 
-  # ─── TGW Route Table (단일 RT · 모든 attachment 가 same RT 사용) ───
+  # ─── TGW Route Table ( RT ·  attachment  same RT ) ───
   TgwRouteTable:
     Type: AWS::EC2::TransitGatewayRouteTable
     Properties:
       TransitGatewayId: !Ref Tgw
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-rt' }]
 
-  # ─── VPC Attachment × 4 (Ansible VPC 제외 · Peering 으로 충분) ───
+  # ─── VPC Attachment × 4 (Ansible VPC  · Peering  ) ───
   TgwAttachBookflowAi:
     Type: AWS::EC2::TransitGatewayVpcAttachment
     Properties:
@@ -122,7 +122,7 @@ Resources:
       TransitGatewayAttachmentId: !Ref TgwAttachData
       TransitGatewayRouteTableId: !Ref TgwRouteTable
 
-  # ─── RT Propagation (4 VPC · 서로 라우팅 자동 학습) ───
+  # ─── RT Propagation (4 VPC ·    ) ───
   RtPropBookflowAi:
     Type: AWS::EC2::TransitGatewayRouteTablePropagation
     Properties:
