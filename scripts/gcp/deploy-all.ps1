@@ -19,7 +19,7 @@ Invoke-TerraformLayer -Config $GcpConfig -Layer "00-foundation"
 
 # 2. 네트워크 레이어 배포 (AWS IP 대기 중이므로 주석 처리)
 # Read-Host "Check AWS peer IPs and VPN shared secret values for 20-network-daily, then press Enter to continue"
-Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily"
+# Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily"
 
 # 3. 서비스 레이어 배포
 Invoke-TerraformLayer -Config $GcpConfig -Layer "99-content"

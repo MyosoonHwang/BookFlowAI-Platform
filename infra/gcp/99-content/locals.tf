@@ -17,8 +17,8 @@ locals {
   ])
 
   region             = var.region
-  vpc_name           = "bookflow-vpc"
-  vpc_connector_name = "bookflow-vpc-conn"
+  vpc_name           = var.vpc_name
+  vpc_connector_name = var.vpc_connector_name
   dataset_id         = var.dataset_id
 
   staging_bucket_name          = coalesce(var.staging_bucket_name, "${var.project_id}-bookflow-staging")
