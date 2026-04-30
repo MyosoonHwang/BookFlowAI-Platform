@@ -56,6 +56,17 @@ Resources:
         - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
       SecurityGroupIds: [!Ref EndpointSg]
 
+  CloudWatchLogs:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
   # S3 Gateway Endpoint (무료 · Firehose 경로 아님 · ECR image layer 저장 이용)
   S3Gateway:
     Type: AWS::EC2::VPCEndpoint
