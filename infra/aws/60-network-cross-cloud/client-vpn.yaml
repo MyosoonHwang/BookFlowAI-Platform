@@ -1,10 +1,10 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 60 · Client VPN Endpoint (3 담당자 access · BookFlow AI VPC subnet · ACM mutual auth)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 60 · Client VPN Endpoint (3  access · BookFlow AI VPC subnet · ACM mutual auth)
 
-# 사용:
-#   3 담당자 (영헌·민지·우혁) 가 OpenVPN client 로 접속
-#   Internal ALB · EKS Pod 직접 접근 (대시보드 디버그 등)
-#   .ovpn 설정파일 + Client cert 는 별도 배포 (영헌이 SSM 으로 이메일 전달)
+# :
+#   3  (··)  OpenVPN client  
+#   Internal ALB · EKS Pod   (  )
+#   .ovpn  + Client cert    ( SSM   )
 
 Parameters:
   ProjectName:
@@ -13,17 +13,17 @@ Parameters:
   ClientCidrBlock:
     Type: String
     Default: 172.20.0.0/22
-    Description: Client VPN 가상 IP 풀 · Azure VNet 172.16.0.0/16 + AWS VPC 10.x + GCP VPC 192.168.x 모두와 무겹침
+    Description: Client VPN  IP  · Azure VNet 172.16.0.0/16 + AWS VPC 10.x + GCP VPC 192.168.x  
   Route53HostedZoneId:
     Type: String
     Default: ''
-    Description: Private Hosted Zone ID (vpn.bookflow.internal · 추후 CNAME 등록용)
+    Description: Private Hosted Zone ID (vpn.bookflow.internal ·  CNAME )
 
 Conditions:
   HasHostedZone: !Not [!Equals [!Ref Route53HostedZoneId, '']]
 
 Resources:
-  # ─── Client VPN SG (egress only · ENI 가 VPC subnet 에 부착) ───
+  # ─── Client VPN SG (egress only · ENI  VPC subnet  ) ───
   ClientVpnSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -56,7 +56,7 @@ Resources:
   ClientVpnEndpoint:
     Type: AWS::EC2::ClientVpnEndpoint
     Properties:
-      Description: BOOKFLOW Client VPN (3 담당자 access)
+      Description: BOOKFLOW Client VPN (3  access)
       ClientCidrBlock: !Ref ClientCidrBlock
       ServerCertificateArn: !ImportValue
         Fn::Sub: ${ProjectName}-acm-client-vpn-server-arn
@@ -90,7 +90,7 @@ Resources:
       SubnetId: !ImportValue
         Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az1
 
-  # ─── Authorization Rule (모든 user 가 BookFlow AI VPC CIDR 접근 허용) ───
+  # ─── Authorization Rule ( user  BookFlow AI VPC CIDR  ) ───
   ClientVpnAuthRule:
     Type: AWS::EC2::ClientVpnAuthorizationRule
     Properties:
@@ -99,7 +99,7 @@ Resources:
       AuthorizeAllGroups: true
       Description: Allow all users to BookFlow AI VPC
 
-  # ─── Route 53 CNAME (선택 · vpn.bookflow.internal 로 stable endpoint) ───
+  # ─── Route 53 CNAME ( · vpn.bookflow.internal  stable endpoint) ───
   VpnDnsRecord:
     Type: AWS::Route53::RecordSet
     Condition: HasHostedZone

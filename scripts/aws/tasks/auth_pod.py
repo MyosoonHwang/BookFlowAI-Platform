@@ -1,4 +1,4 @@
-"""task-auth-pod · NAT + Azure VPN + endpoints (Auth Pod 작업용)."""
+﻿"""task-auth-pod · NAT + Azure VPN + endpoints (Auth Pod )."""
 import os
 
 from ..lib import Stack, log
@@ -7,9 +7,9 @@ from ..lib import Stack, log
 def deploy() -> None:
     log.step("=== task-auth-pod · NAT + Azure VPN ===")
     if not Stack(tier="10", name="vpc-egress", template="").exists():
-        log.err("vpc-egress 미배포"); raise SystemExit(1)
+        log.err("vpc-egress "); raise SystemExit(1)
     if not Stack(tier="30", name="eks-cluster", template="").exists():
-        log.warn("eks-cluster 미배포 · Pod 배포 전 task-msa-pods 필요")
+        log.warn("eks-cluster  · Pod   task-msa-pods ")
 
     if not Stack(tier="10", name="endpoints-bookflow-ai", template="").exists():
         Stack(tier="10", name="endpoints-bookflow-ai",
@@ -33,18 +33,18 @@ def deploy() -> None:
               template="60-network-cross-cloud/vpn-site-to-site.yaml",
               parameters=params).deploy()
     else:
-        log.warn("BOOKFLOW_AZURE_VPN_GW_IP 환경변수 없음 · Azure VPN skip")
-        log.info('  $env:BOOKFLOW_AZURE_VPN_GW_IP = "민지에게 받은 IP"')
+        log.warn("BOOKFLOW_AZURE_VPN_GW_IP   · Azure VPN skip")
+        log.info('  $env:BOOKFLOW_AZURE_VPN_GW_IP = "  IP"')
 
-    log.step("=== task-auth-pod 완료 ===")
+    log.step("=== task-auth-pod  ===")
 
 
 def destroy() -> None:
     log.step("=== task-auth-pod-down ===")
-    log.warn("vpn-site-to-site stack 전체 destroy (Azure + GCP 모두)")
+    log.warn("vpn-site-to-site stack  destroy (Azure + GCP )")
     Stack(tier="60", name="vpn-site-to-site", template="").destroy()
     if not Stack(tier="60", name="vpn-site-to-site", template="").exists():
         Stack(tier="60", name="tgw", template="").destroy()
     Stack(tier="50", name="nat-gateway", template="").destroy()
-    log.info("endpoints-bookflow-ai 는 task-msa-pods 와 공유 · 유지")
-    log.step("=== task-auth-pod-down 완료 ===")
+    log.info("endpoints-bookflow-ai  task-msa-pods   · ")
+    log.step("=== task-auth-pod-down  ===")

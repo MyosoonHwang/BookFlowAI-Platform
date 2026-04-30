@@ -1,4 +1,4 @@
-resource "google_bigquery_dataset" "bookflow_dw" {
+﻿resource "google_bigquery_dataset" "bookflow_dw" {
   project       = var.project_id
   dataset_id    = "bookflow_dw"
   friendly_name = "BOOKFLOW Data Warehouse"

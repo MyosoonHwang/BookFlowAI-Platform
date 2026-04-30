@@ -1,13 +1,13 @@
-"""task-publisher · External ALB + WAF + Publisher ASG + ECS inventory-api."""
+﻿"""task-publisher · External ALB + WAF + Publisher ASG + ECS inventory-api."""
 from ..lib import Stack, log
 
 
 def deploy() -> None:
     log.step("=== task-publisher · ALB + WAF + Publisher + inventory-api ===")
     if not Stack(tier="10", name="vpc-egress", template="").exists():
-        log.err("vpc-egress 미배포"); raise SystemExit(1)
+        log.err("vpc-egress "); raise SystemExit(1)
     if not Stack(tier="20", name="rds", template="").exists():
-        log.warn("RDS 미배포 · inventory-api DB 접속 필요 시 task-data 권장")
+        log.warn("RDS  · inventory-api DB    task-data ")
 
     Stack(tier="10", name="peering-egress-data",
           template="10-network-core/peering/egress-data.yaml").deploy()
@@ -20,7 +20,7 @@ def deploy() -> None:
     blue_tg = out.get("PublisherBlueTgArn")
     inv_tg = out.get("InventoryApiTgArn")
     if not blue_tg or not inv_tg:
-        log.err(f"ALB outputs 부재 (blue={blue_tg}, inv={inv_tg})"); raise SystemExit(1)
+        log.err(f"ALB outputs  (blue={blue_tg}, inv={inv_tg})"); raise SystemExit(1)
     log.info(f"PublisherBlueTg: {blue_tg}")
     log.info(f"InventoryApiTg: {inv_tg}")
 
@@ -32,7 +32,7 @@ def deploy() -> None:
           parameters={"TargetGroupArn": inv_tg}).deploy()
 
     log.info(f"ALB DNS: {out.get('AlbDnsName', '?')}")
-    log.step("=== task-publisher 완료 ===")
+    log.step("=== task-publisher  ===")
 
 
 def destroy() -> None:
@@ -42,4 +42,4 @@ def destroy() -> None:
     Stack(tier="50", name="waf", template="").destroy()
     Stack(tier="50", name="alb-external", template="").destroy()
     Stack(tier="10", name="peering-egress-data", template="").destroy()
-    log.step("=== task-publisher-down 완료 ===")
+    log.step("=== task-publisher-down  ===")

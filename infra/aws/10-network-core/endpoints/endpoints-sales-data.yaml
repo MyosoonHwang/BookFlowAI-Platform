@@ -1,9 +1,9 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  BOOKFLOW · Tier 10 · Sales Data VPC Interface Endpoints (3개)
+  BOOKFLOW · Tier 10 · Sales Data VPC Interface Endpoints (3)
   ECR api/dkr (ECS Fargate image pull) · Kinesis (POS put_records)
   + S3 Gateway Endpoint
-  단일 AZ · 학프 간소화
+   AZ ·  
 
 Parameters:
   ProjectName:
@@ -56,7 +56,18 @@ Resources:
         - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
       SecurityGroupIds: [!Ref EndpointSg]
 
-  # S3 Gateway Endpoint (무료 · Firehose 경로 아님 · ECR image layer 저장 이용)
+  CloudWatchLogs:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcId: !ImportValue { 'Fn::Sub': '${ProjectName}-vpc-sales-data-id' }
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !ImportValue { 'Fn::Sub': '${ProjectName}-subnet-sales-data-private-az1' }
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  # S3 Gateway Endpoint ( · Firehose   · ECR image layer  )
   S3Gateway:
     Type: AWS::EC2::VPCEndpoint
     Properties:

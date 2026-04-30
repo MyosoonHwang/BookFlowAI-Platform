@@ -1,10 +1,10 @@
----
+﻿---
 # cicd/ansible/roles/glue-scripts/tasks/main.yml
-# Task 1: glue-jobs/ → S3 sync (S3 Gateway Endpoint 경유 · 무료)
-# Task 2: 6개 Glue Job StartJobRun (Glue Interface VPC Endpoint 경유)
+# Task 1: glue-jobs/ → S3 sync (S3 Gateway Endpoint  · )
+# Task 2: 6 Glue Job StartJobRun (Glue Interface VPC Endpoint )
 
 # ── Task 1: S3 sync ────────────────────────────────────────
-- name: Glue 스크립트 → S3 sync
+- name: Glue  → S3 sync
   command: >
     aws s3 sync {{ glue_scripts_root }}/
     s3://{{ s3_bucket }}/
@@ -13,12 +13,12 @@
   register: sync_result
   changed_when: sync_result.stdout != ""
 
-- name: S3 sync 결과
+- name: S3 sync 
   debug:
-    msg: "{{ sync_result.stdout | default('변경 없음') }}"
+    msg: "{{ sync_result.stdout | default(' ') }}"
 
 # ── Task 2: Glue Job StartJobRun ───────────────────────────
-- name: Glue Job 실행 (StartJobRun)
+- name: Glue Job  (StartJobRun)
   command: >
     aws glue start-job-run
     --job-name bookflow-{{ item }}
@@ -29,7 +29,7 @@
   register: job_run_results
   changed_when: true
 
-- name: Job Run ID 출력
+- name: Job Run ID 
   debug:
     msg: "bookflow-{{ item.item }} → JobRunId: {{ (item.stdout | from_json).JobRunId }}"
   loop: "{{ job_run_results.results }}"

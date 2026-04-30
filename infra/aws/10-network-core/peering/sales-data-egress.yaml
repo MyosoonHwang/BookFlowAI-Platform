@@ -1,7 +1,7 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   BOOKFLOW · Tier 10 · VPC Peering · Sales Data ↔ Egress
-  ECS 시뮬 (Sales Data) → 재고조회 API External ALB (Egress) 호출
+  ECS  (Sales Data) →  API External ALB (Egress) 
 
 Parameters:
   ProjectName:

@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 30 · ALB Controller IRSA Role (Pod 본체는 CI/CD 가 K8s yaml 로 apply)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 30 · ALB Controller IRSA Role (Pod  CI/CD  K8s yaml  apply)
 
 Parameters:
   ProjectName:
@@ -13,7 +13,7 @@ Parameters:
     Default: aws-load-balancer-controller
 
 Resources:
-  # ─── IRSA Role (ALB Controller Pod 가 ServiceAccount annotation 으로 assume) ───
+  # ─── IRSA Role (ALB Controller Pod  ServiceAccount annotation  assume) ───
   AlbControllerRole:
     Type: AWS::IAM::Role
     Properties:

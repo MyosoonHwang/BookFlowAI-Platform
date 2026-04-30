@@ -1,23 +1,23 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · CICD · ECS Pipeline (CodePipeline + CodeBuild · 3 ECS Service → ECR → ecs:update-service)
 
 # ────────────────────────────────────────────────────────────────────
-# 흐름:
+# :
 #   [BookFlowAI-Apps · main · path:ecs-sims/**]
 #     → CodeStar Connection webhook
 #     → CodePipeline V2
 #     → CodeBuild
 #         1. ECR login
 #         2. docker build × 3 (online-sim · offline-sim · inventory-api) → ECR push (tag = commit SHA + latest)
-#         3. aws ecs update-service --force-new-deployment (3개 service)
+#         3. aws ecs update-service --force-new-deployment (3 service)
 #     → ECS rolling update (Fargate task replacement)
 #
-# 사전 조건:
+#  :
 #   1. Tier 00 codestar-connection · ecr (online-sim · offline-sim · inventory-api repo)
 #   2. Tier 30 ecs-cluster (bookflow-ecs ACTIVE)
-#   3. Tier 40 ecs-online-sim · ecs-offline-sim · ecs-inventory-api (Service 등록 · taskdef 가 :latest 참조)
+#   3. Tier 40 ecs-online-sim · ecs-offline-sim · ecs-inventory-api (Service  · taskdef  :latest )
 #
-# 라이프사이클: 🟡 필요 시 deploy
+# : 🟡   deploy
 
 Parameters:
   ProjectName:
@@ -114,7 +114,7 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_MEDIUM
         Image: aws/codebuild/standard:7.0
-        PrivilegedMode: true   # Docker daemon 필수
+        PrivilegedMode: true   # Docker daemon 
         EnvironmentVariables:
           - { Name: AWS_REGION, Value: !Ref AWS::Region }
           - { Name: AWS_ACCOUNT_ID, Value: !Ref AWS::AccountId }

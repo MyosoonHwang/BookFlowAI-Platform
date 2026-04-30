@@ -1,18 +1,18 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: BOOKFLOW · Tier 99-serverless · 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
 
-# 7 Lambdas (V6.2 + Schema v3 · 비용산정 V1 의 6 Lambda + pos-ingestor):
+# 7 Lambdas (V6.2 + Schema v3 ·  V1  6 Lambda + pos-ingestor):
 #   1. aladin-sync       (cron daily 04:00 KST · S3 Raw write)
 #   2. event-sync        (cron daily 03:00 KST · S3 Raw write)
-#   3. sns-gen           (cron 10min · S3 Raw write · 시뮬 데이터 생성)
+#   3. sns-gen           (cron 10min · S3 Raw write ·   )
 #   4. spike-detect      (cron 10min · VPC · RDS spike_events INSERT)
 #   5. forecast-trigger  (cron daily 04:00 · Step Functions invoke)
 #   6. secret-forwarder  (API Gateway POST · Secrets Manager rotate · Azure Function trigger)
 #   7. pos-ingestor      (Kinesis ESM · VPC · RDS inventory UPDATE · sales_realtime INSERT)
 #
-# 배포: SAM transform 사용 → CAPABILITY_AUTO_EXPAND 필요
-# 코드: inline placeholder · 실 코드는 추후 lambdas/* 폴더에 작성 후 sam build/deploy 또는 cfn package
+# : SAM transform  → CAPABILITY_AUTO_EXPAND 
+# : inline placeholder ·    lambdas/*    sam build/deploy  cfn package
 
 Parameters:
   ProjectName:
@@ -21,7 +21,7 @@ Parameters:
   StepFunctionsArn:
     Type: String
     Default: ''
-    Description: ETL3 Step Functions State Machine ARN · Tier 99-glue 후 update-stack 으로 주입
+    Description: ETL3 Step Functions State Machine ARN · Tier 99-glue  update-stack  
 
 Conditions:
   HasStepFn: !Not [!Equals [!Ref StepFunctionsArn, '']]
@@ -38,7 +38,7 @@ Globals:
         REGION: !Ref AWS::Region
 
 Resources:
-  # ─── Lambda VPC SG (spike-detect · pos-ingestor 공용 · BookFlow AI VPC) ───
+  # ─── Lambda VPC SG (spike-detect · pos-ingestor  · BookFlow AI VPC) ───
   LambdaVpcSg:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -109,7 +109,7 @@ Resources:
             Name: !Sub ${ProjectName}-event-sync-cron
             Description: daily 03:00 KST (18:00 UTC)
 
-  # ─── 3. sns-gen (cron 10min · 시뮬 데이터) ───
+  # ─── 3. sns-gen (cron 10min ·  ) ───
   SnsGenFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -187,7 +187,7 @@ Resources:
                 sfn = boto3.client('stepfunctions')
                 resp = sfn.start_execution(stateMachineArn=sfn_arn, input=json.dumps({"trigger": "cron"}))
                 return {"statusCode": 200, "executionArn": resp['executionArn']}
-            return {"statusCode": 200, "body": "STEP_FN_ARN 미설정 · placeholder"}
+            return {"statusCode": 200, "body": "STEP_FN_ARN  · placeholder"}
       Environment:
         Variables:
           PROJECT_NAME: !Ref ProjectName
@@ -207,7 +207,7 @@ Resources:
             Name: !Sub ${ProjectName}-forecast-trigger-cron
             Description: daily 04:00 KST (forecast pipeline trigger)
 
-  # ─── 6. secret-forwarder (API Gateway · Azure Function 트리거) ───
+  # ─── 6. secret-forwarder (API Gateway · Azure Function ) ───
   SecretForwarderFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -239,7 +239,7 @@ Resources:
             Method: post
             ApiId: !Ref SecretForwarderApi
 
-  # ─── secret-forwarder 전용 HTTP API Gateway ───
+  # ─── secret-forwarder  HTTP API Gateway ───
   SecretForwarderApi:
     Type: AWS::Serverless::HttpApi
     Properties:

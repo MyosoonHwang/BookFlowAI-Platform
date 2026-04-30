@@ -1,4 +1,4 @@
-"""task-msa-pods · EKS Cluster + Node Group + Addons + IRSA + endpoints + peering."""
+﻿"""task-msa-pods · EKS Cluster + Node Group + Addons + IRSA + endpoints + peering."""
 from ..lib import Stack, log
 
 
@@ -6,7 +6,7 @@ def deploy() -> None:
     log.step("=== task-msa-pods · EKS + endpoints + peering ===")
 
     if not Stack(tier="10", name="vpc-bookflow-ai", template="").exists():
-        log.err("vpc-bookflow-ai 미배포 · base-up 먼저"); raise SystemExit(1)
+        log.err("vpc-bookflow-ai  · base-up "); raise SystemExit(1)
 
     Stack(tier="10", name="endpoints-bookflow-ai",
           template="10-network-core/endpoints/endpoints-bookflow-ai.yaml").deploy()
@@ -27,7 +27,7 @@ def deploy() -> None:
     Stack(tier="40", name="eks-addons",
           template="40-compute-runtime/eks-addons.yaml").deploy()
 
-    log.step("=== task-msa-pods 완료 ===")
+    log.step("=== task-msa-pods  ===")
     log.info("kubeconfig: aws eks update-kubeconfig --name bookflow-eks --region ap-northeast-1")
 
 
@@ -41,4 +41,4 @@ def destroy() -> None:
     Stack(tier="10", name="peering-bookflow-ai-egress", template="").destroy()
     Stack(tier="10", name="peering-bookflow-ai-data", template="").destroy()
     Stack(tier="10", name="endpoints-bookflow-ai", template="").destroy()
-    log.step("=== task-msa-pods-down 완료 ===")
+    log.step("=== task-msa-pods-down  ===")
