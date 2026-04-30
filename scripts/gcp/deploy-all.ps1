@@ -19,7 +19,7 @@ Invoke-TerraformLayer -Config $GcpConfig -Layer "00-foundation"
 
 # 2.    (AWS IP    )
 # Read-Host "Check AWS peer IPs and VPN shared secret values for 20-network-daily, then press Enter to continue"
-Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily"
+# Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily"
 
 # 3.   
 Invoke-TerraformLayer -Config $GcpConfig -Layer "99-content"

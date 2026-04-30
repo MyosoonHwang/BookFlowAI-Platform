@@ -29,7 +29,7 @@ variable "labels" {
 variable "vpc_connector_name" {
   description = "Existing Serverless VPC Access connector name attached to bookflow-vpc."
   type        = string
-  default     = "bookflow-vpc-connector"
+  default     = "bookflow-vpc-conn"
 }
 
 variable "vpc_name" {
