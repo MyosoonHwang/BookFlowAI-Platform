@@ -3,8 +3,8 @@
   dataset_id    = "bookflow_dw"
   friendly_name = "BOOKFLOW Data Warehouse"
   description   = "Analytics dataset for BOOKFLOW v6.2."
-  location      = "asia-northeast1"
-  # 1.        true 
+  location      = var.bigquery_location
+  # Allow Terraform destroy to remove tables in the dataset during rebuilds.
   delete_contents_on_destroy = true
 
   labels = var.labels
@@ -18,7 +18,7 @@ resource "google_bigquery_table" "sales_fact" {
   project    = var.project_id
   dataset_id = google_bigquery_dataset.bookflow_dw.dataset_id
   table_id   = "sales_fact"
-  # 2.    
+  # Disable protection so dev rebuilds can replace placeholder tables.
   deletion_protection = false
 
   schema = jsonencode([
@@ -34,7 +34,7 @@ resource "google_bigquery_table" "inventory" {
   project    = var.project_id
   dataset_id = google_bigquery_dataset.bookflow_dw.dataset_id
   table_id   = "inventory"
-  # 2.    
+  # Disable protection so dev rebuilds can replace placeholder tables.
   deletion_protection = false
 
   schema = jsonencode([
@@ -50,7 +50,7 @@ resource "google_bigquery_table" "forecast_results" {
   project    = var.project_id
   dataset_id = google_bigquery_dataset.bookflow_dw.dataset_id
   table_id   = "forecast_results"
-  # 2.    
+  # Disable protection so dev rebuilds can replace placeholder tables.
   deletion_protection = false
 
   schema = jsonencode([
