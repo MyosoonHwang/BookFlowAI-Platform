@@ -1,7 +1,7 @@
-"""
+﻿"""
 [5/6~5/7] Task7 ETL2 · spike-detect Lambda
-10분 cron · 최근 1시간 SNS 데이터 집계 → Poisson Z-score ≥ 3.0 → RDS spike_events INSERT
-VPC 내부 실행 (BookFlowAI VPC · RDS 직접 연결)
+10 cron ·  1 SNS   → Poisson Z-score ≥ 3.0 → RDS spike_events INSERT
+VPC   (BookFlowAI VPC · RDS  )
 """
 import gzip
 import json
@@ -33,7 +33,7 @@ def _db_connect(secret: dict):
 
 
 def _read_sns_window(s3, bucket: str, now: datetime) -> dict[str, int]:
-    """최근 WINDOW_HOURS 시간 S3 SNS → isbn13별 mention_count 합산"""
+    """ WINDOW_HOURS  S3 SNS → isbn13 mention_count """
     counts: dict[str, int] = {}
     for delta in range(WINDOW_HOURS + 1):
         h = now - timedelta(hours=delta)
@@ -55,7 +55,7 @@ def _read_sns_window(s3, bucket: str, now: datetime) -> dict[str, int]:
                         if isbn13:
                             counts[isbn13] = counts.get(isbn13, 0) + 1
                 except Exception as e:
-                    print(f"[spike-detect] S3 읽기 오류 {obj['Key']}: {e}")
+                    print(f"[spike-detect] S3   {obj['Key']}: {e}")
     return counts
 
 
@@ -92,7 +92,7 @@ def lambda_handler(event, context):
             })
 
     print(
-        f"[spike-detect] {len(counts)} ISBNs 집계 "
+        f"[spike-detect] {len(counts)} ISBNs  "
         f"· {len(spikes)} spikes (Z≥{Z_THRESHOLD})"
     )
 

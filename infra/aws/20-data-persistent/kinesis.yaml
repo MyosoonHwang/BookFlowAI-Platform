@@ -1,10 +1,14 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 20 · Kinesis pos-events Data Stream (5 shards) + Firehose → S3 Raw (VPC 무관)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 20 · Kinesis pos-events Data Stream (5 shards) + Firehose → S3 Raw (VPC )
 
 Parameters:
   ProjectName:
     Type: String
     Default: bookflow
+  RawBucketName:
+    Type: String
+    Default: bookflow-raw-354493396671
+    Description: S3 Raw  (    · ImportValue )
   ShardCount:
     Type: Number
     Default: 5
@@ -22,7 +26,7 @@ Parameters:
     MaxValue: 128
 
 Resources:
-  # ─── Kinesis Data Stream (POS 이벤트 실시간 수집) ───
+  # ─── Kinesis Data Stream (POS   ) ───
   PosEventsStream:
     Type: AWS::Kinesis::Stream
     DeletionPolicy: Delete
@@ -71,14 +75,8 @@ Resources:
                   - s3:ListBucketMultipartUploads
                   - s3:PutObject
                 Resource:
-                  - !Sub
-                    - arn:aws:s3:::${BucketName}
-                    - BucketName: !ImportValue
-                        Fn::Sub: ${ProjectName}-s3-raw-name
-                  - !Sub
-                    - arn:aws:s3:::${BucketName}/*
-                    - BucketName: !ImportValue
-                        Fn::Sub: ${ProjectName}-s3-raw-name
+                  - !Sub arn:aws:s3:::${RawBucketName}
+                  - !Sub arn:aws:s3:::${RawBucketName}/*
         - PolicyName: CloudWatchLogs
           PolicyDocument:
             Version: '2012-10-17'
@@ -116,10 +114,7 @@ Resources:
         KinesisStreamARN: !GetAtt PosEventsStream.Arn
         RoleARN: !GetAtt FirehoseRole.Arn
       ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub
-          - arn:aws:s3:::${BucketName}
-          - BucketName: !ImportValue
-              Fn::Sub: ${ProjectName}-s3-raw-name
+        BucketARN: !Sub arn:aws:s3:::${RawBucketName}
         RoleARN: !GetAtt FirehoseRole.Arn
         Prefix: pos-events/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/
         ErrorOutputPrefix: pos-events-errors/!{firehose:error-output-type}/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/

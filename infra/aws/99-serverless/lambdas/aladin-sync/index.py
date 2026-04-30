@@ -1,8 +1,8 @@
-"""
+﻿"""
 aladin-sync Lambda
-매일 04:00 KST(UTC 19:00) Aladin API → S3 Raw/aladin/ gzip JSON
+ 04:00 KST(UTC 19:00) Aladin API → S3 Raw/aladin/ gzip JSON
 
-aladin_etl.py(BookFlowAI-Apps) 스키마 기준:
+aladin_etl.py(BookFlowAI-Apps)  :
 isbn13, title, author, publisher, pub_date, category_id, category_name,
 price, cover_url, sales_point, stock_status, synced_at
 """
@@ -65,7 +65,7 @@ def lambda_handler(event, context):
                 if not isbn13 or isbn13 in seen:
                     continue
                 seen.add(isbn13)
-                # aladin_etl.py 스키마에 맞춰 출력
+                # aladin_etl.py   
                 books.append({
                     "isbn13":        isbn13,
                     "title":         item.get("title", ""),
@@ -73,7 +73,7 @@ def lambda_handler(event, context):
                     "publisher":     item.get("publisher", ""),
                     "pub_date":      item.get("pubDate", ""),
                     "category_id":   int(item.get("categoryId", cat)),
-                    "category_name": item.get("categoryName", ""),  # aladin_etl.py 기준
+                    "category_name": item.get("categoryName", ""),  # aladin_etl.py 
                     "price":         int(item.get("priceSales", 0)),
                     "cover_url":     item.get("cover", ""),
                     "sales_point":   int(item.get("salesPoint", 0)),

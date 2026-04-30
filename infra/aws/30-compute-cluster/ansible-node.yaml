@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 30 · Ansible Control Node (Ubuntu 24 · t3.nano · Ansible VPC Public · SG ingress block · SSM 접속 · K8s 와 무관)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 30 · Ansible Control Node (Ubuntu 24 · t3.nano · Ansible VPC Public · SG ingress block · SSM  · K8s  )
 
 Parameters:
   ProjectName:
@@ -11,7 +11,7 @@ Parameters:
   UbuntuAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
-    Description: Ubuntu 24.04 LTS · region 별 최신 AMI · SSM public parameter
+    Description: Ubuntu 24.04 LTS · region   AMI · SSM public parameter
   GitRepoUrl:
     Type: String
     Default: https://github.com/MyosoonHwang/BookFlowAI-Platform.git
@@ -22,7 +22,7 @@ Parameters:
     Description: Apps repo (glue-jobs scripts · /opt/bookflow-apps)
 
 Resources:
-  # ─── Ansible Node IAM Role (Ansible ops 권한 · K8s 와 무관) ───
+  # ─── Ansible Node IAM Role (Ansible ops  · K8s  ) ───
   AnsibleNodeRole:
     Type: AWS::IAM::Role
     Properties:
@@ -82,8 +82,8 @@ Resources:
       InstanceProfileName: !Sub ${ProjectName}-ansible-node-profile
       Roles: [!Ref AnsibleNodeRole]
 
-  # ─── Custom SG (egress all · ingress 차단 · SSM session 만 접속) ───
-  # Public Subnet 이지만 SG 가 모든 inbound 차단 → 보안적으로 Private 과 동일
+  # ─── Custom SG (egress all · ingress  · SSM session  ) ───
+  # Public Subnet  SG   inbound  →  Private  
   AnsibleNodeSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -97,7 +97,7 @@ Resources:
           Description: egress all (apt, pip, git clone, AWS API, etc.)
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ansible-node-sg' }]
 
-  # ─── EC2 Instance (Ubuntu 24 · cloud-init · Ansible 전용) ───
+  # ─── EC2 Instance (Ubuntu 24 · cloud-init · Ansible ) ───
   AnsibleNode:
     Type: AWS::EC2::Instance
     DeletionPolicy: Delete
@@ -128,7 +128,7 @@ Resources:
           apt-get update
           apt-get install -y git python3-pip python3-venv curl unzip jq postgresql-client
 
-          # ─── 2. Ansible + Python libs (Glue 관리 · RDS seed/migration) ───
+          # ─── 2. Ansible + Python libs (Glue  · RDS seed/migration) ───
           pip3 install --break-system-packages \
             ansible ansible-core \
             boto3 botocore \
@@ -140,14 +140,14 @@ Resources:
           unzip -q /tmp/awscli.zip -d /tmp
           /tmp/aws/install
 
-          # ─── 4. Ansible Collections (AWS · PostgreSQL · Glue 작업) ───
+          # ─── 4. Ansible Collections (AWS · PostgreSQL · Glue ) ───
           ansible-galaxy collection install --force \
             amazon.aws \
             community.aws \
             community.postgresql \
             community.general
 
-          # ─── 5. Ansible 설정 디렉토리 ───
+          # ─── 5. Ansible   ───
           mkdir -p /etc/ansible/inventory
           mkdir -p /etc/ansible/group_vars
           mkdir -p /etc/ansible/host_vars
@@ -179,7 +179,7 @@ Resources:
           pipelining = True
           EOF
 
-          # ─── 7. Localhost Inventory (self-run · Ansible Node 가 local 실행) ───
+          # ─── 7. Localhost Inventory (self-run · Ansible Node  local ) ───
           cat > /etc/ansible/inventory/localhost.yml <<'EOF'
           all:
             hosts:
@@ -188,7 +188,7 @@ Resources:
                 ansible_python_interpreter: /usr/bin/python3
           EOF
 
-          # ─── 8. AWS Dynamic Inventory (태그 기반 EC2 자동 인식 · 필요 시) ───
+          # ─── 8. AWS Dynamic Inventory (  EC2   ·  ) ───
           cat > /etc/ansible/inventory/aws_ec2.yml <<EOF
           plugin: amazon.aws.aws_ec2
           regions:
@@ -205,7 +205,7 @@ Resources:
             - private-ip-address
           EOF
 
-          # ─── 9. Repo clone (Ansible playbook 포함 예정 · ansible/ 하위) ───
+          # ─── 9. Repo clone (Ansible playbook   · ansible/ ) ───
           mkdir -p /opt/bookflow
           git clone ${GitRepoUrl} /opt/bookflow || true
           chown -R ubuntu:ubuntu /opt/bookflow
@@ -215,18 +215,18 @@ Resources:
           git clone ${GitAppsRepoUrl} /opt/bookflow-apps || true
           chown -R ubuntu:ubuntu /opt/bookflow-apps
 
-          # ─── 10. 로그 파일 권한 ───
+          # ─── 10.    ───
           chmod 664 /var/log/ansible
           chown -R ubuntu:ubuntu /var/log/ansible
 
-          # ─── 11. ubuntu user 환경 변수 ───
+          # ─── 11. ubuntu user   ───
           cat >> /home/ubuntu/.bashrc <<'EOF'
           export ANSIBLE_CONFIG=/etc/ansible/ansible.cfg
           export ANSIBLE_INVENTORY=/etc/ansible/inventory
           cd /opt/bookflow 2>/dev/null || true
           EOF
 
-          # ─── 12. 설치 검증 ───
+          # ─── 12.   ───
           ansible --version >> ${!LOG} 2>&1
           ansible-galaxy collection list >> ${!LOG} 2>&1
           aws --version >> ${!LOG} 2>&1

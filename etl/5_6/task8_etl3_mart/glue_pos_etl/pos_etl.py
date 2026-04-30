@@ -1,9 +1,9 @@
-"""
+﻿"""
 [5/6~5/8] Task8 ETL3 · [Glue] pos_etl.py
 S3 Raw pos-events/ (GZIP JSON) → S3 Mart pos_events/ (Parquet, partitioned by sale_date)
-Job bookmark 사용 → 증분 처리
+Job bookmark  →  
 
-BookFlowAI-Apps/glue-jobs/raw-pos-mart/pos_etl.py 기준
+BookFlowAI-Apps/glue-jobs/raw-pos-mart/pos_etl.py 
 Args: JOB_NAME, RAW_BUCKET, MART_BUCKET
 """
 import sys

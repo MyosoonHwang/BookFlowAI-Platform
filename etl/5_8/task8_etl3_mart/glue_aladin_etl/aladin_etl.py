@@ -1,11 +1,11 @@
-"""
+﻿"""
 [5/8~5/12] Task8 ETL3 · [Glue] aladin_etl.py
 S3 Raw aladin/ (GZIP NDJSON) → S3 Mart aladin_books/ (Parquet)
-SCD Type-1: isbn13 기준 최신 synced_at 레코드만 유지 (덮어쓰기)
+SCD Type-1: isbn13   synced_at   ()
 
-BookFlowAI-Apps/glue-jobs/raw-aladin-mart/aladin_etl.py 기준
+BookFlowAI-Apps/glue-jobs/raw-aladin-mart/aladin_etl.py 
 Args: JOB_NAME, RAW_BUCKET, MART_BUCKET
-컬럼: isbn13, title, author, publisher, pub_date, category_id, category_name,
+: isbn13, title, author, publisher, pub_date, category_id, category_name,
       price, cover_url, sales_point, stock_status, synced_at
 """
 import sys
@@ -48,7 +48,7 @@ df = (
     .filter(F.col("isbn13").rlike(r"^\d{13}$"))
 )
 
-# SCD Type-1: isbn13당 최신 synced_at 레코드만 유지
+# SCD Type-1: isbn13  synced_at  
 win = Window.partitionBy("isbn13").orderBy(F.desc("synced_at"))
 df_deduped = (
     df

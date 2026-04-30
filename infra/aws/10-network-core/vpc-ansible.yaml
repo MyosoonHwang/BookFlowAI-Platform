@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 10 · Ansible VPC (10.4.0.0/16) · Public subnet (Ansible Node · 인터넷 outbound) + Private subnet × 2
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 10 · Ansible VPC (10.4.0.0/16) · Public subnet (Ansible Node ·  outbound) + Private subnet × 2
 
 Parameters:
   ProjectName:
@@ -21,7 +21,7 @@ Resources:
       EnableDnsHostnames: true
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpc-ansible' }]
 
-  # ─── Internet Gateway (Ansible Node bootstrap · cloud-init apt/pip/git 필요) ───
+  # ─── Internet Gateway (Ansible Node bootstrap · cloud-init apt/pip/git ) ───
   Igw:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -33,7 +33,7 @@ Resources:
       VpcId: !Ref Vpc
       InternetGatewayId: !Ref Igw
 
-  # ─── Public Subnet (Ansible Node 전용 · 인터넷 outbound · SG 로 ingress 차단) ───
+  # ─── Public Subnet (Ansible Node  ·  outbound · SG  ingress ) ───
   PublicAz1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -43,7 +43,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-ansible-public-az1' }]
 
-  # ─── Private Subnets (이후 확장 대비 · 현재 Ansible Node 는 Public 사용) ───
+  # ─── Private Subnets (   ·  Ansible Node  Public ) ───
   PrivateAz1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -79,7 +79,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties: { SubnetId: !Ref PublicAz1, RouteTableId: !Ref PublicRouteTable }
 
-  # ─── Private Route Table (인터넷 없음 · 추후 Peering 만 추가) ───
+  # ─── Private Route Table (  ·  Peering  ) ───
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -94,7 +94,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties: { SubnetId: !Ref PrivateAz2, RouteTableId: !Ref PrivateRouteTable }
 
-  # ─── Custom NACL (3 subnet 공통 · allow all · stateful 제어는 SG) ───
+  # ─── Custom NACL (3 subnet  · allow all · stateful  SG) ───
   Nacl:
     Type: AWS::EC2::NetworkAcl
     Properties:

@@ -1,7 +1,7 @@
-"""cross-cloud minimum deploy · Tier 10 VPC×4 + CGW + Tier 60 TGW + VPN.
+﻿"""cross-cloud minimum deploy · Tier 10 VPC×4 + CGW + Tier 60 TGW + VPN.
 
-cross-cloud (AWS ↔ Azure ↔ GCP) 검증을 위한 최소 자원만 deploy.
-EKS · ECS · RDS 등 cross-cloud 와 무관한 자원 skip.
+cross-cloud (AWS ↔ Azure ↔ GCP)     deploy.
+EKS · ECS · RDS  cross-cloud    skip.
 """
 import os
 
@@ -55,28 +55,28 @@ def deploy() -> None:
             vpn_params["GcpPresharedKey"] = gcp_psk
 
     if not vpn_params:
-        log.warn("Azure / GCP VPN IP env var 모두 없음 · VPN connection skip")
+        log.warn("Azure / GCP VPN IP env var   · VPN connection skip")
     else:
         Stack(tier="60", name="vpn-site-to-site",
               template="60-network-cross-cloud/vpn-site-to-site.yaml",
               parameters=vpn_params).deploy()
         _attach_vpn_to_tgw_rt()
 
-    log.step("=== cross-cloud deploy 완료 · BGP propagation 까지 ~5-10분 추가 대기 ===")
+    log.step("=== cross-cloud deploy  · BGP propagation  ~5-10   ===")
 
 
 def _attach_vpn_to_tgw_rt() -> None:
-    """VPN attachment 를 TGW route table 에 association + propagation."""
+    """VPN attachment  TGW route table  association + propagation."""
     import boto3
     from ..lib.config import Config
     ec2 = boto3.client("ec2", region_name=Config.REGION)
 
     tgw_rt_id = Stack(tier="60", name="tgw", template="").outputs().get("TgwRouteTableId")
     if not tgw_rt_id:
-        log.warn("TGW route table id 조회 실패 · propagation skip")
+        log.warn("TGW route table id   · propagation skip")
         return
 
-    # VPN attachment 조회 (VPN connection 이 만든 자동 attachment)
+    # VPN attachment  (VPN connection    attachment)
     attachments = ec2.describe_transit_gateway_attachments(
         Filters=[{"Name": "resource-type", "Values": ["vpn"]},
                  {"Name": "state", "Values": ["available", "pending"]}]
@@ -99,7 +99,7 @@ def _attach_vpn_to_tgw_rt() -> None:
             else:
                 log.warn(f"  associate fail: {e}")
 
-        # Propagation (BGP route 학습)
+        # Propagation (BGP route )
         try:
             ec2.enable_transit_gateway_route_table_propagation(
                 TransitGatewayRouteTableId=tgw_rt_id,
@@ -121,4 +121,4 @@ def destroy() -> None:
     Stack(tier="10", name="customer-gateway", template="").destroy()
     for name, _tmpl in reversed(VPCS):
         Stack(tier="10", name=name, template="").destroy()
-    log.step("=== cross-cloud destroy 완료 ===")
+    log.step("=== cross-cloud destroy  ===")

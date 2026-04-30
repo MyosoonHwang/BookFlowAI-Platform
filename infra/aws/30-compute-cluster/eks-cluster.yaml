@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 30 · EKS Control Plane (BookFlow AI VPC Private) + Access Entry + OIDC + KMS envelope
 
 Parameters:
@@ -14,7 +14,7 @@ Parameters:
   CiCdRoleArn:
     Type: String
     Default: ''
-    Description: CodeBuild/CodePipeline IAM Role ARN (나중에 CICD tier 에서 생성 후 update-stack 으로 주입)
+    Description: CodeBuild/CodePipeline IAM Role ARN ( CICD tier    update-stack  )
 
 Conditions:
   HasCiCdRole: !Not [!Equals [!Ref CiCdRoleArn, '']]
@@ -34,7 +34,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
 
-  # ─── Cluster SG (Custom · default 미사용) ───
+  # ─── Cluster SG (Custom · default ) ───
   ClusterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -88,7 +88,7 @@ Resources:
         BootstrapClusterCreatorAdminPermissions: true
       Tags: [{ Key: Name, Value: !Ref ClusterName }]
 
-  # ─── OIDC Provider (IRSA 기반 Pod 내 AWS API 호출용) ───
+  # ─── OIDC Provider (IRSA  Pod  AWS API ) ───
   OidcProvider:
     Type: AWS::IAM::OIDCProvider
     Properties:
@@ -96,7 +96,7 @@ Resources:
       ClientIdList: [sts.amazonaws.com]
       ThumbprintList: [9e99a48a9960b14926bb7f3b02e22da2b0ab7280]
 
-  # ─── Access Entry (CI/CD 전용 · 조건부 · Ansible Node 는 K8s 무관이므로 Access Entry 없음) ───
+  # ─── Access Entry (CI/CD  ·  · Ansible Node  K8s  Access Entry ) ───
   CiCdAccessEntry:
     Type: AWS::EKS::AccessEntry
     Condition: HasCiCdRole

@@ -1,9 +1,9 @@
-"""
+﻿"""
 pos-ingestor Lambda
-Kinesis ESM (bookflow-pos-events) → sales_realtime INSERT + inventory UPDATE + Redis 무효화
-VPC 내부 실행 · ReservedConcurrentExecutions=5 · batchItemFailures 반환
+Kinesis ESM (bookflow-pos-events) → sales_realtime INSERT + inventory UPDATE + Redis 
+VPC   · ReservedConcurrentExecutions=5 · batchItemFailures 
 
-ECS sim 페이로드 기준: tx_id, isbn13, qty, unit_price, total_price, channel, location_id, ts
+ECS sim  : tx_id, isbn13, qty, unit_price, total_price, channel, location_id, ts
 """
 import base64
 import json
@@ -46,11 +46,11 @@ def _process(cur, rc, rec: dict) -> None:
     isbn13      = rec["isbn13"]
     location_id = int(rec["location_id"])
     qty         = int(rec["qty"])
-    # ECS sim은 total_price 사용 (qty * unit_price)
+    # ECS sim total_price  (qty * unit_price)
     sale_price  = float(rec.get("total_price", rec.get("sale_price", 0)))
     channel     = rec.get("channel", "OFFLINE")
     tx_id       = rec["tx_id"]
-    # ECS sim은 ts 필드 사용
+    # ECS sim ts  
     created_at  = rec.get("ts", rec.get("created_at", datetime.now(timezone.utc).isoformat()))
 
     cur.execute(
@@ -77,7 +77,7 @@ def _process(cur, rc, rec: dict) -> None:
     try:
         rc.delete(f"stock:{isbn13}:{location_id}")
     except Exception as e:
-        print(f"[pos-ingestor] Redis 무효화 실패 {isbn13}:{location_id}: {e}")
+        print(f"[pos-ingestor] Redis   {isbn13}:{location_id}: {e}")
 
 
 def lambda_handler(event, context):
@@ -100,10 +100,10 @@ def lambda_handler(event, context):
                     with conn.cursor() as cur:
                         _process(cur, rc, rec)
             except Exception:
-                print(f"[pos-ingestor] seq={seq} 실패\n{traceback.format_exc()}")
+                print(f"[pos-ingestor] seq={seq} \n{traceback.format_exc()}")
                 failures.append({"itemIdentifier": seq})
     finally:
         conn.close()
 
-    print(f"[pos-ingestor] {len(records)}건 처리 · {len(failures)}건 실패")
+    print(f"[pos-ingestor] {len(records)}  · {len(failures)} ")
     return {"batchItemFailures": failures}

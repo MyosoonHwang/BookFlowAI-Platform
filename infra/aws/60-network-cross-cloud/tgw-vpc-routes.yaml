@@ -1,16 +1,16 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 60 · VPC Route Table entries pointing to TGW (cross-VPC + cross-cloud)
 
-# 의존성:
-#   1. Tier 10 vpc-* (RouteTable export 들) 모두 생성됨
-#   2. Tier 60 tgw (tgw-id export) 생성됨
+# :
+#   1. Tier 10 vpc-* (RouteTable export )  
+#   2. Tier 60 tgw (tgw-id export) 
 #
-# 각 VPC RT 에 다음 routes 추가:
-#   - 다른 3개 VPC CIDR → TGW (cross-VPC 통신)
-#   - Azure VNet CIDR (default 172.16.0.0/16) → TGW (cross-cloud · BGP 광고와 별개로 명시)
+#  VPC RT   routes :
+#   -  3 VPC CIDR → TGW (cross-VPC )
+#   - Azure VNet CIDR (default 172.16.0.0/16) → TGW (cross-cloud · BGP   )
 #   - GCP VPC CIDR (default 192.168.10.0/24) → TGW
 #
-# Note: Egress VPC 의 RT 는 0.0.0.0/0 → IGW 가 이미 존재 (more specific 가 우선이라 충돌 X)
+# Note: Egress VPC  RT  0.0.0.0/0 → IGW    (more specific    X)
 
 Parameters:
   ProjectName:
@@ -19,14 +19,14 @@ Parameters:
   AzureVnetCidr:
     Type: String
     Default: 172.16.0.0/16
-    Description: Azure VNet CIDR (BGP 광고로 학습되지만 명시 route 안전망)
+    Description: Azure VNet CIDR (BGP    route )
   GcpVpcCidr:
     Type: String
     Default: 192.168.10.0/24
-    Description: GCP VPC CIDR (BGP 광고로 학습되지만 명시 route 안전망)
+    Description: GCP VPC CIDR (BGP    route )
 
 Resources:
-  # ─── bookflow-ai VPC RT (10.0.0.0/16) → 다른 VPC + Azure + GCP ───
+  # ─── bookflow-ai VPC RT (10.0.0.0/16) →  VPC + Azure + GCP ───
   RtBookflowAiToSalesData:
     Type: AWS::EC2::Route
     Properties:
@@ -58,7 +58,7 @@ Resources:
       DestinationCidrBlock: !Ref GcpVpcCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
 
-  # ─── sales-data VPC RT (10.1.0.0/16) → 다른 VPC + Azure + GCP ───
+  # ─── sales-data VPC RT (10.1.0.0/16) →  VPC + Azure + GCP ───
   RtSalesDataToBookflowAi:
     Type: AWS::EC2::Route
     Properties:
@@ -90,8 +90,8 @@ Resources:
       DestinationCidrBlock: !Ref GcpVpcCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
 
-  # ─── egress VPC RT (10.2.0.0/16) → 다른 VPC + Azure + GCP ───
-  # Note: 0.0.0.0/0 → IGW 가 이미 존재 (more specific 가 우선이라 OK)
+  # ─── egress VPC RT (10.2.0.0/16) →  VPC + Azure + GCP ───
+  # Note: 0.0.0.0/0 → IGW    (more specific   OK)
   RtEgressToBookflowAi:
     Type: AWS::EC2::Route
     Properties:
@@ -123,7 +123,7 @@ Resources:
       DestinationCidrBlock: !Ref GcpVpcCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
 
-  # ─── data VPC private RT (10.3.0.0/16) → 다른 VPC + Azure + GCP ───
+  # ─── data VPC private RT (10.3.0.0/16) →  VPC + Azure + GCP ───
   RtDataPrivateToBookflowAi:
     Type: AWS::EC2::Route
     Properties:
@@ -155,8 +155,8 @@ Resources:
       DestinationCidrBlock: !Ref GcpVpcCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
 
-  # ─── data VPC db RT (RDS subnet) → 다른 VPC + Azure + GCP ───
-  # RDS 가 보통 응답만 하지만 안전망으로 같은 set 추가
+  # ─── data VPC db RT (RDS subnet) →  VPC + Azure + GCP ───
+  # RDS       set 
   RtDataDbToBookflowAi:
     Type: AWS::EC2::Route
     Properties:

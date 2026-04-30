@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 50 · WAFv2 WebACL (Regional) + External ALB Association + AWS Managed Rules + Rate Limit
 
 Parameters:
@@ -8,10 +8,10 @@ Parameters:
   RateLimitPer5Min:
     Type: Number
     Default: 2000
-    Description: IP 당 5분당 최대 요청 수 (초과 시 BLOCK)
+    Description: IP  5    (  BLOCK)
 
 Resources:
-  # ─── WAFv2 WebACL (Regional · ALB 부착) ───
+  # ─── WAFv2 WebACL (Regional · ALB ) ───
   WebAcl:
     Type: AWS::WAFv2::WebACL
     Properties:
@@ -23,7 +23,7 @@ Resources:
         CloudWatchMetricsEnabled: true
         MetricName: !Sub ${ProjectName}-external-waf
       Rules:
-        # 1. Rate Limit (IP 기반 · DDoS 완화)
+        # 1. Rate Limit (IP  · DDoS )
         - Name: RateLimit
           Priority: 1
           Action: { Block: {} }
@@ -35,7 +35,7 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: RateLimit
-        # 2. AWS Managed · Common Rule Set (OWASP Top 10 부분 커버)
+        # 2. AWS Managed · Common Rule Set (OWASP Top 10  )
         - Name: AwsCommonRules
           Priority: 10
           OverrideAction: { None: {} }
@@ -47,7 +47,7 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: AwsCommonRules
-        # 3. AWS Managed · Known Bad Inputs (잘못된 헤더 · 알려진 페이로드)
+        # 3. AWS Managed · Known Bad Inputs (  ·  )
         - Name: AwsKnownBadInputs
           Priority: 20
           OverrideAction: { None: {} }
@@ -59,7 +59,7 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: AwsKnownBadInputs
-        # 4. AWS Managed · IP Reputation List (Amazon 위협 인텔)
+        # 4. AWS Managed · IP Reputation List (Amazon  )
         - Name: AwsIpReputation
           Priority: 30
           OverrideAction: { None: {} }
@@ -73,7 +73,7 @@ Resources:
             MetricName: AwsIpReputation
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-external-waf' }]
 
-  # ─── ALB Association (External ALB 에 WebACL 부착) ───
+  # ─── ALB Association (External ALB  WebACL ) ───
   WebAclAssociation:
     Type: AWS::WAFv2::WebACLAssociation
     Properties:
@@ -81,7 +81,7 @@ Resources:
         Fn::Sub: ${ProjectName}-alb-external-arn
       WebACLArn: !GetAtt WebAcl.Arn
 
-  # ─── CloudWatch Log Group (WAF 로그 · 차단 사유 디버그) ───
+  # ─── CloudWatch Log Group (WAF  ·   ) ───
   WafLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete

@@ -1,32 +1,32 @@
-"""wipe-all · 모든 자원 (Tier 00 영구 포함) destroy. 프로젝트 완전 종료 시.
+﻿"""wipe-all ·   (Tier 00  ) destroy.    .
 
-⚠️ 강력 confirmation 필요 · S3 객체 / ECR 이미지 사전 삭제 필요.
+⚠️  confirmation  · S3  / ECR    .
 """
 from ..lib import log
 from . import base, cicd_ecs, cicd_eks, foundation
 
 
 def deploy() -> None:
-    raise SystemExit("wipe-all 은 destroy 전용. `phase0` + `task` 등으로 deploy.")
+    raise SystemExit("wipe-all  destroy . `phase0` + `task`  deploy.")
 
 
 def destroy() -> None:
-    log.step("=== WIPE ALL · 모든 BOOKFLOW 자원 제거 ===")
-    log.warn("S3 객체 / ECR 이미지 / KMS pending / ACM IN_USE · 사전 정리 필요")
-    confirm = input("정말 진행? 'WIPE EVERYTHING' 입력 → ").strip()
+    log.step("=== WIPE ALL ·  BOOKFLOW   ===")
+    log.warn("S3  / ECR  / KMS pending / ACM IN_USE ·   ")
+    confirm = input(" ? 'WIPE EVERYTHING'  → ").strip()
     if confirm != "WIPE EVERYTHING":
-        log.info("취소")
+        log.info("")
         return
 
-    log.info("1. cicd-eks-down · cicd-ecs-down (CICD pipeline · ImportValue 의존성 제거)")
+    log.info("1. cicd-eks-down · cicd-ecs-down (CICD pipeline · ImportValue  )")
     for mod in (cicd_eks, cicd_ecs):
         try:
             mod.destroy()
         except Exception as e:
-            log.warn(f"  {mod.__name__} destroy 실패 무시 후 진행: {e}")
+            log.warn(f"  {mod.__name__} destroy    : {e}")
 
     log.info("2. base-down (Tier 10-99)")
     base.destroy()
-    log.info("3. phase0-foundation-down (Tier 00 영구)")
+    log.info("3. phase0-foundation-down (Tier 00 )")
     foundation.destroy()
-    log.step("=== WIPE ALL 완료 ===")
+    log.step("=== WIPE ALL  ===")

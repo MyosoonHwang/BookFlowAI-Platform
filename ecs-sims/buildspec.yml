@@ -1,15 +1,15 @@
-# BookFlowAI-Apps · ecs-sims · CodeBuild buildspec
-# CodeBuild 가 실행하는 명령. ecs-pipeline.yaml 의 CodeBuildProject 가 reference.
+﻿# BookFlowAI-Apps · ecs-sims · CodeBuild buildspec
+# CodeBuild   . ecs-pipeline.yaml  CodeBuildProject  reference.
 #
-# Env vars (ecs-pipeline.yaml 가 주입):
+# Env vars (ecs-pipeline.yaml  ):
 #   AWS_REGION · AWS_ACCOUNT_ID · ECR_REGISTRY · PROJECT_NAME · ECS_CLUSTER_NAME
 #
-# 흐름 (한 phase 통합 · CodeBuild phase 간 shell 격리 회피):
+#  ( phase  · CodeBuild phase  shell  ):
 #   1. ECR login
-#   2. ecs-sims/ 하위 Dockerfile 가진 디렉토리 자동 발견 (online-sim · offline-sim · inventory-api)
-#      → docker build/push (commit SHA + latest 태그)
-#   3. aws ecs update-service --force-new-deployment (각 서비스)
-#      → ECS 가 :latest 이미지 pull · Fargate task replacement (rolling)
+#   2. ecs-sims/  Dockerfile     (online-sim · offline-sim · inventory-api)
+#      → docker build/push (commit SHA + latest )
+#   3. aws ecs update-service --force-new-deployment ( )
+#      → ECS  :latest  pull · Fargate task replacement (rolling)
 
 version: 0.2
 
@@ -39,7 +39,7 @@ phases:
           docker push "$ECR_REGISTRY/$PROJECT_NAME/$svc:latest"
         done
 
-      # ── 2. ECS service rolling update (taskdef 가 :latest 참조 → force-new-deployment 가 새 image pull) ──
+      # ── 2. ECS service rolling update (taskdef  :latest  → force-new-deployment   image pull) ──
       - |
         for svc in $SVCS; do
           SVC_NAME="$PROJECT_NAME-$svc"
@@ -53,11 +53,11 @@ phases:
               --region "$AWS_REGION" >/dev/null
             echo "  triggered new deployment"
           else
-            echo "  service not found · skip (initial deploy 시 정상 · 첫 service 등록 후 다음 push 부터 동작)"
+            echo "  service not found · skip (initial deploy   ·  service    push  )"
           fi
         done
 
-      # ── 3. (선택) deployment 안정화 대기 ──
+      # ── 3. () deployment   ──
       - |
         for svc in $SVCS; do
           SVC_NAME="$PROJECT_NAME-$svc"

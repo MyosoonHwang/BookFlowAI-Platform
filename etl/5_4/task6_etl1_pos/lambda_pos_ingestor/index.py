@@ -1,8 +1,8 @@
-"""
+﻿"""
 [5/4] Task6 ETL1 · pos-ingestor Lambda
-Kinesis ESM → RDS sales_realtime + inventory UPDATE + Redis 무효화
+Kinesis ESM → RDS sales_realtime + inventory UPDATE + Redis 
 
-ECS sim 페이로드 기준 (BookFlowAI-Apps):
+ECS sim   (BookFlowAI-Apps):
 tx_id, isbn13, qty, unit_price, total_price, channel, location_id, ts
 """
 import base64
@@ -66,7 +66,7 @@ def _process(cur, rc, rec: dict) -> None:
     try:
         rc.delete(f"stock:{isbn13}:{location_id}")
     except Exception as e:
-        print(f"[pos-ingestor] Redis 실패 {isbn13}:{location_id}: {e}")
+        print(f"[pos-ingestor] Redis  {isbn13}:{location_id}: {e}")
 
 
 def lambda_handler(event, context):
@@ -88,5 +88,5 @@ def lambda_handler(event, context):
                 failures.append({"itemIdentifier": seq})
     finally:
         conn.close()
-    print(f"[pos-ingestor] {len(records)}건 · {len(failures)}건 실패")
+    print(f"[pos-ingestor] {len(records)} · {len(failures)} ")
     return {"batchItemFailures": failures}

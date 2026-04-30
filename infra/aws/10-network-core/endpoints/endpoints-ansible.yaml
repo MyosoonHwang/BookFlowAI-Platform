@@ -1,8 +1,8 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   BOOKFLOW · Tier 10 · Ansible VPC Interface Endpoints
   SSM + SSMMessages + EC2Messages (Session Manager · GHA → SSM SendCommand)
-  Secrets Manager (RDS 비밀번호 조회)
+  Secrets Manager (RDS  )
   Glue (Script deploy)
   + S3 Gateway (Glue Scripts bucket sync)
 

@@ -1,7 +1,7 @@
-"""
+﻿"""
 [4/30] Task6 ETL1 · ECS② ecs-api-client
-외부 판매처 시뮬레이터 · sales-api(API Gateway) 호출 → 재고 조회 + 주문
-Egress VPC에서 실행 · API Key 인증
+   · sales-api(API Gateway)  →   + 
+Egress VPC  · API Key 
 """
 import json
 import os
@@ -43,7 +43,7 @@ def check_availability(isbn13: str) -> dict | None:
         r.raise_for_status()
         return r.json()
     except requests.RequestException as e:
-        print(f"[api-client] availability 조회 실패 {isbn13}: {e}", flush=True)
+        print(f"[api-client] availability   {isbn13}: {e}", flush=True)
         return None
 
 
@@ -55,7 +55,7 @@ def check_stock(isbn13: str, location_id: int) -> dict | None:
         r.raise_for_status()
         return r.json()
     except requests.RequestException as e:
-        print(f"[api-client] stock 조회 실패: {e}", flush=True)
+        print(f"[api-client] stock  : {e}", flush=True)
         return None
 
 
@@ -66,7 +66,7 @@ def get_catalog(isbn13: str) -> dict | None:
         r.raise_for_status()
         return r.json()
     except requests.RequestException as e:
-        print(f"[api-client] catalog 조회 실패 {isbn13}: {e}", flush=True)
+        print(f"[api-client] catalog   {isbn13}: {e}", flush=True)
         return None
 
 
@@ -103,7 +103,7 @@ def run_scenario() -> None:
 
 def main() -> None:
     if not SALES_API_BASE:
-        print("[api-client] SALES_API_BASE 환경변수 미설정 — 더미 모드로 실행", flush=True)
+        print("[api-client] SALES_API_BASE   —   ", flush=True)
         while True:
             isbn13 = random.choice(ISBNS)
             print(
@@ -113,7 +113,7 @@ def main() -> None:
             )
             time.sleep(random.uniform(INTERVAL_MIN, INTERVAL_MAX))
 
-    print(f"[api-client] 시작 → base={SALES_API_BASE}", flush=True)
+    print(f"[api-client]  → base={SALES_API_BASE}", flush=True)
     while True:
         run_scenario()
         time.sleep(random.uniform(INTERVAL_MIN, INTERVAL_MAX))

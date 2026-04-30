@@ -1,6 +1,6 @@
-"""
-offline-sim: 오프라인(매장) POS 판매 시뮬레이터 → Kinesis bookflow-pos-events
-채널: OFFLINE, location_id 3-14 (지점)
+﻿"""
+offline-sim: () POS   → Kinesis bookflow-pos-events
+: OFFLINE, location_id 3-14 ()
 """
 import json, os, random, time, uuid
 from datetime import datetime, timezone
@@ -8,7 +8,7 @@ import boto3
 
 STREAM_NAME = os.environ.get("KINESIS_STREAM_NAME", "bookflow-pos-events")
 REGION      = os.environ.get("AWS_REGION", "ap-northeast-1")
-INTERVAL    = (30, 90)   # 초 (오프라인은 더 느림)
+INTERVAL    = (30, 90)   #  (  )
 
 ISBNS = [
     "9788936434120","9791165341909","9788997253203","9788932919126","9788998441067",
@@ -16,7 +16,7 @@ ISBNS = [
     "9788936472405","9788937460449","9788966261598","9791164054312","9788954647939",
 ]
 
-BRANCH_IDS = list(range(3, 15))   # location_id 3~14: 오프라인 지점
+BRANCH_IDS = list(range(3, 15))   # location_id 3~14:  
 
 kinesis = boto3.client("kinesis", region_name=REGION)
 
@@ -38,7 +38,7 @@ def make_record() -> dict:
 
 
 def main() -> None:
-    print(f"[offline-sim] 시작 → stream={STREAM_NAME}", flush=True)
+    print(f"[offline-sim]  → stream={STREAM_NAME}", flush=True)
     while True:
         rec = make_record()
         kinesis.put_record(
