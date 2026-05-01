@@ -23,6 +23,15 @@ Resources:
       DestinationCidrBlock: 10.3.0.0/16
       VpcPeeringConnectionId: !Ref Peering
 
+  # ansible-node lives in PUBLIC subnet (SSM-only, no inbound). Public RT
+  # also needs the peering route or RDS connection times out.
+  RouteAnsiblePublicToData:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { 'Fn::Sub': '${ProjectName}-rt-ansible-public' }
+      DestinationCidrBlock: 10.3.0.0/16
+      VpcPeeringConnectionId: !Ref Peering
+
   RouteDataPrivateToAnsible:
     Type: AWS::EC2::Route
     Properties:
