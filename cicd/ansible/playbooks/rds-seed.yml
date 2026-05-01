@@ -63,24 +63,20 @@
       loop_control:
         label: "{{ item }}"
 
-    - name: Bulk COPY each seed CSV
-      community.postgresql.postgresql_copy:
-        login_host: "{{ db_host }}"
-        login_port: "{{ db_port }}"
-        login_user: "{{ db_master_user }}"
-        login_password: "{{ db_master_password }}"
-        db: "{{ db_name }}"
-        copy_from: "{{ seed_dir }}/{{ item.item }}.csv"
-        dst: "{{ item.item }}"
-        options:
-          format: csv
-          header: true
-          delimiter: ','
+    # RDS 는 server-side COPY 불가 (postgresql_copy 모듈은 서버 파일 가정).
+    # psql 클라이언트의 \copy 메타커맨드를 통해 client-side stream 적재.
+    - name: Bulk \copy each seed CSV via psql
+      ansible.builtin.shell: |
+        export PGPASSWORD={{ db_master_password | quote }}
+        psql -h {{ db_host }} -p {{ db_port }} -U {{ db_master_user }} -d {{ db_name }} \
+          -v ON_ERROR_STOP=1 \
+          -c "\copy {{ item.item }} FROM '{{ seed_dir }}/{{ item.item }}.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',');"
       loop: "{{ csv_stats.results }}"
       when: item.stat.exists
       loop_control:
         label: "{{ item.item }}"
       no_log: true
+      changed_when: true
 
     - name: Update sequences (SERIAL/BIGSERIAL columns) post-seed
       community.postgresql.postgresql_query:
