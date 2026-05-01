@@ -1,6 +1,98 @@
-﻿# RDS    INSERT playbook
-# : —
-# BOOKFLOW V6.2
+---
+# rds-seed playbook
+# Bulk-load seed CSVs (warehouses, locations, books, authors, publishers, users,
+#                      inventory, sales_realtime, forecast_cache, pending_orders, ...)
+# Order matters - FK constraints (warehouses -> locations -> inventory etc.)
+# Idempotent strategy: TRUNCATE then COPY (dev/test) OR INSERT ON CONFLICT (prod)
 
-# TODO:    
-# : docs/ARCHITECTURE.md · docs/DEPLOYMENT.md
+- name: BookFlow RDS seed apply
+  hosts: localhost
+  gather_facts: false
+  vars:
+    aws_region: ap-northeast-1
+    project_name: bookflow
+    rds_secret_id: bookflow/rds/master-password
+    db_port: 5432
+    db_name: bookflow
+    seed_dir: "{{ playbook_dir }}/../../../infra/aws/20-data-persistent/seed-data"
+    # FK-respecting load order
+    seed_tables:
+      - warehouses
+      - publishers
+      - authors
+      - books
+      - locations
+      - users
+      - inventory
+      - reservations
+      - forecast_cache
+      - pending_orders
+      - order_approvals
+      - returns
+      - new_book_requests
+      - spike_events
+      - notifications_log
+      - sales_realtime
+      - inventory_snapshot_daily
+      - kpi_daily
+      - audit_log
+
+  tasks:
+    - name: Resolve RDS connection
+      ansible.builtin.import_role:
+        name: postgres-schema
+
+    - name: Truncate target tables (reverse FK order)
+      community.postgresql.postgresql_query:
+        login_host: "{{ db_host }}"
+        login_port: "{{ db_port }}"
+        login_user: "{{ db_master_user }}"
+        login_password: "{{ db_master_password }}"
+        db: "{{ db_name }}"
+        query: >-
+          TRUNCATE TABLE {{ seed_tables | reverse | join(', ') }}
+          RESTART IDENTITY CASCADE
+        autocommit: true
+      no_log: true
+
+    - name: Stat each seed CSV (skip missing tables)
+      ansible.builtin.stat:
+        path: "{{ seed_dir }}/{{ item }}.csv"
+      loop: "{{ seed_tables }}"
+      register: csv_stats
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Bulk COPY each seed CSV
+      community.postgresql.postgresql_copy:
+        login_host: "{{ db_host }}"
+        login_port: "{{ db_port }}"
+        login_user: "{{ db_master_user }}"
+        login_password: "{{ db_master_password }}"
+        db: "{{ db_name }}"
+        copy_from: "{{ seed_dir }}/{{ item.item }}.csv"
+        dst: "{{ item.item }}"
+        options:
+          format: csv
+          header: true
+          delimiter: ','
+      loop: "{{ csv_stats.results }}"
+      when: item.stat.exists
+      loop_control:
+        label: "{{ item.item }}"
+      no_log: true
+
+    - name: Update sequences (SERIAL/BIGSERIAL columns) post-seed
+      community.postgresql.postgresql_query:
+        login_host: "{{ db_host }}"
+        login_port: "{{ db_port }}"
+        login_user: "{{ db_master_user }}"
+        login_password: "{{ db_master_password }}"
+        db: "{{ db_name }}"
+        query: |
+          SELECT setval('authors_author_id_seq',          COALESCE((SELECT MAX(author_id)    FROM authors),    1), true);
+          SELECT setval('publishers_publisher_id_seq',    COALESCE((SELECT MAX(publisher_id) FROM publishers), 1), true);
+          SELECT setval('audit_log_log_id_seq',           COALESCE((SELECT MAX(log_id)       FROM audit_log),  1), true);
+          SELECT setval('new_book_requests_id_seq',       COALESCE((SELECT MAX(id)           FROM new_book_requests), 1), true);
+        autocommit: true
+      no_log: true
