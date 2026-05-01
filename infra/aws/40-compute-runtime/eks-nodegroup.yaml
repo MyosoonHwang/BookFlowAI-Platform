@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 40 · EKS Managed Node Group (EC2 · t3.medium × 2 ON_DEMAND · BookFlow AI VPC Private)
 
 Parameters:
@@ -11,7 +11,7 @@ Parameters:
   InstanceType:
     Type: String
     Default: t3.medium
-    Description: t3.small (저비용) · t3.medium (권장) · t3.large (여유)
+    Description: t3.small () · t3.medium () · t3.large ()
   CapacityType:
     Type: String
     Default: ON_DEMAND
@@ -21,7 +21,7 @@ Parameters:
     Default: 1
     MinValue: 1
     MaxValue: 10
-    Description: 구축 phase 1 노드 default · 부하 시 2로 autoscale (Cluster Autoscaler 추가 시)
+    Description:  phase 1  default ·   2 autoscale (Cluster Autoscaler  )
   MinSize:
     Type: Number
     Default: 1

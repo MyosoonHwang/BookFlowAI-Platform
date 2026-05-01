@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW - Tier 40 - Publisher ASG (Ubuntu 24 - t3.small × 2 - Egress VPC Public - CodeDeploy Blue/Green target)
 
 Parameters:
@@ -8,11 +8,11 @@ Parameters:
   InstanceType:
     Type: String
     Default: t3.micro
-    Description: 비용산정 V1 기준 t3.micro - 시연 시 트래픽 증가 시 t3.small 로 변경 가능
+    Description:  V1  t3.micro -      t3.small   
   UbuntuAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
-    Description: Ubuntu 24.04 LTS - region 별 최신 AMI - SSM public parameter
+    Description: Ubuntu 24.04 LTS - region   AMI - SSM public parameter
   AppPort:
     Type: Number
     Default: 80
@@ -28,13 +28,13 @@ Parameters:
   TargetGroupArn:
     Type: String
     Default: ''
-    Description: Tier 50 External ALB Target Group ARN (Blue) - 비어있으면 미연결 (CFN 생성 시) - 추후 update-stack 으로 주입
+    Description: Tier 50 External ALB Target Group ARN (Blue) -   (CFN  ) -  update-stack  
 
 Conditions:
   HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, '']]
 
 Resources:
-  # ─── Publisher Instance IAM Role (CodeDeploy 대상 + S3 read + SSM + CW agent) ───
+  # ─── Publisher Instance IAM Role (CodeDeploy  + S3 read + SSM + CW agent) ───
   PublisherRole:
     Type: AWS::IAM::Role
     Properties:
@@ -53,7 +53,7 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # CodeDeploy 가 S3 에서 deployment artifact 다운로드
+              # CodeDeploy  S3  deployment artifact 
               - Effect: Allow
                 Action:
                   - s3:Get*
@@ -144,7 +144,7 @@ Resources:
             apt-get update
             apt-get install -y ruby-full wget curl jq nginx
 
-            # ─── 2. CodeDeploy agent (Blue/Green deploy 수신) ───
+            # ─── 2. CodeDeploy agent (Blue/Green deploy ) ───
             cd /home/ubuntu
             wget https://aws-codedeploy-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/latest/install
             chmod +x ./install
@@ -152,11 +152,11 @@ Resources:
             systemctl enable codedeploy-agent
             systemctl start codedeploy-agent
 
-            # ─── 3. CloudWatch agent (선택 - ASG 메트릭) ───
+            # ─── 3. CloudWatch agent ( - ASG ) ───
             wget https://amazoncloudwatch-agent-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O /tmp/cw.deb
             dpkg -i -E /tmp/cw.deb || true
 
-            # ─── 4. Nginx 기본 페이지 (CI/CD 첫 배포 전 health check 통과용) ───
+            # ─── 4. Nginx   (CI/CD    health check ) ───
             systemctl enable nginx
             systemctl start nginx
 

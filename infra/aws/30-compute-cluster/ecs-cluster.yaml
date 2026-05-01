@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 30 · ECS Cluster + Fargate Capacity Provider + Container Insights
 
 Parameters:
@@ -24,7 +24,7 @@ Resources:
           Value: enabled
       Tags: [{ Key: Name, Value: !Ref ClusterName }]
 
-  # Task 로그 공용 LogGroup (각 ECS Service 가 이 Group 에 stream)
+  # Task   LogGroup ( ECS Service   Group  stream)
   EcsLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete

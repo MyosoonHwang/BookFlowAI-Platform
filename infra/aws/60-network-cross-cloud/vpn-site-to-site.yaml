@@ -1,15 +1,15 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 60 · Site-to-Site VPN (Azure + GCP) · TGW Attachment + IPSec Tunnel
 
-# 사용 시점:
-#   Phase 1-2: 미사용
-#   Phase 3-4: TGW 활성 후 cross-cloud 통신 (auth-pod → Azure Entra · forecast-svc → Vertex AI)
+#  :
+#   Phase 1-2: 
+#   Phase 3-4: TGW   cross-cloud  (auth-pod → Azure Entra · forecast-svc → Vertex AI)
 #
-# 의존성:
-#   1. Tier 10 customer-gateway · 실 IP 주입된 상태
-#   2. Tier 60 tgw · TGW Hub 생성 완료
+# :
+#   1. Tier 10 customer-gateway ·  IP  
+#   2. Tier 60 tgw · TGW Hub  
 #
-# Provider parameter 로 azure/gcp 각각 활성
+# Provider parameter  azure/gcp  
 
 Parameters:
   ProjectName:
@@ -19,22 +19,22 @@ Parameters:
     Type: String
     Default: 'false'
     AllowedValues: ['true', 'false']
-    Description: Azure VPN 활성 (Customer Gateway IP 주입 후 true)
+    Description: Azure VPN  (Customer Gateway IP   true)
   EnableGcpVpn:
     Type: String
     Default: 'false'
     AllowedValues: ['true', 'false']
-    Description: GCP HA VPN 활성 (Customer Gateway IP 주입 후 true)
+    Description: GCP HA VPN  (Customer Gateway IP   true)
   AzurePresharedKey:
     Type: String
     Default: ''
     NoEcho: true
-    Description: Azure VPN Tunnel Pre-Shared Key (공란 시 AWS 자동 생성 · 민지에게 동일 값 전달)
+    Description: Azure VPN Tunnel Pre-Shared Key (  AWS   ·    )
   GcpPresharedKey:
     Type: String
     Default: ''
     NoEcho: true
-    Description: GCP HA VPN Tunnel Pre-Shared Key (공란 시 AWS 자동 생성 · 우혁에게 vpn_shared_secret 으로 전달)
+    Description: GCP HA VPN Tunnel Pre-Shared Key (  AWS   ·  vpn_shared_secret  )
 
 Conditions:
   WithAzure: !Equals [!Ref EnableAzureVpn, 'true']
@@ -83,9 +83,9 @@ Resources:
         - !Ref AWS::NoValue
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpn-gcp' }]
 
-  # VPN Connection 을 TGW 에 attach 하면 자동으로 TGW VPN Attachment 생성됨
-  # 단 attachment id 는 VpnConnectionId 와 다름 - CFN 에서 직접 GetAtt 못함
-  # → RtPropagation/Association 은 cross_cloud.py 가 deploy 후 boto3 로 처리
+  # VPN Connection  TGW  attach   TGW VPN Attachment 
+  #  attachment id  VpnConnectionId   - CFN   GetAtt 
+  # → RtPropagation/Association  cross_cloud.py  deploy  boto3  
 
 Outputs:
   AzureVpnConnectionId:

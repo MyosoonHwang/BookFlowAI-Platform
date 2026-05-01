@@ -1,4 +1,4 @@
-# 현재 프로젝트의 숫자 번호(Project Number)를 가져오기 위한 데이터 소스
+﻿#    (Project Number)    
 data "google_project" "project" {
   project_id = var.project_id
 }
@@ -20,10 +20,6 @@ data "google_storage_bucket" "staging" {
 
 data "google_storage_bucket" "models" {
   name = local.models_bucket_name
-}
-
-data "google_storage_bucket" "function_source" {
-  name = local.function_source_bucket_name
 }
 
 data "google_bigquery_dataset" "bookflow_dw" {

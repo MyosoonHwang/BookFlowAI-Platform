@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW - Tier 40 - ECS Inventory API (Fargate - Egress VPC Public - External ALB target - RDS read)
 
 Parameters:
@@ -27,7 +27,7 @@ Parameters:
   TargetGroupArn:
     Type: String
     Default: ''
-    Description: Tier 50 External ALB Target Group ARN - 비어있으면 LoadBalancer 미연결 (CFN 생성 시) - 추후 update-stack 으로 주입
+    Description: Tier 50 External ALB Target Group ARN -  LoadBalancer  (CFN  ) -  update-stack  
 
 Conditions:
   HasTargetGroup: !Not [!Equals [!Ref TargetGroupArn, '']]
@@ -65,7 +65,7 @@ Resources:
                 Action: secretsmanager:GetSecretValue
                 Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/*
 
-  # ─── SG (egress all - ingress 8080 from Egress VPC CIDR - ALB 같은 VPC) ───
+  # ─── SG (egress all - ingress 8080 from Egress VPC CIDR - ALB  VPC) ───
   TaskSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -127,7 +127,7 @@ Resources:
               Value: !ImportValue
                 Fn::Sub: ${ProjectName}-secrets-rds-master-arn
 
-  # ─── ECS Service - LoadBalancer 는 TargetGroup 있을 때만 연결 ───
+  # ─── ECS Service - LoadBalancer  TargetGroup    ───
   Service:
     Type: AWS::ECS::Service
     Properties:

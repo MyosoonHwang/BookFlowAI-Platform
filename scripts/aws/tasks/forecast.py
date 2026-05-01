@@ -1,4 +1,4 @@
-"""task-forecast · GCP HA VPN (forecast-svc Pod → Vertex AI Endpoint)."""
+﻿"""task-forecast · GCP HA VPN (forecast-svc Pod → Vertex AI Endpoint)."""
 import os
 
 from ..lib import Stack, log
@@ -7,7 +7,7 @@ from ..lib import Stack, log
 def deploy() -> None:
     log.step("=== task-forecast · GCP HA VPN ===")
     if not Stack(tier="10", name="customer-gateway", template="").exists():
-        log.err("customer-gateway 미배포 · base-up 먼저"); raise SystemExit(1)
+        log.err("customer-gateway  · base-up "); raise SystemExit(1)
 
     Stack(tier="60", name="tgw",
           template="60-network-cross-cloud/tgw.yaml").deploy()
@@ -25,14 +25,14 @@ def deploy() -> None:
               template="60-network-cross-cloud/vpn-site-to-site.yaml",
               parameters=params).deploy()
     else:
-        log.warn("BOOKFLOW_GCP_VPN_GW_IP 환경변수 없음 · GCP VPN skip")
-        log.info('  $env:BOOKFLOW_GCP_VPN_GW_IP = "우혁에게 받은 GCP HA VPN IP"')
+        log.warn("BOOKFLOW_GCP_VPN_GW_IP   · GCP VPN skip")
+        log.info('  $env:BOOKFLOW_GCP_VPN_GW_IP = "  GCP HA VPN IP"')
 
-    log.step("=== task-forecast 완료 ===")
+    log.step("=== task-forecast  ===")
 
 
 def destroy() -> None:
     log.step("=== task-forecast-down ===")
     Stack(tier="60", name="vpn-site-to-site", template="").destroy()
-    log.info("TGW 는 task-auth-pod 와 공유 · 유지 (필요 시 task-auth-pod-down 으로 정리)")
-    log.step("=== task-forecast-down 완료 ===")
+    log.info("TGW  task-auth-pod   ·  (  task-auth-pod-down  )")
+    log.step("=== task-forecast-down  ===")

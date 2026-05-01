@@ -1,16 +1,16 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 99-glue · Glue Database + 6 Jobs (Flex) + IAM + Connection (BigQuery) + Data Quality
 
-# 6 Jobs (V6.2 + 비용산정 V1):
+# 6 Jobs (V6.2 +  V1):
 #   1. raw_pos_mart       (POS raw → mart)
 #   2. raw_sns_mart       (SNS raw → mart)
-#   3. raw_aladin_mart    (알라딘 raw → mart)
-#   4. raw_event_mart     (공공데이터 raw → mart)
-#   5. sales_daily_agg    (일별 매출 집계)
-#   6. features_build     (forecast 학습용 feature 조립)
+#   3. raw_aladin_mart    ( raw → mart)
+#   4. raw_event_mart     ( raw → mart)
+#   5. sales_daily_agg    (  )
+#   6. features_build     (forecast  feature )
 #
-# 비용산정: $4.06/월 · 14 DPU · Flex execution ($0.29/DPU-hr · 표준 $0.44 대비 34% 할인)
-# 스크립트: s3://bookflow-glue-scripts-*/scripts/*.py · CI/CD Pipeline 5 (Glue) 가 push
+# : $4.06/ · 14 DPU · Flex execution ($0.29/DPU-hr ·  $0.44  34% )
+# : s3://bookflow-glue-scripts-*/scripts/*.py · CI/CD Pipeline 5 (Glue)  push
 
 Parameters:
   ProjectName:
@@ -25,14 +25,14 @@ Parameters:
     Description: Glue 4.0 (Spark 3.3 · Python 3.10)
 
 Resources:
-  # ─── Glue Database (Mart 테이블 메타) ───
+  # ─── Glue Database (Mart  ) ───
   Database:
     Type: AWS::Glue::Database
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref GlueDatabaseName
-        Description: BOOKFLOW Mart Database (Glue ETL 결과 테이블 카탈로그)
+        Description: BOOKFLOW Mart Database (Glue ETL   )
         LocationUri: !Sub
           - s3://${BucketName}/
           - BucketName: !ImportValue
@@ -110,7 +110,7 @@ Resources:
                     Fn::Sub: ${ProjectName}-secrets-rds-master-arn
 
   # ─── Glue Connection (BigQuery JDBC · GCP SA key from Secrets) ───
-  # 실제 사용은 features_build job 가 BigQuery 에서 historical 데이터 조회 시
+  #   features_build job  BigQuery  historical   
   BigQueryConnection:
     Type: AWS::Glue::Connection
     Properties:
@@ -125,8 +125,8 @@ Resources:
           USERNAME: placeholder
           PASSWORD: placeholder
 
-  # ─── Glue Jobs × 6 (Flex execution · 비용 절감) ───
-  # 공통 설정 함수 대신 yaml 반복
+  # ─── Glue Jobs × 6 (Flex execution ·  ) ───
+  #     yaml 
 
   # 1. raw_pos_mart
   RawPosMartJob:
@@ -265,7 +265,7 @@ Resources:
       WorkerType: G.1X
       NumberOfWorkers: 2
 
-  # 5. sales_daily_agg (일별 매출 집계)
+  # 5. sales_daily_agg (  )
   SalesDailyAggJob:
     Type: AWS::Glue::Job
     Properties:
@@ -297,7 +297,7 @@ Resources:
       WorkerType: G.1X
       NumberOfWorkers: 2
 
-  # 6. features_build (forecast 학습 feature 조립)
+  # 6. features_build (forecast  feature )
   FeaturesBuildJob:
     Type: AWS::Glue::Job
     Properties:

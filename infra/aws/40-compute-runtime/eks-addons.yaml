@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 40 · EKS Core Addons (vpc-cni · kube-proxy · coredns · ebs-csi-driver · pod-identity-agent)
 
 Parameters:
@@ -7,7 +7,7 @@ Parameters:
     Default: bookflow
 
 Resources:
-  # ─── VPC CNI (Pod 네트워킹 · 가장 먼저) ───
+  # ─── VPC CNI (Pod  ·  ) ───
   VpcCniAddon:
     Type: AWS::EKS::Addon
     Properties:
@@ -25,7 +25,7 @@ Resources:
       AddonName: kube-proxy
       ResolveConflicts: OVERWRITE
 
-  # ─── CoreDNS (Node Group 있어야 작동) ───
+  # ─── CoreDNS (Node Group  ) ───
   CoreDnsAddon:
     Type: AWS::EKS::Addon
     DependsOn: VpcCniAddon
@@ -35,7 +35,7 @@ Resources:
       AddonName: coredns
       ResolveConflicts: OVERWRITE
 
-  # ─── EBS CSI Driver IRSA Role (PV/PVC 동적 프로비저닝) ───
+  # ─── EBS CSI Driver IRSA Role (PV/PVC  ) ───
   EbsCsiDriverRole:
     Type: AWS::IAM::Role
     Properties:
@@ -67,7 +67,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
 
-  # ─── EBS CSI Driver (PVC 처리) ───
+  # ─── EBS CSI Driver (PVC ) ───
   EbsCsiAddon:
     Type: AWS::EKS::Addon
     Properties:
@@ -77,7 +77,7 @@ Resources:
       ResolveConflicts: OVERWRITE
       ServiceAccountRoleArn: !GetAtt EbsCsiDriverRole.Arn
 
-  # ─── Pod Identity Agent (IRSA 차세대 · 추후 워크로드용 · 선택적) ───
+  # ─── Pod Identity Agent (IRSA  ·   · ) ───
   PodIdentityAddon:
     Type: AWS::EKS::Addon
     Properties:

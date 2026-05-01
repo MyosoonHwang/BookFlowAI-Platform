@@ -1,13 +1,13 @@
-AWSTemplateFormatVersion: '2010-09-09'
+﻿AWSTemplateFormatVersion: '2010-09-09'
 Description: BOOKFLOW · Tier 50 · External ALB (Egress VPC Public) + Target Groups (Publisher Blue/Green + inventory-api) + Listener (HTTP 80 + Test 8080)
 
-# 구조:
+# :
 #   ALB (internet-facing · Egress VPC Public)
 #   ├─ Listener 80 (PROD)
 #   │   ├─ Default action  → publisher-blue (Publisher EC2 ASG · Blue/Green Active)
 #   │   └─ Rule /api/inventory/* (priority 10) → inventory-api (ECS Fargate)
 #   └─ Listener 8080 (TEST)
-#       └─ Default action  → publisher-green (Publisher EC2 ASG · Blue/Green Standby · CodeDeploy 검증 traffic)
+#       └─ Default action  → publisher-green (Publisher EC2 ASG · Blue/Green Standby · CodeDeploy  traffic)
 
 Parameters:
   ProjectName:
@@ -15,7 +15,7 @@ Parameters:
     Default: bookflow
 
 Resources:
-  # ─── ALB SG (internet inbound 80/8080 · WAF 가 앞단에서 필터) ───
+  # ─── ALB SG (internet inbound 80/8080 · WAF   ) ───
   AlbSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -147,7 +147,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref InventoryApiTg
 
-  # ─── Listener 8080 (TEST · CodeDeploy 검증 traffic → Publisher Green) ───
+  # ─── Listener 8080 (TEST · CodeDeploy  traffic → Publisher Green) ───
   ListenerTest:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:

@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 30 · External Secrets Operator IRSA Role (auth-pod 등 Pod 가 Secrets Manager → K8s Secret 로 sync)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 30 · External Secrets Operator IRSA Role (auth-pod  Pod  Secrets Manager → K8s Secret  sync)
 
 Parameters:
   ProjectName:
@@ -8,14 +8,14 @@ Parameters:
   ServiceAccountNamespace:
     Type: String
     Default: external-secrets
-    Description: ESO Helm chart 가 ServiceAccount 만드는 namespace
+    Description: ESO Helm chart  ServiceAccount  namespace
   ServiceAccountName:
     Type: String
     Default: external-secrets
-    Description: ESO ServiceAccount 이름
+    Description: ESO ServiceAccount 
 
 Resources:
-  # ─── IRSA Role (ESO Operator Pod 가 SA annotation 으로 assume) ───
+  # ─── IRSA Role (ESO Operator Pod  SA annotation  assume) ───
   EsoRole:
     Type: AWS::IAM::Role
     Properties:

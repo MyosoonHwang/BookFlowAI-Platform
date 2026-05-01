@@ -1,9 +1,9 @@
-import os
+﻿import os
 from pathlib import Path
 
 import boto3
 
-# 자동 load scripts/aws/config/.env.local (gitignored · 팀 내부 공유)
+#  load scripts/aws/config/.env.local (gitignored ·   )
 _env_path = Path(__file__).resolve().parent.parent / "config" / ".env.local"
 if _env_path.exists():
     for _line in _env_path.read_text(encoding="utf-8").splitlines():

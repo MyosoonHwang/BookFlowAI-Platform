@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $GcpScriptRoot = $PSScriptRoot
 
 . (Join-Path $GcpScriptRoot "config\gcp.ps1")
@@ -9,11 +9,11 @@ $env:GOOGLE_PROJECT = $GcpConfig.ProjectID
 $env:CLOUDSDK_CORE_PROJECT = $GcpConfig.ProjectID
 $env:CLOUDSDK_COMPUTE_REGION = $GcpConfig.Region
 
-# 1. 서비스 레이어 삭제
+# 1. destroy content layer
 Invoke-TerraformLayer -Config $GcpConfig -Layer "99-content" -Action "destroy"
 
-# 2. 네트워크 레이어 삭제 (배포를 안 했으므로 주석 처리)
-Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily" -Action "destroy"
+# 2. network layer (commented out - not deployed)
+# Invoke-TerraformLayer -Config $GcpConfig -Layer "20-network-daily" -Action "destroy"
 
-# 3. 기초 레이어 삭제
+# 3. destroy foundation layer
 Invoke-TerraformLayer -Config $GcpConfig -Layer "00-foundation" -Action "destroy"

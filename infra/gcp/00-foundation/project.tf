@@ -21,6 +21,31 @@ variable "zone" {
   default     = "asia-northeast1-a"
 }
 
+variable "bigquery_location" {
+  description = "BigQuery dataset location for BOOKFLOW data warehouse resources."
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "GCP internal CIDR range allowed by the BOOKFLOW foundation firewall."
+  type        = string
+}
+
+variable "main_subnet_cidr" {
+  description = "Primary GCP subnet CIDR advertised to AWS through the cross-cloud route tables."
+  type        = string
+}
+
+variable "vpc_connector_cidr" {
+  description = "Serverless VPC Access connector CIDR. Must not overlap PSC endpoint IP allocation."
+  type        = string
+}
+
+variable "aws_allowed_cidrs" {
+  description = "AWS CIDR ranges allowed to reach the GCP foundation VPC over TGW/VPN."
+  type        = list(string)
+}
+
 variable "labels" {
   description = "Common labels applied to supported resources."
   type        = map(string)

@@ -1,9 +1,9 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 50 · NAT Gateway × 2 (Egress VPC Public · Multi-AZ HA · TGW 활성 시 cross-VPC 전용)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 50 · NAT Gateway × 2 (Egress VPC Public · Multi-AZ HA · TGW   cross-VPC )
 
-# NAT 사용 시점:
-#   Phase 1-2 (build/dev): 만들어두지만 사용 안 됨 (Peering 으론 cross-VPC NAT 불가)
-#   Phase 3-4 (시나리오/시연): TGW Route 활성 후 BookFlow AI Pod (auth-pod) → TGW → 이 NAT → IGW → Azure Entra
+# NAT  :
+#   Phase 1-2 (build/dev):     (Peering  cross-VPC NAT )
+#   Phase 3-4 (/): TGW Route   BookFlow AI Pod (auth-pod) → TGW →  NAT → IGW → Azure Entra
 
 Parameters:
   ProjectName:

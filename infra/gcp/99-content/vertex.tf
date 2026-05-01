@@ -5,7 +5,7 @@ resource "google_vertex_ai_endpoint" "forecast" {
   project      = var.project_id
   location     = local.region
   labels       = var.labels
-  network = "projects/${data.google_project.project.number}/global/networks/${data.google_compute_network.bookflow_vpc.name}"
+  network      = "projects/${data.google_project.project.number}/global/networks/${data.google_compute_network.bookflow_vpc.name}"
 
   depends_on = [
     google_project_service.required["aiplatform.googleapis.com"],

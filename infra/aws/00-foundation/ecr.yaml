@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 00 · ECR Repositories (11개 · EKS Pod 7 + EKS CronJob 1 + ECS Service 3)
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: BOOKFLOW · Tier 00 · ECR Repositories (11 · EKS Pod 7 + EKS CronJob 1 + ECS Service 3)
 
 Parameters:
   ProjectName:
@@ -7,7 +7,7 @@ Parameters:
     Default: bookflow
 
 Resources:
-  # ─── EKS Pod 이미지 (8개) ───
+  # ─── EKS Pod  (8) ───
   EcrAuthPod:
     Type: AWS::ECR::Repository
     Properties:
@@ -16,7 +16,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrDashboardSvc:
     Type: AWS::ECR::Repository
@@ -26,7 +26,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrForecastSvc:
     Type: AWS::ECR::Repository
@@ -36,7 +36,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrDecisionSvc:
     Type: AWS::ECR::Repository
@@ -46,7 +46,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrInterventionSvc:
     Type: AWS::ECR::Repository
@@ -56,7 +56,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrInventorySvc:
     Type: AWS::ECR::Repository
@@ -66,7 +66,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrNotificationSvc:
     Type: AWS::ECR::Repository
@@ -76,7 +76,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrPublishWatcher:
     Type: AWS::ECR::Repository
@@ -86,9 +86,9 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
-  # ─── ECS Task 이미지 (3개) ───
+  # ─── ECS Task  (3) ───
   EcrOnlineSim:
     Type: AWS::ECR::Repository
     Properties:
@@ -97,7 +97,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrOfflineSim:
     Type: AWS::ECR::Repository
@@ -107,7 +107,7 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
   EcrInventoryApi:
     Type: AWS::ECR::Repository
@@ -117,10 +117,10 @@ Resources:
       EncryptionConfiguration: { EncryptionType: AES256 }
       LifecyclePolicy:
         LifecyclePolicyText: |
-          { "rules": [{ "rulePriority": 1, "description": "최신 10개 유지", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
+          { "rules": [{ "rulePriority": 1, "description": " 10 ", "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 }, "action": { "type": "expire" } }] }
 
-  # Note: Publisher EC2 (Tier 40 publisher-asg) 는 Ubuntu 베어메탈에 nginx/앱 직접 설치 (UserData) ·
-  #       CodeDeploy Blue/Green 으로 S3 zip artifact 배포 → ECR 불필요 (V6.2 Slide 22)
+  # Note: Publisher EC2 (Tier 40 publisher-asg)  Ubuntu  nginx/   (UserData) ·
+  #       CodeDeploy Blue/Green  S3 zip artifact  → ECR  (V6.2 Slide 22)
 
 Outputs:
   EcrRegistryUri:

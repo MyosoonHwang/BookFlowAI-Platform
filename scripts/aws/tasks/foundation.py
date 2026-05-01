@@ -1,11 +1,11 @@
-"""Tier 00 · Foundation (영구 자원 · Day 0 1회).
+"""Tier 00 Foundation (Day 0 once - permanent resources).
 
-기본 STACKS: KMS · IAM · Parameter Store · Secrets · ACM · ECR · CodeStar · S3.
-선택 STACKS (감사/관측 용도): CloudTrail · CloudWatch — phase0 default 에 미포함 ·
-필요 시 STACKS_OPTIONAL 의 stack 만 직접 deploy.
+Default STACKS: KMS / IAM / Parameter Store / Secrets / ACM / ECR / CodeStar / S3.
+Optional STACKS (audit/observability): CloudTrail / CloudWatch - skipped by default.
+Use STACKS_OPTIONAL list to deploy them separately when needed.
 
-`BOOKFLOW_FOUNDATION_SKIP` env var 로 일부 stack skip (콤마 구분 · stack 짧은 이름):
-예: `BOOKFLOW_FOUNDATION_SKIP=codestar-connection,acm` → 6개만 deploy (CICD 로컬 build 모드 등).
+`BOOKFLOW_FOUNDATION_SKIP` env var to skip selected stacks (comma-separated short names):
+e.g. `BOOKFLOW_FOUNDATION_SKIP=codestar-connection,acm,s3` -> deploy 5 stacks (local CICD mode).
 """
 import os
 
@@ -23,7 +23,7 @@ STACKS = [
     ("s3",                  "00-foundation/s3.yaml"),
 ]
 
-# 감사/관측 — audit bucket 사용 (S3 Object Lock 90일) · 필요 시 별도 deploy
+# audit/observability - audit bucket (S3 Object Lock 90d) - deploy separately
 STACKS_OPTIONAL = [
     ("cloudtrail",          "00-foundation/cloudtrail.yaml"),
     ("cloudwatch",          "00-foundation/cloudwatch.yaml"),
@@ -36,7 +36,7 @@ def _skip_set() -> set[str]:
 
 
 def deploy() -> None:
-    log.step("═══ Phase 0 · Foundation Deploy (영구 자원 · Day 0 1회) ═══")
+    log.step("=== Phase 0 Foundation Deploy (permanent / Day 0 once) ===")
     skip = _skip_set()
     for name, template in STACKS:
         if name in skip:
@@ -44,15 +44,15 @@ def deploy() -> None:
             continue
         Stack(tier="00", name=name, template=template).deploy()
     if "codestar-connection" not in skip:
-        log.warn("CodeStar Connection 은 PENDING 상태로 생성됨 · Console 에서 수동 Activate 필요")
-    log.warn("CloudTrail · CloudWatch 는 default skip · 필요 시 STACKS_OPTIONAL 별도 deploy")
-    log.warn("Audit S3 bucket: phase0 default skip · `s3.yaml` EnableAuditBucket=true 로 활성화")
-    log.step("═══ Tier 00 Foundation 배포 완료 ═══")
+        log.warn("CodeStar Connection created in PENDING - manual Activate via Console required")
+    log.warn("CloudTrail / CloudWatch default skip - deploy via STACKS_OPTIONAL when needed")
+    log.warn("Audit S3 bucket: phase0 default skip - enable via `s3.yaml` EnableAuditBucket=true")
+    log.step("=== Tier 00 Foundation deploy done ===")
 
 
 def destroy() -> None:
-    log.step("═══ Tier 00 Foundation Destroy (영구 자원 ⚠) ═══")
-    # OPTIONAL 도 같이 정리 (있으면 destroy · 없으면 no-op)
+    log.step("=== Tier 00 Foundation Destroy (permanent resources WARNING) ===")
+    # OPTIONAL also cleaned up (destroy if exists / no-op otherwise)
     for name, _template in reversed(STACKS + STACKS_OPTIONAL):
         Stack(tier="00", name=name, template="").destroy()
-    log.step("═══ Tier 00 destroy 완료 ═══")
+    log.step("=== Tier 00 destroy done ===")
