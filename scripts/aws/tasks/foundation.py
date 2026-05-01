@@ -3,7 +3,12 @@
 기본 STACKS: KMS · IAM · Parameter Store · Secrets · ACM · ECR · CodeStar · S3.
 선택 STACKS (감사/관측 용도): CloudTrail · CloudWatch — phase0 default 에 미포함 ·
 필요 시 STACKS_OPTIONAL 의 stack 만 직접 deploy.
+
+`BOOKFLOW_FOUNDATION_SKIP` env var 로 일부 stack skip (콤마 구분 · stack 짧은 이름):
+예: `BOOKFLOW_FOUNDATION_SKIP=codestar-connection,acm` → 6개만 deploy (CICD 로컬 build 모드 등).
 """
+import os
+
 from ..lib import Stack, log
 
 
@@ -25,11 +30,21 @@ STACKS_OPTIONAL = [
 ]
 
 
+def _skip_set() -> set[str]:
+    raw = os.environ.get("BOOKFLOW_FOUNDATION_SKIP", "")
+    return {s.strip() for s in raw.split(",") if s.strip()}
+
+
 def deploy() -> None:
     log.step("═══ Phase 0 · Foundation Deploy (영구 자원 · Day 0 1회) ═══")
+    skip = _skip_set()
     for name, template in STACKS:
+        if name in skip:
+            log.info(f"  skip {name} (BOOKFLOW_FOUNDATION_SKIP)")
+            continue
         Stack(tier="00", name=name, template=template).deploy()
-    log.warn("CodeStar Connection 은 PENDING 상태로 생성됨 · Console 에서 수동 Activate 필요")
+    if "codestar-connection" not in skip:
+        log.warn("CodeStar Connection 은 PENDING 상태로 생성됨 · Console 에서 수동 Activate 필요")
     log.warn("CloudTrail · CloudWatch 는 default skip · 필요 시 STACKS_OPTIONAL 별도 deploy")
     log.warn("Audit S3 bucket: phase0 default skip · `s3.yaml` EnableAuditBucket=true 로 활성화")
     log.step("═══ Tier 00 Foundation 배포 완료 ═══")
