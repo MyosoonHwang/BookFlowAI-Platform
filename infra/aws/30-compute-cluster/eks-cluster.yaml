@@ -9,7 +9,7 @@ Parameters:
     Default: bookflow-eks
   KubernetesVersion:
     Type: String
-    Default: '1.30'
+    Default: '1.33'
   CiCdRoleArn:
     Type: String
     Default: ''
