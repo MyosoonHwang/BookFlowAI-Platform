@@ -1,17 +1,5 @@
 ﻿AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 60 · VPC Route Table entries pointing to TGW (cross-VPC + cross-cloud)
-
-# :
-#   1. Tier 10 vpc-* (RouteTable export )  
-#   2. Tier 60 tgw (tgw-id export) 
-#
-#  VPC RT   routes :
-#   -  3 VPC CIDR → TGW (cross-VPC )
-#   - Azure VNet CIDR (default 172.16.0.0/16) → TGW (cross-cloud · BGP   )
-#   - GCP VPC CIDR (default 192.168.10.0/24) → TGW
-#
-# Note: Egress VPC  RT  0.0.0.0/0 → IGW    (more specific    X)
-
+Description: BOOKFLOW - Tier 60 - VPC Route Table entries pointing to TGW (cross-VPC + cross-cloud)
 Parameters:
   ProjectName:
     Type: String

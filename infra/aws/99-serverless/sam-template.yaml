@@ -1,19 +1,6 @@
 ﻿AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: BOOKFLOW · Tier 99-serverless · 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
-
-# 7 Lambdas (V6.2 + Schema v3 ·  V1  6 Lambda + pos-ingestor):
-#   1. aladin-sync       (cron daily 04:00 KST · S3 Raw write)
-#   2. event-sync        (cron daily 03:00 KST · S3 Raw write)
-#   3. sns-gen           (cron 10min · S3 Raw write ·   )
-#   4. spike-detect      (cron 10min · VPC · RDS spike_events INSERT)
-#   5. forecast-trigger  (cron daily 04:00 · Step Functions invoke)
-#   6. secret-forwarder  (API Gateway POST · Secrets Manager rotate · Azure Function trigger)
-#   7. pos-ingestor      (Kinesis ESM · VPC · RDS inventory UPDATE · sales_realtime INSERT)
-#
-# : SAM transform  → CAPABILITY_AUTO_EXPAND 
-# : inline placeholder ·    lambdas/*    sam build/deploy  cfn package
-
+Description: BOOKFLOW - Tier 99-serverless - 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
 Parameters:
   ProjectName:
     Type: String

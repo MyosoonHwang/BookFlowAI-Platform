@@ -1,8 +1,5 @@
 ﻿AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  BOOKFLOW · Tier 10 · VPC Peering · Ansible ↔ Data
-  Ansible CN → RDS (schema/seed/grants SQL ) · RDS  GitOps 
-
+Description: BOOKFLOW - Tier 10 - VPC Peering: Ansible <-> Data. Ansible CN -> RDS (schema/seed/grants SQL apply for RDS GitOps)
 Parameters:
   ProjectName:
     Type: String

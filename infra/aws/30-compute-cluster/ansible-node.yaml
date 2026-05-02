@@ -1,6 +1,5 @@
 ﻿AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 30 · Ansible Control Node (Ubuntu 24 · t3.nano · Ansible VPC Public · SG ingress block · SSM  · K8s  )
-
+Description: BOOKFLOW - Tier 30 - Ansible Control Node (Ubuntu 24, t3.nano, Ansible VPC Public, SG ingress blocked, SSM Session Manager only, K8s admin entry)
 Parameters:
   ProjectName:
     Type: String

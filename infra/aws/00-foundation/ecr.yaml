@@ -1,6 +1,5 @@
 ﻿AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 00 · ECR Repositories (11 · EKS Pod 7 + EKS CronJob 1 + ECS Service 3)
-
+Description: BOOKFLOW - Tier 00 - ECR Repositories (11 total: 7 EKS Pods + 1 EKS CronJob + 3 ECS Services)
 Parameters:
   ProjectName:
     Type: String
