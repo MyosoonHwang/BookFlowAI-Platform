@@ -1,6 +1,5 @@
 ﻿AWSTemplateFormatVersion: '2010-09-09'
-Description: BOOKFLOW · Tier 20 · Kinesis pos-events Data Stream (5 shards) + Firehose → S3 Raw (VPC )
-
+Description: BOOKFLOW - Tier 20 - Kinesis pos-events Data Stream (5 shards) + Firehose to S3 Raw (via VPC endpoint)
 Parameters:
   ProjectName:
     Type: String
