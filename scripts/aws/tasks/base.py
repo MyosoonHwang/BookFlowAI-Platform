@@ -24,6 +24,16 @@ def deploy() -> None:
 
 def destroy() -> None:
     """  18:00 · Tier 10-60 + 99  destroy (Tier 00  )."""
+    # K8s workload (helm releases) must be uninstalled before EKS stack deletion.
+    # otherwise CFN delete leaves orphaned LoadBalancers / PVCs / namespaces.
+    try:
+        from . import mocks
+        mocks.destroy()
+    except SystemExit:
+        log.warn("mocks helm cleanup skipped (helm/kubectl missing or no cluster)")
+    except Exception as e:
+        log.warn(f"mocks helm cleanup failed: {e} (continuing)")
+
     log.step("=== base-down · Tier 10-99  destroy ===")
 
     DOWN_ORDER = {
