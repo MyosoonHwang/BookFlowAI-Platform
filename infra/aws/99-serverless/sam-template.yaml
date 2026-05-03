@@ -29,11 +29,20 @@ Parameters:
     Type: String
     Default: ''
     Description: Secrets Manager ARN for pos_ingestor RDS role - bookflow/rds/pos_ingestor
+  SpikeDetectS3Key:
+    Type: String
+    Default: lambda/spike-detect.zip
+    Description: S3 key for spike-detect Lambda code zip
+  SpikeDetectSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager ARN for spike_detect RDS role - bookflow/rds/spike_detect
 
 Conditions:
   HasStepFn:        !Not [!Equals [!Ref StepFunctionsArn, '']]
   HasArtifact:      !Not [!Equals [!Ref LambdaArtifactBucket, '']]
   HasPosSecret:     !Not [!Equals [!Ref PosIngestorSecretArn, '']]
+  HasSpikeSecret:   !Not [!Equals [!Ref SpikeDetectSecretArn, '']]
 
 Globals:
   Function:
@@ -145,19 +154,30 @@ Resources:
             Schedule: 'rate(10 minutes)'
             Name: !Sub ${ProjectName}-sns-gen-cron
 
-  # --- 4. spike-detect (cron 10min - VPC - RDS write) ---
+  # --- 4. spike-detect (cron 10min - VPC - RDS write - REAL code from S3) ---
   SpikeDetectFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-spike-detect
-      Handler: index.lambda_handler
+      Handler: lambda_function.lambda_handler
       MemorySize: 512
       Timeout: 60
-      InlineCode: |
-        import json
-        def lambda_handler(event, context):
-            print(f"[spike-detect] placeholder - event={json.dumps(event)}")
-            return {"statusCode": 200, "body": "spike-detect placeholder"}
+      CodeUri:
+        Bucket: !Ref LambdaArtifactBucket
+        Key: !Ref SpikeDetectS3Key
+      Environment:
+        Variables:
+          RDS_HOST: !Ref RdsHost
+          RDS_DB: bookflow
+          RDS_USER: spike_detect
+          RDS_SECRET_ARN: !Ref SpikeDetectSecretArn
+          REDIS_HOST: !Ref RedisHost
+          # Phase 3.5 demo (cross-ISBN normalization · 14 ECS sim ISBN 균등 분산):
+          # z >= 0.5 means "above-average sales velocity" - visible in dashboard.
+          # Phase 4: per-ISBN historic baseline (24h+ rolling) -> z >= 2.0 threshold.
+          Z_THRESHOLD: '0.5'
+          WINDOW_MINUTES: '60'
+          LOG_LEVEL: INFO
       VpcConfig:
         SecurityGroupIds: [!Ref LambdaVpcSg]
         SubnetIds:
@@ -167,11 +187,17 @@ Resources:
             Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az2
       Policies:
         - VPCAccessPolicy: {}
-        - Statement:
-            - Effect: Allow
-              Action: secretsmanager:GetSecretValue
-              Resource: !ImportValue
-                Fn::Sub: ${ProjectName}-secrets-rds-master-arn
+        - !If
+          - HasSpikeSecret
+          - Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref SpikeDetectSecretArn
+          - Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !ImportValue
+                  Fn::Sub: ${ProjectName}-secrets-rds-master-arn
       Events:
         Cron:
           Type: Schedule
