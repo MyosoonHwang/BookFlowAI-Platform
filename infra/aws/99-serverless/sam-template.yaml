@@ -1,4 +1,4 @@
-﻿AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: BOOKFLOW - Tier 99-serverless - 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
 Parameters:
@@ -8,10 +8,32 @@ Parameters:
   StepFunctionsArn:
     Type: String
     Default: ''
-    Description: ETL3 Step Functions State Machine ARN · Tier 99-glue  update-stack  
+    Description: ETL3 Step Functions State Machine ARN - update-stack after Tier 99-glue
+  LambdaArtifactBucket:
+    Type: String
+    Default: ''
+    Description: S3 bucket where lambda zip artifacts are uploaded (CodeStar bypass) - leave empty to use InlineCode placeholders
+  PosIngestorS3Key:
+    Type: String
+    Default: lambda/pos-ingestor.zip
+    Description: S3 key for pos-ingestor Lambda code zip
+  RdsHost:
+    Type: String
+    Default: ''
+    Description: RDS endpoint - bookflow-postgres.xxx.rds.amazonaws.com (empty before Tier 20)
+  RedisHost:
+    Type: String
+    Default: ''
+    Description: ElastiCache primary endpoint
+  PosIngestorSecretArn:
+    Type: String
+    Default: ''
+    Description: Secrets Manager ARN for pos_ingestor RDS role - bookflow/rds/pos_ingestor
 
 Conditions:
-  HasStepFn: !Not [!Equals [!Ref StepFunctionsArn, '']]
+  HasStepFn:        !Not [!Equals [!Ref StepFunctionsArn, '']]
+  HasArtifact:      !Not [!Equals [!Ref LambdaArtifactBucket, '']]
+  HasPosSecret:     !Not [!Equals [!Ref PosIngestorSecretArn, '']]
 
 Globals:
   Function:
@@ -25,7 +47,7 @@ Globals:
         REGION: !Ref AWS::Region
 
 Resources:
-  # ─── Lambda VPC SG (spike-detect · pos-ingestor  · BookFlow AI VPC) ───
+  # --- Lambda VPC SG (spike-detect - pos-ingestor  - BookFlow AI VPC) ---
   LambdaVpcSg:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -39,7 +61,7 @@ Resources:
           Description: egress all
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-lambda-vpc-sg' }]
 
-  # ─── 1. aladin-sync (cron daily · S3 Raw write) ───
+  # --- 1. aladin-sync (cron daily - S3 Raw write) ---
   AladinSyncFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -49,7 +71,7 @@ Resources:
         import json
         import os
         def lambda_handler(event, context):
-            print(f"[aladin-sync] placeholder · event={json.dumps(event)}")
+            print(f"[aladin-sync] placeholder - event={json.dumps(event)}")
             return {"statusCode": 200, "body": "aladin-sync placeholder"}
       Policies:
         - S3WritePolicy:
@@ -68,7 +90,7 @@ Resources:
             Name: !Sub ${ProjectName}-aladin-sync-cron
             Description: daily 04:00 KST (19:00 UTC)
 
-  # ─── 2. event-sync (cron daily · S3 Raw write) ───
+  # --- 2. event-sync (cron daily - S3 Raw write) ---
   EventSyncFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -77,7 +99,7 @@ Resources:
       InlineCode: |
         import json
         def lambda_handler(event, context):
-            print(f"[event-sync] placeholder · event={json.dumps(event)}")
+            print(f"[event-sync] placeholder - event={json.dumps(event)}")
             return {"statusCode": 200, "body": "event-sync placeholder"}
       Policies:
         - S3WritePolicy:
@@ -96,7 +118,7 @@ Resources:
             Name: !Sub ${ProjectName}-event-sync-cron
             Description: daily 03:00 KST (18:00 UTC)
 
-  # ─── 3. sns-gen (cron 10min ·  ) ───
+  # --- 3. sns-gen (cron 10min -  ) ---
   SnsGenFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -105,7 +127,7 @@ Resources:
       InlineCode: |
         import json
         def lambda_handler(event, context):
-            print(f"[sns-gen] placeholder · event={json.dumps(event)}")
+            print(f"[sns-gen] placeholder - event={json.dumps(event)}")
             return {"statusCode": 200, "body": "sns-gen placeholder"}
       Policies:
         - S3WritePolicy:
@@ -123,7 +145,7 @@ Resources:
             Schedule: 'rate(10 minutes)'
             Name: !Sub ${ProjectName}-sns-gen-cron
 
-  # ─── 4. spike-detect (cron 10min · VPC · RDS write) ───
+  # --- 4. spike-detect (cron 10min - VPC - RDS write) ---
   SpikeDetectFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -134,7 +156,7 @@ Resources:
       InlineCode: |
         import json
         def lambda_handler(event, context):
-            print(f"[spike-detect] placeholder · event={json.dumps(event)}")
+            print(f"[spike-detect] placeholder - event={json.dumps(event)}")
             return {"statusCode": 200, "body": "spike-detect placeholder"}
       VpcConfig:
         SecurityGroupIds: [!Ref LambdaVpcSg]
@@ -157,7 +179,7 @@ Resources:
             Schedule: 'rate(10 minutes)'
             Name: !Sub ${ProjectName}-spike-detect-cron
 
-  # ─── 5. forecast-trigger (cron daily · Step Functions invoke) ───
+  # --- 5. forecast-trigger (cron daily - Step Functions invoke) ---
   ForecastTriggerFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -168,13 +190,13 @@ Resources:
         import os
         import boto3
         def lambda_handler(event, context):
-            print(f"[forecast-trigger] placeholder · event={json.dumps(event)}")
+            print(f"[forecast-trigger] placeholder - event={json.dumps(event)}")
             sfn_arn = os.environ.get('STEP_FN_ARN', '')
             if sfn_arn:
                 sfn = boto3.client('stepfunctions')
                 resp = sfn.start_execution(stateMachineArn=sfn_arn, input=json.dumps({"trigger": "cron"}))
                 return {"statusCode": 200, "executionArn": resp['executionArn']}
-            return {"statusCode": 200, "body": "STEP_FN_ARN  · placeholder"}
+            return {"statusCode": 200, "body": "STEP_FN_ARN  - placeholder"}
       Environment:
         Variables:
           PROJECT_NAME: !Ref ProjectName
@@ -194,7 +216,7 @@ Resources:
             Name: !Sub ${ProjectName}-forecast-trigger-cron
             Description: daily 04:00 KST (forecast pipeline trigger)
 
-  # ─── 6. secret-forwarder (API Gateway · Azure Function ) ───
+  # --- 6. secret-forwarder (API Gateway - Azure Function ) ---
   SecretForwarderFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -203,7 +225,7 @@ Resources:
       InlineCode: |
         import json
         def lambda_handler(event, context):
-            print(f"[secret-forwarder] placeholder · event={json.dumps(event)}")
+            print(f"[secret-forwarder] placeholder - event={json.dumps(event)}")
             return {"statusCode": 200, "body": json.dumps({"status": "placeholder"})}
       Policies:
         - Statement:
@@ -226,32 +248,34 @@ Resources:
             Method: post
             ApiId: !Ref SecretForwarderApi
 
-  # ─── secret-forwarder  HTTP API Gateway ───
+  # --- secret-forwarder  HTTP API Gateway ---
   SecretForwarderApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: '$default'
       Tags: { Name: !Sub '${ProjectName}-secret-forwarder-api' }
 
-  # ─── 7. pos-ingestor (Kinesis ESM · VPC · RDS write) ───
+  # --- 7. pos-ingestor (Kinesis ESM - VPC - RDS write - REAL code from S3) ---
   PosIngestorFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-pos-ingestor
-      Handler: index.lambda_handler
+      Handler: lambda_function.lambda_handler
       MemorySize: 512
       Timeout: 60
-      ReservedConcurrentExecutions: 5
-      InlineCode: |
-        import json
-        import base64
-        def lambda_handler(event, context):
-            records = event.get('Records', [])
-            print(f"[pos-ingestor] placeholder · {len(records)} records from Kinesis")
-            for rec in records:
-                payload = base64.b64decode(rec['kinesis']['data']).decode('utf-8')
-                print(f"  payload: {payload[:200]}")
-            return {"batchItemFailures": []}
+      # ReservedConcurrentExecutions removed - new account default Lambda limit is too low.
+      # SAM transform requires CodeUri literal - !If wrapper breaks it.
+      CodeUri:
+        Bucket: !Ref LambdaArtifactBucket
+        Key: !Ref PosIngestorS3Key
+      Environment:
+        Variables:
+          RDS_HOST: !Ref RdsHost
+          RDS_DB: bookflow
+          RDS_USER: pos_ingestor
+          RDS_SECRET_ARN: !Ref PosIngestorSecretArn
+          REDIS_HOST: !Ref RedisHost
+          LOG_LEVEL: INFO
       VpcConfig:
         SecurityGroupIds: [!Ref LambdaVpcSg]
         SubnetIds:
@@ -264,11 +288,17 @@ Resources:
         - KinesisStreamReadPolicy:
             StreamName: !ImportValue
               Fn::Sub: ${ProjectName}-kinesis-pos-events-name
-        - Statement:
-            - Effect: Allow
-              Action: secretsmanager:GetSecretValue
-              Resource: !ImportValue
-                Fn::Sub: ${ProjectName}-secrets-rds-master-arn
+        - !If
+          - HasPosSecret
+          - Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref PosIngestorSecretArn
+          - Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !ImportValue
+                  Fn::Sub: ${ProjectName}-secrets-rds-master-arn
       Events:
         Stream:
           Type: Kinesis
