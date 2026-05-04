@@ -54,6 +54,33 @@ etl/
 
 ---
 
+## 배포 / 삭제 스크립트
+
+### 전체 삭제
+
+```bash
+bash etl/teardown-etl-infra.sh
+```
+
+삭제 순서:
+1. `bookflow-cicd-ecs` — CodePipeline + CodeBuild
+2. `sam-app` — Lambda 7개
+3. `base-down` — Tier 10-99 (VPC / RDS / Redis / Kinesis / ECS)
+4. S3 버킷 5개 비우기 + 삭제 (버전 관리 포함)
+5. `bookflow-00-s3` CFN 스택
+
+> Tier 00 (KMS / IAM / ECR / Secrets)는 삭제하지 않아 재배포 시 그대로 재사용된다.
+
+### 재배포
+
+```bash
+bash etl/deploy-etl-infra.sh
+```
+
+S3 버킷이 없으면 자동으로 생성한 뒤 나머지 인프라를 배포한다. teardown 후 바로 실행 가능.
+
+---
+
 ## 일정별 할 일
 
 ### 4/30 (오늘)
@@ -104,11 +131,29 @@ aws ecs describe-services --cluster bookflow-ecs --services online-sim offline-s
 
 #### 3. Lambda 배포 (SAM)
 
+> **⚠️ SAM 배포는 2단계로 나뉜다**
+>
+> `sam-template.yaml`의 모든 Lambda는 최초 배포 시 `InlineCode`(플레이스홀더)로 되어 있다.
+> 이는 인프라 배포 단계와 코드 배포 단계를 분리하기 위한 설계다.
+>
+> | 단계 | 명령 | 결과 |
+> |------|------|------|
+> | 1단계 (인프라) | `sam deploy --guided` | VPC, EventBridge 트리거, IAM Role, Kinesis ESM 등 리소스만 생성. Lambda는 플레이스홀더로 동작 (트리거는 받지만 아무것도 안 함) |
+> | 2단계 (실제 코드) | `sam build` → `sam deploy` | `lambdas/*/index.py` 실제 코드 + psycopg2 등 외부 라이브러리 패키징 후 Lambda 교체 |
+>
+> 인프라가 갖춰지기 전에 실제 코드를 올리면 VPC 연결 실패, RDS 접근 불가 에러가 나므로
+> 플레이스홀더로 자리를 잡아두고 인프라 완성 후 실제 코드로 교체하는 방식이다.
+>
+> CloudWatch 로그에서 `placeholder` 문자열이 찍히면 아직 2단계가 안 된 것이다.
+
 ```powershell
-# BookFlowAI-Platform 루트에서
+# 1단계: 인프라 배포 (최초 1회 · deploy-etl-infra.sh 실행 시 이미 완료)
 cd C:\Users\campus3S027\MJ_USER\bookflow-azure-iac\bookflow-azure-iac\BookFlowAI-Platform
-sam build -t infra\aws\99-serverless\sam-template.yaml
 sam deploy --guided
+
+# 2단계: 실제 코드 배포 (인프라 완성 후 실행)
+sam build -t infra\aws\99-serverless\sam-template.yaml
+sam deploy
 ```
 
 ---
