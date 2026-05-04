@@ -14,26 +14,46 @@ SCRIPT="py ${REPO_ROOT}/scripts/aws/bookflow.py"
 REGION="${AWS_REGION:-ap-northeast-1}"
 PROJECT="bookflow"
 
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+
 echo "================================================"
 echo " BookFlow ETL Infrastructure Deploy"
 echo " $(date '+%Y-%m-%d %H:%M:%S')"
+echo " Account : ${ACCOUNT_ID}"
+echo " ECR     : ${ECR_REGISTRY}"
 echo "================================================"
 
-# Step 0: ensure S3 stack has Outputs (deploy without import if already managed)
+# Step 0: S3 버킷 생성 (없으면 생성, 있으면 스킵)
 echo ""
-echo "[0/3] S3 stack (bookflow-00-s3)..."
-S3_STATUS=$(aws cloudformation describe-stacks \
-  --stack-name "${PROJECT}-00-s3" \
-  --query "Stacks[0].StackStatus" \
-  --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+echo "[0/4] S3 buckets (create if missing)..."
+for BUCKET in \
+  "${PROJECT}-raw-${ACCOUNT_ID}" \
+  "${PROJECT}-mart-${ACCOUNT_ID}" \
+  "${PROJECT}-cp-artifacts-${ACCOUNT_ID}" \
+  "${PROJECT}-glue-scripts-${ACCOUNT_ID}" \
+  "${PROJECT}-tf-state-${ACCOUNT_ID}"; do
 
-if [ "${S3_STATUS}" = "DOES_NOT_EXIST" ] || [ "${S3_STATUS}" = "REVIEW_IN_PROGRESS" ]; then
-  echo "  WARNING: ${PROJECT}-00-s3 stack not in UPDATE_COMPLETE state (status: ${S3_STATUS})"
-  echo "  Run import-s3-buckets.sh first to import existing S3 buckets."
-  echo "  Continuing - downstream stacks that ImportValue s3 exports may fail."
-else
-  echo "  OK ${PROJECT}-00-s3 is ${S3_STATUS}"
-fi
+  if aws s3api head-bucket --bucket "${BUCKET}" --region "${REGION}" 2>/dev/null; then
+    echo "  OK s3://${BUCKET} exists"
+  else
+    echo "  Creating s3://${BUCKET}..."
+    aws s3api create-bucket \
+      --bucket "${BUCKET}" \
+      --region "${REGION}" \
+      --create-bucket-configuration LocationConstraint="${REGION}"
+    aws s3api put-public-access-block \
+      --bucket "${BUCKET}" \
+      --region "${REGION}" \
+      --public-access-block-configuration \
+      '{"BlockPublicAcls":true,"IgnorePublicAcls":true,"BlockPublicPolicy":true,"RestrictPublicBuckets":true}'
+    aws s3api put-bucket-versioning \
+      --bucket "${BUCKET}" \
+      --region "${REGION}" \
+      --versioning-configuration Status=Enabled
+    echo "  OK s3://${BUCKET} created"
+  fi
+done
 
 # Step 1: base-up (VPCs + ECS cluster)
 echo ""
@@ -47,9 +67,23 @@ echo "[2/3] task-data (RDS + Redis + Kinesis)..."
 ${SCRIPT} task data
 echo "  OK task-data complete"
 
-# Step 3: task-etl-streaming (endpoints + ECS sims)
+# Step 3: ECR image build & push (required before ECS sims start)
 echo ""
-echo "[3/3] task-etl-streaming (VPC endpoints + ECS online/offline-sim)..."
+echo "[3/4] ECR image build & push (online-sim / offline-sim)..."
+aws ecr get-login-password --region "${REGION}" | \
+  docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
+for SIM in online-sim offline-sim; do
+  IMAGE="${ECR_REGISTRY}/${PROJECT}/${SIM}:latest"
+  echo "  -> ${SIM} build..."
+  docker build -t "${IMAGE}" "${REPO_ROOT}/ecs-sims/${SIM}"
+  docker push "${IMAGE}"
+  echo "  OK ${IMAGE} pushed"
+done
+
+# Step 4: task-etl-streaming (endpoints + ECS sims)
+echo ""
+echo "[4/4] task-etl-streaming (VPC endpoints + ECS online/offline-sim)..."
 ${SCRIPT} task etl-streaming
 echo "  OK task-etl-streaming complete"
 
@@ -60,7 +94,8 @@ echo " - Tier 10: vpc-sales-data / vpc-egress / vpc-data / vpc-bookflow-ai"
 echo " -          endpoints-sales-data (ECR/Kinesis/CWLogs/S3)"
 echo " - Tier 20: RDS / Redis / Kinesis"
 echo " - Tier 30: ECS cluster (bookflow-ecs)"
-echo " - Tier 40: ECS online-sim / offline-sim"
+echo " - ECR   : online-sim / offline-sim images pushed
+ - Tier 40: ECS online-sim / offline-sim"
 echo ""
 echo " Verify:"
 echo "   py scripts/aws/bookflow.py status"
