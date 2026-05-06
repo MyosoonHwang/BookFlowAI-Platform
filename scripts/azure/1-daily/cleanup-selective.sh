@@ -15,7 +15,7 @@ set -e
 export MSYS_NO_PATHCONV=1
 
 RESOURCE_GROUP="rg-bookflow"
-PREFIX="bookflow"
+PREFIX="bookflowmj"
 
 echo "========================================"
 echo " BOOKFLOW   "
