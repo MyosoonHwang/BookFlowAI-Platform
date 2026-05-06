@@ -5,7 +5,7 @@
 
 set -e
 
-PREFIX="bookflow"
+PREFIX="bookflowmj"
 REDIRECT_URI="https://auth.bookflow.internal/callback"  # AWS    
 
 echo "========================================"
