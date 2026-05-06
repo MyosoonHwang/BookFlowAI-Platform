@@ -81,6 +81,8 @@ GRANT INSERT                 ON audit_log        TO auth_pod;
 -- publish-watcher: new_book_requests writer (external publisher source)
 GRANT INSERT, UPDATE        ON new_book_requests TO publish_watcher;
 GRANT INSERT                ON audit_log         TO publish_watcher;
+-- intervention-svc: HQ approves/rejects new book requests (FR-A1.4 / A11.1)
+GRANT INSERT, UPDATE        ON new_book_requests TO intervention_svc;
 
 -- pos-ingestor (Lambda): sales_realtime + inventory adjustment via reservations
 GRANT INSERT                ON sales_realtime    TO pos_ingestor;

@@ -159,6 +159,8 @@ CREATE TABLE IF NOT EXISTS returns (
     status                  VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     requested_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     hq_approved_at          TIMESTAMPTZ,
+    rejected_at             TIMESTAMPTZ,    -- A4 FR-A6.8: HQ 거부 시점 (migrations/002)
+    reject_reason           VARCHAR(200),   -- A4 FR-A6.8: HQ 거부 사유 (migrations/002)
     executed_at             TIMESTAMPTZ
 );
 
