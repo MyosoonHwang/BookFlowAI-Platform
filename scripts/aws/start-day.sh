@@ -1,41 +1,44 @@
 #!/usr/bin/env bash
-# Daily 09:00 boot · Tier 10/20/30 base + EKS + ECS sims + mocks helm.
-#
-# Idempotent: safe to re-run. Each step uses CFN deploy (no-op if unchanged) or
-# helm upgrade --install (no-op if already installed).
+# start-day.sh · 09:00 매일 deploy
+# 흐름: base → peering → 4 서비스 병렬 → seed
+# 발표일: + ./scripts/ops/network-mode.sh tgw + ./scripts/ops/eks-mode.sh private
 #
 # Env:
-#   AWS_PROFILE=bookflow-admin (required · or `aws configure --profile`)
-#   AWS_REGION=ap-northeast-1  (default)
-#   BOOKFLOW_APPS_DIR=../BookFlowAI-Apps (default · for mocks chart)
-#
-# CI/CD: when CodeStar is available (weekday), wrap this script in a CodeBuild
-# project triggered by EventBridge cron 09:00 KST. helm step stays unchanged.
+#   BOOKFLOW_ENV=admin|deploy (default deploy)
 
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+load_env
+init_log "start-day" "up"
+pre_flight
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$PROJECT_ROOT"
+T0=$(date +%s)
 
-echo "=== 09:00 BOOKFLOW start-day ==="
-echo "Project root: $PROJECT_ROOT"
-echo "AWS profile: ${AWS_PROFILE:-default} · region: ${AWS_REGION:-ap-northeast-1}"
-echo
+step "1/4 base · prereq"
+"$SCRIPT_DIR/ops/base.sh" up
 
-# 1. Tier 10 (VPC) + Tier 30 base (ECS cluster)
-py scripts/aws/bookflow.py base-up
+step "2/4 peering · cross-VPC 통신"
+"$SCRIPT_DIR/ops/peering.sh" up
 
-# 2. Tier 20 data (RDS · Redis · Kinesis) + ansible-data peering
-py scripts/aws/bookflow.py task data
+step "3/4 4 서비스 병렬 (eks · ecs · publisher · etl)"
+"$SCRIPT_DIR/ops/eks.sh" up &        EKS_PID=$!
+"$SCRIPT_DIR/ops/ecs.sh" up &        ECS_PID=$!
+"$SCRIPT_DIR/ops/publisher.sh" up &  PUB_PID=$!
+"$SCRIPT_DIR/ops/etl.sh" up &        ETL_PID=$!
 
-# 3. EKS cluster + IRSA + node group + addons + bookflow-ai endpoints/peering
-py scripts/aws/bookflow.py task msa-pods
+FAILED=0
+for pid in $EKS_PID $ECS_PID $PUB_PID $ETL_PID; do
+  if ! wait $pid; then FAILED=$((FAILED+1)); fi
+done
+[ $FAILED -gt 0 ] && err "$FAILED service failed (logs/ 확인)"
 
-# 4. CSP mocks helm install (Phase 1-3 dev · swap to real CSP later via env)
-py scripts/aws/bookflow.py task mocks
+step "4/4 seed · parquet → RDS"
+"$SCRIPT_DIR/ops/seed.sh" up
 
-echo
-echo "=== start-day complete ==="
-echo "Verify:"
-echo "  py scripts/aws/bookflow.py status"
-echo "  kubectl get pods -A"
+ELAPSED=$(( $(date +%s) - T0 ))
+state_write "last-start-day" "$(date +%Y-%m-%dT%H:%M:%S)"
+state_write "last-start-elapsed" "$ELAPSED"
+echo ""
+echo "═══ start-day done · ${ELAPSED}s · failed=${FAILED} ═══"
+echo "  발표일 추가: ./scripts/ops/network-mode.sh tgw && ./scripts/ops/eks-mode.sh private"
