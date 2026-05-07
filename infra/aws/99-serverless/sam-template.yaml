@@ -1,18 +1,6 @@
-﻿AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: BOOKFLOW · Tier 99-serverless · 7 Lambdas + EventBridge cron 5 + Kinesis ESM + API Gateway HTTP
-
-# 7 Lambdas (V6.2 + Schema v3 ·  V1  6 Lambda + pos-ingestor):
-#   1. aladin-sync       (cron daily 04:00 KST · S3 Raw write)
-#   2. event-sync        (cron daily 03:00 KST · S3 Raw write)
-#   3. sns-gen           (cron 10min · S3 Raw write ·   )
-#   4. spike-detect      (cron 10min · VPC · RDS spike_events INSERT)
-#   5. forecast-trigger  (cron daily 04:00 · Step Functions invoke)
-#   6. secret-forwarder  (API Gateway POST · Secrets Manager rotate · Azure Function trigger)
-#   7. pos-ingestor      (Kinesis ESM · VPC · RDS inventory UPDATE · sales_realtime INSERT)
-#
-# : SAM transform  → CAPABILITY_AUTO_EXPAND 
-# : inline placeholder ·    lambdas/*    sam build/deploy  cfn package
+Description: BOOKFLOW Tier 99-serverless 8 Lambdas + EventBridge cron + Kinesis ESM + API Gateway HTTP
 
 Parameters:
   ProjectName:
@@ -21,14 +9,18 @@ Parameters:
   StepFunctionsArn:
     Type: String
     Default: ''
-    Description: ETL3 Step Functions State Machine ARN · Tier 99-glue  update-stack  
+    Description: ETL3 Step Functions State Machine ARN
+  GcsStagingBucket:
+    Type: String
+    Default: ''
+    Description: GCS staging bucket name for mart-to-gcs Lambda
 
 Conditions:
   HasStepFn: !Not [!Equals [!Ref StepFunctionsArn, '']]
 
 Globals:
   Function:
-    Runtime: python3.12
+    Runtime: python3.13
     Timeout: 30
     MemorySize: 256
     Tracing: Active
@@ -38,7 +30,6 @@ Globals:
         REGION: !Ref AWS::Region
 
 Resources:
-  # ─── Lambda VPC SG (spike-detect · pos-ingestor  · BookFlow AI VPC) ───
   LambdaVpcSg:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -52,18 +43,17 @@ Resources:
           Description: egress all
       Tags: [{ Key: Name, Value: !Sub '${ProjectName}-lambda-vpc-sg' }]
 
-  # ─── 1. aladin-sync (cron daily · S3 Raw write) ───
+  # 1. aladin-sync (cron daily 16:50 KST)
   AladinSyncFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-aladin-sync
+      CodeUri: lambdas/aladin-sync/
       Handler: index.lambda_handler
-      InlineCode: |
-        import json
-        import os
-        def lambda_handler(event, context):
-            print(f"[aladin-sync] placeholder · event={json.dumps(event)}")
-            return {"statusCode": 200, "body": "aladin-sync placeholder"}
+      Environment:
+        Variables:
+          RAW_BUCKET: !ImportValue
+            Fn::Sub: ${ProjectName}-s3-raw-name
       Policies:
         - S3WritePolicy:
             BucketName: !ImportValue
@@ -77,21 +67,23 @@ Resources:
         Cron:
           Type: Schedule
           Properties:
-            Schedule: 'cron(0 19 * * ? *)'
+            Schedule: 'cron(50 7 * * ? *)'
+            Enabled: true
             Name: !Sub ${ProjectName}-aladin-sync-cron
-            Description: daily 04:00 KST (19:00 UTC)
+            Description: daily 16:50 KST (07:50 UTC)
 
-  # ─── 2. event-sync (cron daily · S3 Raw write) ───
+  # 2. event-sync (cron daily 16:50 KST)
   EventSyncFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-event-sync
+      CodeUri: lambdas/event-sync/
       Handler: index.lambda_handler
-      InlineCode: |
-        import json
-        def lambda_handler(event, context):
-            print(f"[event-sync] placeholder · event={json.dumps(event)}")
-            return {"statusCode": 200, "body": "event-sync placeholder"}
+      Timeout: 120
+      Environment:
+        Variables:
+          RAW_BUCKET: !ImportValue
+            Fn::Sub: ${ProjectName}-s3-raw-name
       Policies:
         - S3WritePolicy:
             BucketName: !ImportValue
@@ -105,21 +97,22 @@ Resources:
         Cron:
           Type: Schedule
           Properties:
-            Schedule: 'cron(0 18 * * ? *)'
+            Schedule: 'cron(50 7 * * ? *)'
+            Enabled: true
             Name: !Sub ${ProjectName}-event-sync-cron
-            Description: daily 03:00 KST (18:00 UTC)
+            Description: daily 16:50 KST (07:50 UTC)
 
-  # ─── 3. sns-gen (cron 10min ·  ) ───
+  # 3. sns-gen (cron 10min)
   SnsGenFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-sns-gen
+      CodeUri: lambdas/sns-gen/
       Handler: index.lambda_handler
-      InlineCode: |
-        import json
-        def lambda_handler(event, context):
-            print(f"[sns-gen] placeholder · event={json.dumps(event)}")
-            return {"statusCode": 200, "body": "sns-gen placeholder"}
+      Environment:
+        Variables:
+          RAW_BUCKET: !ImportValue
+            Fn::Sub: ${ProjectName}-s3-raw-name
       Policies:
         - S3WritePolicy:
             BucketName: !ImportValue
@@ -134,21 +127,18 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: 'rate(10 minutes)'
+            Enabled: true
             Name: !Sub ${ProjectName}-sns-gen-cron
 
-  # ─── 4. spike-detect (cron 10min · VPC · RDS write) ───
+  # 4. spike-detect (cron 10min, VPC)
   SpikeDetectFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-spike-detect
+      CodeUri: lambdas/spike-detect/
       Handler: index.lambda_handler
       MemorySize: 512
       Timeout: 60
-      InlineCode: |
-        import json
-        def lambda_handler(event, context):
-            print(f"[spike-detect] placeholder · event={json.dumps(event)}")
-            return {"statusCode": 200, "body": "spike-detect placeholder"}
       VpcConfig:
         SecurityGroupIds: [!Ref LambdaVpcSg]
         SubnetIds:
@@ -168,9 +158,10 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: 'rate(10 minutes)'
+            Enabled: true
             Name: !Sub ${ProjectName}-spike-detect-cron
 
-  # ─── 5. forecast-trigger (cron daily · Step Functions invoke) ───
+  # 5. forecast-trigger (cron daily 18:24 KST)
   ForecastTriggerFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -181,13 +172,12 @@ Resources:
         import os
         import boto3
         def lambda_handler(event, context):
-            print(f"[forecast-trigger] placeholder · event={json.dumps(event)}")
             sfn_arn = os.environ.get('STEP_FN_ARN', '')
             if sfn_arn:
                 sfn = boto3.client('stepfunctions')
                 resp = sfn.start_execution(stateMachineArn=sfn_arn, input=json.dumps({"trigger": "cron"}))
                 return {"statusCode": 200, "executionArn": resp['executionArn']}
-            return {"statusCode": 200, "body": "STEP_FN_ARN  · placeholder"}
+            return {"statusCode": 200, "body": "STEP_FN_ARN not set"}
       Environment:
         Variables:
           PROJECT_NAME: !Ref ProjectName
@@ -203,11 +193,12 @@ Resources:
         Cron:
           Type: Schedule
           Properties:
-            Schedule: 'cron(0 19 * * ? *)'
+            Schedule: 'cron(24 9 * * ? *)'
+            Enabled: true
             Name: !Sub ${ProjectName}-forecast-trigger-cron
-            Description: daily 04:00 KST (forecast pipeline trigger)
+            Description: daily 18:24 KST (09:24 UTC)
 
-  # ─── 6. secret-forwarder (API Gateway · Azure Function ) ───
+  # 6. secret-forwarder (API Gateway)
   SecretForwarderFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -216,7 +207,6 @@ Resources:
       InlineCode: |
         import json
         def lambda_handler(event, context):
-            print(f"[secret-forwarder] placeholder · event={json.dumps(event)}")
             return {"statusCode": 200, "body": json.dumps({"status": "placeholder"})}
       Policies:
         - Statement:
@@ -239,32 +229,22 @@ Resources:
             Method: post
             ApiId: !Ref SecretForwarderApi
 
-  # ─── secret-forwarder  HTTP API Gateway ───
   SecretForwarderApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: '$default'
       Tags: { Name: !Sub '${ProjectName}-secret-forwarder-api' }
 
-  # ─── 7. pos-ingestor (Kinesis ESM · VPC · RDS write) ───
+  # 7. pos-ingestor (Kinesis ESM, VPC)
   PosIngestorFn:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ProjectName}-pos-ingestor
+      CodeUri: lambdas/pos-ingestor/
       Handler: index.lambda_handler
       MemorySize: 512
       Timeout: 60
       ReservedConcurrentExecutions: 5
-      InlineCode: |
-        import json
-        import base64
-        def lambda_handler(event, context):
-            records = event.get('Records', [])
-            print(f"[pos-ingestor] placeholder · {len(records)} records from Kinesis")
-            for rec in records:
-                payload = base64.b64decode(rec['kinesis']['data']).decode('utf-8')
-                print(f"  payload: {payload[:200]}")
-            return {"batchItemFailures": []}
       VpcConfig:
         SecurityGroupIds: [!Ref LambdaVpcSg]
         SubnetIds:
@@ -293,6 +273,44 @@ Resources:
             MaximumBatchingWindowInSeconds: 5
             FunctionResponseTypes: [ReportBatchItemFailures]
 
+  # 8. mart-to-gcs (S3 EventBridge -> GCS staging)
+  MartToGcsFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-mart-to-gcs
+      CodeUri: lambdas/mart-to-gcs/
+      Handler: index.lambda_handler
+      MemorySize: 512
+      Timeout: 120
+      Environment:
+        Variables:
+          GCS_STAGING_BUCKET: !Ref GcsStagingBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !ImportValue
+              Fn::Sub: ${ProjectName}-s3-mart-name
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !ImportValue
+                Fn::Sub: ${ProjectName}-secrets-gcp-sa-key-arn
+      Events:
+        S3EventBridge:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.s3
+              detail-type:
+                - Object Created
+              detail:
+                bucket:
+                  name:
+                    - !Sub '${ProjectName}-mart-${AWS::AccountId}'
+                object:
+                  key:
+                    - prefix: mart/
+
 Outputs:
   AladinSyncArn:
     Value: !GetAtt AladinSyncFn.Arn
@@ -318,6 +336,9 @@ Outputs:
   PosIngestorArn:
     Value: !GetAtt PosIngestorFn.Arn
     Export: { Name: !Sub '${ProjectName}-lambda-pos-ingestor-arn' }
+  MartToGcsArn:
+    Value: !GetAtt MartToGcsFn.Arn
+    Export: { Name: !Sub '${ProjectName}-lambda-mart-to-gcs-arn' }
   LambdaVpcSgId:
     Value: !Ref LambdaVpcSg
     Export: { Name: !Sub '${ProjectName}-lambda-vpc-sg-id' }
