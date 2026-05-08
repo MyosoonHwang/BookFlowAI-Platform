@@ -152,9 +152,6 @@ Resources:
         '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
-        '--additional-python-modules': 'google-cloud-bigquery==3.11.0,db-dtypes==1.1.1'
-        '--GCP_SECRET_ID': bookflow/glue/gcp-sa-key
-        '--BQ_TABLE': bookflow_dw.sales_fact
       WorkerType: G.1X
       NumberOfWorkers: 2
 
@@ -223,9 +220,6 @@ Resources:
         '--MART_BUCKET': !ImportValue
           Fn::Sub: ${ProjectName}-s3-mart-name
         '--catalog_database': !Ref Database
-        '--additional-python-modules': 'google-cloud-bigquery==3.11.0,db-dtypes==1.1.1'
-        '--GCP_SECRET_ID': bookflow/glue/gcp-sa-key
-        '--BQ_TABLE': bookflow_dw.books_static
       WorkerType: G.1X
       NumberOfWorkers: 2
 
