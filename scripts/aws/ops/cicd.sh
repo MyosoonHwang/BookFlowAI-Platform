@@ -9,11 +9,11 @@ CICD="$PROJECT_ROOT/cicd/codepipeline"
 
 case "$ACTION" in
 up)
-  step "cicd.sh up · 4 CodePipeline (4 병렬)"
+  step "cicd.sh up · 3 CodePipeline (3 병렬 · lambda-sam 제외)"
+  # lambda-sam-pipeline.yaml 은 0 byte (Lambda SAM CodePipeline 미사용 결정 · 사용자 plan)
   cfn_parallel_deploy <<EOF
 bookflow-cicd-eks|$CICD/eks-pipeline.yaml
 bookflow-cicd-ecs|$CICD/ecs-pipeline.yaml
-bookflow-cicd-lambda-sam|$CICD/lambda-sam-pipeline.yaml
 bookflow-cicd-publisher|$CICD/publisher-codedeploy.yaml
 EOF
   state_write "cicd" "up"; step "cicd.sh up done" ;;

@@ -83,6 +83,18 @@ Resources:
                   - cloudformation:ListExports
                   - cloudformation:DescribeStacks
                 Resource: '*'
+        # seed CSV / 일회성 artifact transport 용 (rds-seed playbook 이 cp-artifacts/seed-tmp/* 에서 download)
+        - PolicyName: S3SeedArtifactsRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub arn:aws:s3:::${ProjectName}-cp-artifacts-${AWS::AccountId}
+                  - !Sub arn:aws:s3:::${ProjectName}-cp-artifacts-${AWS::AccountId}/seed-tmp/*
 
   AnsibleNodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile

@@ -29,6 +29,7 @@ from ..lib import log
 CERT_MANAGER_VERSION = "v1.16.1"
 INGRESS_NGINX_VERSION = "4.11.3"
 WEBHOOK_DUCKDNS_VERSION = "v1.2.3"
+EXTERNAL_SECRETS_VERSION = "0.10.4"
 
 DEFAULT_APPS_DIR_REL = "../BookFlowAI-Apps"
 
@@ -62,6 +63,7 @@ def _helm_repo_add() -> None:
         ("ingress-nginx", "https://kubernetes.github.io/ingress-nginx"),
         ("jetstack", "https://charts.jetstack.io"),
         ("mmontes11", "https://mmontes11.github.io/charts"),
+        ("external-secrets", "https://charts.external-secrets.io"),
     ]
     for name, url in repos:
         subprocess.run(["helm", "repo", "add", name, url], check=False)
@@ -92,6 +94,53 @@ def _helm_install_cert_manager() -> None:
         "--set", "extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=8.8.8.8:53\\,1.1.1.1:53}",
         "--wait", "--timeout", "5m",
     ], check=True)
+
+
+def _helm_install_external_secrets() -> None:
+    """ESO 설치 + ServiceAccount 에 IRSA role ARN annotation.
+    eks-eso-irsa stack 의 EsoRoleArn export 를 사용 → ESO Pod 가 Secrets Manager 접근.
+    """
+    import boto3
+    cf = boto3.client("cloudformation", region_name=os.environ.get("AWS_REGION", "ap-northeast-1"))
+    eso_role_arn = next(
+        (e["Value"] for e in cf.list_exports()["Exports"] if e["Name"] == "bookflow-eso-role-arn"),
+        None,
+    )
+    if not eso_role_arn:
+        log.err("bookflow-eso-role-arn export missing · eks-eso-irsa stack 먼저 deploy")
+        raise SystemExit(1)
+    log.info(f"helm upgrade --install external-secrets · IRSA={eso_role_arn}")
+    subprocess.run([
+        "helm", "upgrade", "--install", "external-secrets", "external-secrets/external-secrets",
+        "--namespace", "external-secrets", "--create-namespace",
+        "--version", EXTERNAL_SECRETS_VERSION,
+        "--set", "installCRDs=true",
+        "--set-string", f"serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn={eso_role_arn}",
+        "--wait", "--timeout", "5m",
+    ], check=True)
+
+
+def _apply_cluster_secret_store() -> None:
+    """ClusterSecretStore `bookflow-aws-secrets` — 모든 Pod 의 ExternalSecret 가 reference."""
+    region = os.environ.get("AWS_REGION", "ap-northeast-1")
+    yaml = f"""
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: bookflow-aws-secrets
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: {region}
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets
+""".lstrip()
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml, text=True, check=True)
+    log.info("  ✓ ClusterSecretStore bookflow-aws-secrets")
 
 
 def _helm_install_webhook_duckdns(token: str) -> None:
@@ -169,62 +218,29 @@ def _alter_rds_pod_roles(rds_pw: str) -> None:
     log.info("  ✓ RDS 6 pod role passwords synced with master")
 
 
-def _sync_pod_secrets() -> None:
-    """AWS Secrets Manager → K8s Secret 자동 sync + RDS role password 정합.
-
-    매일 destroy/redeploy 시 cicd-eks 가 secret.example.yaml 무시 (buildspec glob fix) +
-    이 함수가 idempotent 보장.
-
-    - bookflow/auth/entra-client-secret → auth-pod-secret.AUTH_ENTRA_CLIENT_SECRET
-    - bookflow/auth/jwt-signing-key     → 7 Pod 의 *-secret.AUTH_JWT_SIGNING_KEY
-    - bookflow/rds/master-password      → 7 Pod 의 *-secret.{POD}_RDS_PASSWORD + auth-pod-secret.AUTH_RDS_PASSWORD
-    - + RDS 의 6 pod role password 도 master 와 일치 (ALTER ROLE)
+def _sync_rds_pod_roles() -> None:
+    """RDS pod role password 를 master password 와 일치 (003_grants.sql 의 CHANGE_ME_* 정정).
+    K8s Secret sync 는 ESO 가 ExternalSecret 으로 처리 (eks-pods/*/k8s/externalsecret.yaml).
     """
     import boto3, json
     sm = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION", "ap-northeast-1"))
-
-    log.info("sync K8s Secrets from AWS Secrets Manager")
-    entra = json.loads(sm.get_secret_value(SecretId="bookflow/auth/entra-client-secret")["SecretString"])
-    jwt_key = sm.get_secret_value(SecretId="bookflow/auth/jwt-signing-key")["SecretString"]
     rds_pw = json.loads(sm.get_secret_value(SecretId="bookflow/rds/master-password")["SecretString"])["password"]
-
-    # RDS pod role password sync (master 와 일치 · 003_grants.sql 의 CHANGE_ME_* 정정)
     _alter_rds_pod_roles(rds_pw)
-
-    # auth-pod-secret (entra + jwt + rds)
-    yaml = subprocess.run(
-        ["kubectl", "create", "secret", "generic", "auth-pod-secret", "-n", "bookflow",
-         f"--from-literal=AUTH_ENTRA_CLIENT_SECRET={entra['client_secret']}",
-         f"--from-literal=AUTH_JWT_SIGNING_KEY={jwt_key}",
-         f"--from-literal=AUTH_RDS_PASSWORD={rds_pw}",
-         "--dry-run=client", "-o", "yaml"],
-        check=True, capture_output=True, text=True,
-    ).stdout
-    subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml, text=True, check=True)
-    log.info("  ✓ auth-pod-secret")
-
-    # 6 Pod dual-mode auth · *_RDS_PASSWORD + AUTH_JWT_SIGNING_KEY 둘 다 sync
-    pod_to_envprefix = {
-        "dashboard-svc": "DASHBOARD",
-        "decision-svc": "DECISION",
-        "forecast-svc": "FORECAST",
-        "intervention-svc": "INTERVENTION",
-        "inventory-svc": "INVENTORY",
-        "notification-svc": "NOTIFICATION",
-    }
-    for pod, prefix in pod_to_envprefix.items():
-        yaml = subprocess.run(
-            ["kubectl", "create", "secret", "generic", f"{pod}-secret", "-n", "bookflow",
-             f"--from-literal={prefix}_RDS_PASSWORD={rds_pw}",
-             f"--from-literal=AUTH_JWT_SIGNING_KEY={jwt_key}",
-             "--dry-run=client", "-o", "yaml"],
-            check=True, capture_output=True, text=True,
-        ).stdout
-        subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml, text=True, check=True)
-    log.info("  ✓ 6 Pod RDS password + JWT key sync")
 
 
 def _apply_manifests() -> None:
+    # bookflow namespace 가 certificate.yaml 보다 먼저 존재해야 함 (cert-manager Certificate 가 namespace=bookflow)
+    subprocess.run(
+        ["kubectl", "create", "namespace", "bookflow", "--dry-run=client", "-o", "yaml"],
+        check=True, capture_output=True, text=True,
+    )
+    yaml = subprocess.run(
+        ["kubectl", "create", "namespace", "bookflow", "--dry-run=client", "-o", "yaml"],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml, text=True, check=True)
+    log.info("  ✓ namespace bookflow")
+
     apps = _apps_dir()
     manifests = [
         apps / "eks-pods" / "auth-pod" / "k8s" / "cluster-issuer.yaml",
@@ -254,9 +270,11 @@ def deploy() -> None:
     _helm_install_ingress_nginx()
     _helm_install_cert_manager()
     _helm_install_webhook_duckdns(token)
+    _helm_install_external_secrets()
     _ensure_duckdns_token_secret(token)
+    _apply_cluster_secret_store()
     _apply_manifests()
-    _sync_pod_secrets()
+    _sync_rds_pod_roles()
 
     log.step("=== task-eks-addons done ===")
     log.info("https://bookflow.duckdns.org/ should serve in 60-90s after first cert issuance")
