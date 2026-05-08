@@ -164,7 +164,7 @@ main:
           region: "${local.region}"
           body:
             displayName: "bookflow-existing-books-batch-prediction"
-            model: "${coalesce(var.vertex_batch_prediction_model, "")}"
+            model: "${var.vertex_batch_prediction_model != null ? var.vertex_batch_prediction_model : ""}"
             inputConfig:
               instancesFormat: "bigquery"
               bigquerySource:
