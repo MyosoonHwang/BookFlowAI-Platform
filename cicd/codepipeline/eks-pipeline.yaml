@@ -120,11 +120,27 @@ Resources:
                 Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}-cb-eks*
 
   # ────────────────────────────────────────────────────────────────
+  # 1b. EKS Access Entry — CodeBuild role 을 EKS cluster admin 으로 등록
+  #     매일 destroy/redeploy 시 cluster 가 새로 생성되어도 cicd-eks stack 이
+  #     access entry 자동 등록 → kubectl Unauthorized 재발 방지.
+  #     ImportValue 로 EKS cluster stack 의존성 자동 (cluster up 후 deploy).
+  # ────────────────────────────────────────────────────────────────
+  CodeBuildEksAccessEntry:
+    Type: AWS::EKS::AccessEntry
+    Properties:
+      ClusterName: !ImportValue bookflow-eks-cluster-name
+      PrincipalArn: !GetAtt CodeBuildRole.Arn
+      Type: STANDARD
+      AccessPolicies:
+        - PolicyArn: arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy
+          AccessScope: { Type: cluster }
+
+  # ────────────────────────────────────────────────────────────────
   # 2. CodeBuild Project
   #    - Privileged mode = true (Docker daemon )
   #    - Compute: BUILD_GENERAL1_MEDIUM (4GB · 2vCPU · Docker build )
   #    - Image: aws/codebuild/standard:7.0 (Ubuntu 22.04 · Docker + AWS CLI  )
-  #    - BuildSpec: source repo  eks-pods/buildspec.yml 
+  #    - BuildSpec: source repo  eks-pods/buildspec.yml
   # ────────────────────────────────────────────────────────────────
   CodeBuildProject:
     Type: AWS::CodeBuild::Project

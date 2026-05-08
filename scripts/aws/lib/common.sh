@@ -105,24 +105,48 @@ for i in range(120):
 PYEOF
 }
 
-# ── CFN deploy single stack (idempotent) ──
+# ── CFN deploy single stack (idempotent · boto3 UTF-8 · Windows cp949 회피) ──
 cfn_deploy() {
   local stack="$1" template="$2"; shift 2
-  local params=()
+  local params_str=""
   while [ $# -gt 0 ]; do
-    params+=("$1"); shift
+    params_str+="$1"$'\n'; shift
   done
   log "deploy $stack"
-  if [ ${#params[@]} -gt 0 ]; then
-    aws cloudformation deploy --stack-name "$stack" --template-file "$template" \
-      --parameter-overrides "${params[@]}" \
-      --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-      --no-fail-on-empty-changeset
-  else
-    aws cloudformation deploy --stack-name "$stack" --template-file "$template" \
-      --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-      --no-fail-on-empty-changeset
-  fi
+  CFN_STACK="$stack" CFN_TEMPLATE="$(_winpath "$template")" CFN_PARAMS="$params_str" py - <<'PYEOF'
+import boto3, sys, os
+sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
+sys.stderr.reconfigure(encoding='utf-8', line_buffering=True)
+session = boto3.Session(profile_name=os.environ['AWS_PROFILE'], region_name=os.environ['AWS_REGION'])
+cf = session.client('cloudformation')
+stack = os.environ['CFN_STACK']
+with open(os.environ['CFN_TEMPLATE'], encoding='utf-8') as f:
+    body = f.read()
+params = []
+for line in os.environ.get('CFN_PARAMS', '').splitlines():
+    if not line.strip(): continue
+    k, _, v = line.partition('=')
+    params.append({'ParameterKey': k, 'ParameterValue': v})
+kwargs = dict(StackName=stack, TemplateBody=body,
+              Capabilities=['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'])
+if params: kwargs['Parameters'] = params
+try:
+    cf.update_stack(**kwargs); action = 'update'
+except cf.exceptions.ClientError as e:
+    msg = str(e)
+    if 'does not exist' in msg:
+        cf.create_stack(**kwargs); action = 'create'
+    elif 'No updates' in msg:
+        print(f"  - {stack} (no changes)"); sys.exit(0)
+    else:
+        print(f"  ✗ {stack}: {msg[:200]}"); sys.exit(1)
+waiter = cf.get_waiter(f'stack_{action}_complete')
+try:
+    waiter.wait(StackName=stack, WaiterConfig={'Delay': 15, 'MaxAttempts': 160})
+    print(f"  ✓ {stack} ({action})")
+except Exception as e:
+    print(f"  ✗ {stack}: {str(e)[:200]}"); sys.exit(1)
+PYEOF
 }
 
 # ── parallel deploy (boto3) ──
@@ -149,6 +173,8 @@ def deploy(spec):
     name, tpl = spec[0], spec[1]
     params = spec[2:] if len(spec) > 2 else []
     print(f"  deploy {name}", flush=True)
+    if not os.path.exists(tpl) or os.path.getsize(tpl) == 0:
+        return f"  ⚠ {name}: skip (template 비어있음 · {tpl})"
     with open(tpl, encoding='utf-8') as f: body = f.read()
     kwargs = dict(StackName=name, TemplateBody=body,
                   Capabilities=['CAPABILITY_NAMED_IAM','CAPABILITY_AUTO_EXPAND'])

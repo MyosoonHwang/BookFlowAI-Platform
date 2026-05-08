@@ -10,8 +10,9 @@ Output: 17 CSVs in this directory (books, authors, publishers, warehouses, locat
         users, inventory, reservations, pending_orders, order_approvals, returns,
         forecast_cache, new_book_requests, spike_events, notifications_log,
         sales_realtime, audit_log).
-inventory_snapshot_daily and kpi_daily are derived at-deploy via SQL aggregation,
-not seeded as CSV (too large to commit).
+kpi_daily is seeded with 30 days × 13 stores (전사+10 오프라인+2 온라인) for demo charts;
+운영에선 매일 03:30 KST kpi-sync CronJob 이 BQ kpi_daily_view 에서 MERGE.
+inventory_snapshot_daily 는 너무 커서 (14일 × 12000 = 168k) 시드 제외 · CronJob 이 채움.
 """
 import csv
 import json
@@ -525,6 +526,56 @@ def gen_audit_log() -> list[dict]:
     return rows
 
 
+def gen_kpi_daily(books: list[dict], locations: list[dict]) -> list[dict]:
+    """30일치 일별 KPI · store_id=0 (전사) + 실 매장 12개 = 13 stores.
+    channel='ALL' · category_id=0 (전체) 단일 분면. 데모 차트용 합리적 수치 분포.
+    """
+    rows = []
+    isbns = [b["isbn13"] for b in books]
+    store_ids = [0] + [loc["location_id"] for loc in locations]   # 0=전사
+    for d in range(30, 0, -1):
+        kpi_date = (TODAY - timedelta(days=d)).isoformat()
+        per_store: list[dict] = []
+        for sid in store_ids:
+            if sid == 0:
+                continue   # 전사 row 는 매장 합으로 마지막에 만듦
+            qty = random.randint(80, 380)
+            avg_price = random.randint(13000, 22000)
+            revenue = qty * avg_price + random.randint(-50000, 50000)
+            tx_count = random.randint(40, 180)
+            unique = random.randint(20, 120)
+            row = {
+                "kpi_date":          kpi_date,
+                "store_id":          sid,
+                "category_id":       0,
+                "channel":           "ALL",
+                "qty_sold":          qty,
+                "revenue":           revenue,
+                "tx_count":          tx_count,
+                "avg_price":         avg_price,
+                "unique_isbn_count": unique,
+                "top_isbn":          random.choice(isbns),
+                "synced_from_bq_at": NOW.isoformat(),
+            }
+            per_store.append(row)
+            rows.append(row)
+        # 전사 합산 row (store_id=0)
+        rows.append({
+            "kpi_date":          kpi_date,
+            "store_id":          0,
+            "category_id":       0,
+            "channel":           "ALL",
+            "qty_sold":          sum(r["qty_sold"] for r in per_store),
+            "revenue":           sum(r["revenue"] for r in per_store),
+            "tx_count":          sum(r["tx_count"] for r in per_store),
+            "avg_price":         sum(r["revenue"] for r in per_store) // max(sum(r["qty_sold"] for r in per_store), 1),
+            "unique_isbn_count": min(1000, sum(r["unique_isbn_count"] for r in per_store)),
+            "top_isbn":          random.choice(isbns),
+            "synced_from_bq_at": NOW.isoformat(),
+        })
+    return rows
+
+
 def main() -> None:
     print(f"BookFlow seed-data generator (deterministic, seed=42)")
     print(f"  aladin source: {ALADIN_JSON.name}")
@@ -545,6 +596,7 @@ def main() -> None:
     notifications_log = gen_notifications_log()
     sales_realtime = gen_sales_realtime(books, locations)
     audit_log = gen_audit_log()
+    kpi_daily = gen_kpi_daily(books, locations)
 
     write_csv("publishers",         publishers)
     write_csv("authors",            authors)
@@ -563,6 +615,7 @@ def main() -> None:
     write_csv("notifications_log",  notifications_log)
     write_csv("sales_realtime",     sales_realtime)
     write_csv("audit_log",          audit_log)
+    write_csv("kpi_daily",          kpi_daily)
 
     print()
     print("done")

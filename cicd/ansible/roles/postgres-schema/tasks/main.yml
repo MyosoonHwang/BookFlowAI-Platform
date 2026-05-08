@@ -9,14 +9,16 @@
     cmd: >-
       aws cloudformation list-exports
       --region {{ aws_region }}
-      --query "Exports[?Name=='{{ project_name }}-rds-endpoint'].Value | [0]"
+      --query "Exports[?Name=='{{ project_name }}-rds-endpoint'].Value"
       --output text
   register: rds_endpoint_result
   changed_when: false
 
+# AWS CLI '| [0]' JMESPath quirk: hostname 다음 'None' 한 줄을 추가 출력 → DNS resolve 실패.
+# query 는 array 그대로 받고 stdout_lines | first 로 첫 줄만 사용.
 - name: Set RDS endpoint fact
   ansible.builtin.set_fact:
-    db_host: "{{ rds_endpoint_result.stdout | trim }}"
+    db_host: "{{ (rds_endpoint_result.stdout_lines | first | default('')) | trim }}"
 
 - name: Fail if RDS endpoint missing
   ansible.builtin.fail:
