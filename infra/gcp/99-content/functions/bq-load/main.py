@@ -82,7 +82,9 @@ _BQ_CAST_TYPES = {
 def _load_table_map() -> dict[str, str]:
     """
     환경변수 BOOKFLOW_TABLE_MAP (JSON) 이 있으면 기본 매핑을 merge하여 반환.
-    예) BOOKFLOW_TABLE_MAP='{"pos_events": "sales_transactions"}'
+    BOOKFLOW_LOAD_TABLES (쉼표 구분 테이블명 목록) 에 없는 테이블은 적재 거부.
+    training_dataset 은 BigQuery 파이프라인이 학습 직전에 JOIN으로 생성하므로
+    이 함수의 허용 목록에 포함되지 않음.
     """
     raw = os.environ.get("BOOKFLOW_TABLE_MAP", "")
     aliases = os.environ.get("BOOKFLOW_LOAD_TABLE_ALIASES", "")
@@ -93,9 +95,17 @@ def _load_table_map() -> dict[str, str]:
                 continue
             source_name, table_name = alias.split(":", 1)
             table_map[source_name.strip()] = table_name.strip()
-        return table_map
     except (json.JSONDecodeError, ValueError):
-        return _DEFAULT_TABLE_MAP
+        table_map = dict(_DEFAULT_TABLE_MAP)
+
+    # BOOKFLOW_LOAD_TABLES 에 정의된 테이블만 허용
+    # 미설정 시 전체 허용 (하위 호환)
+    allowed_raw = os.environ.get("BOOKFLOW_LOAD_TABLES", "")
+    if allowed_raw:
+        allowed = {t.strip() for t in allowed_raw.split(",") if t.strip()}
+        table_map = {src: tgt for src, tgt in table_map.items() if tgt in allowed}
+
+    return table_map
 
 
 def _parse_path(object_name: str) -> tuple[str, str]:

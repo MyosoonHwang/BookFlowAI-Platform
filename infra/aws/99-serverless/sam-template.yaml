@@ -273,7 +273,7 @@ Resources:
             MaximumBatchingWindowInSeconds: 5
             FunctionResponseTypes: [ReportBatchItemFailures]
 
-  # 8. mart-to-gcs (S3 EventBridge -> GCS staging)
+  # 8. mart-to-gcs (S3 EventBridge -> GCS staging, VPC private → TGW → VPN → GCP)
   MartToGcsFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -282,18 +282,30 @@ Resources:
       Handler: index.lambda_handler
       MemorySize: 512
       Timeout: 120
+      VpcConfig:
+        SecurityGroupIds: [!Ref LambdaVpcSg]
+        SubnetIds:
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az1
+          - !ImportValue
+            Fn::Sub: ${ProjectName}-subnet-bookflow-ai-private-az2
       Environment:
         Variables:
           GCS_STAGING_BUCKET: !Ref GcsStagingBucket
+          GCP_SECRET_ID: bookflow/glue/gcp-sa-key
       Policies:
+        - VPCAccessPolicy: {}
         - S3ReadPolicy:
             BucketName: !ImportValue
               Fn::Sub: ${ProjectName}-s3-mart-name
         - Statement:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
-              Resource: !ImportValue
-                Fn::Sub: ${ProjectName}-secrets-gcp-sa-key-arn
+              Resource:
+                - !ImportValue
+                  Fn::Sub: ${ProjectName}-secrets-gcp-sa-key-arn
+                - !ImportValue
+                  Fn::Sub: ${ProjectName}-secrets-glue-gcp-arn
       Events:
         S3EventBridge:
           Type: EventBridgeRule
