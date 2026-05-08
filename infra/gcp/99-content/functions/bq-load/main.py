@@ -37,6 +37,7 @@ bq-load Cloud Function (GCP)
 import json
 import os
 import re
+import uuid
 
 import functions_framework
 from google.cloud import bigquery
@@ -60,6 +61,22 @@ _DEFAULT_TABLE_MAP: dict[str, str] = {
 # 예) mart/pos_events/sale_date=2026-05-01/part.parquet
 #      ↑ 이 정규식으로 "mart/pos_events/" 를 추출
 _HIVE_PART_RE = re.compile(r"/[^/]+=")
+
+_BQ_CAST_TYPES = {
+    "BOOL": "BOOL",
+    "BOOLEAN": "BOOL",
+    "BYTES": "BYTES",
+    "DATE": "DATE",
+    "DATETIME": "DATETIME",
+    "FLOAT": "FLOAT64",
+    "FLOAT64": "FLOAT64",
+    "INTEGER": "INT64",
+    "INT64": "INT64",
+    "NUMERIC": "NUMERIC",
+    "STRING": "STRING",
+    "TIME": "TIME",
+    "TIMESTAMP": "TIMESTAMP",
+}
 
 
 def _load_table_map() -> dict[str, str]:
@@ -103,6 +120,14 @@ def _parse_path(object_name: str) -> tuple[str, str]:
         base  = object_name[: match.start()] if match else folder
 
     return folder, base
+
+
+def _field_expr(field: bigquery.SchemaField, source_columns: set[str]) -> str:
+    field_name = field.name.replace("`", "")
+    field_type = _BQ_CAST_TYPES.get(field.field_type.upper(), field.field_type.upper())
+    if field_name in source_columns:
+        return f"SAFE_CAST(`{field_name}` AS {field_type}) AS `{field_name}`"
+    return f"CAST(NULL AS {field_type}) AS `{field_name}`"
 
 
 @functions_framework.http
@@ -158,23 +183,46 @@ def handler(request):
 
     client = bigquery.Client(project=project_id, location=bq_location)
 
-    job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.PARQUET,
-        write_disposition=write_disp,
+    load_config_kwargs = {
+        "source_format": bigquery.SourceFormat.PARQUET,
+        "write_disposition": write_disp,
         # BigQuery 테이블 스키마는 bookflow_bigquery_ddl.sql 로 미리 정의됨 → autodetect 불필요
-        autodetect=False,
-        # Hive 파티션 자동 감지: source_uri_prefix 기준으로 key=value 컬럼을 BigQuery 파티션으로 변환
-        # 예) sale_date=2026-05-01/ → PARTITION BY sale_date
-        hive_partitioning_options=bigquery.HivePartitioningOptions(
-            mode="AUTO",
-            source_uri_prefix=f"gs://{bucket}/{base_path}/",
-            require_partition_filter=False,
-        ),
-    )
+        "autodetect": False,
+    }
 
-    # BigQuery Load Job 실행 (동기 대기 · locals.tf timeout=540s 이내)
-    load_job = client.load_table_from_uri(gcs_uri, table_ref, job_config=job_config)
+    # Hive 파티션 자동 감지는 key=value 경로가 있는 객체에만 적용한다.
+    # 예) mart/pos_events/sale_date=2026-05-01/part.parquet → sale_date 컬럼 로드
+    if _HIVE_PART_RE.search(object_name):
+        hive_options = bigquery.HivePartitioningOptions()
+        hive_options.mode = "AUTO"
+        hive_options.source_uri_prefix = f"gs://{bucket}/{base_path}/"
+        hive_options.require_partition_filter = False
+        load_config_kwargs["hive_partitioning"] = hive_options
+
+    temp_table_ref = f"{project_id}.{dataset_id}.__load_{table_name}_{uuid.uuid4().hex[:12]}"
+    load_config_kwargs["autodetect"] = True
+    load_config_kwargs["write_disposition"] = bigquery.WriteDisposition.WRITE_TRUNCATE
+    job_config = bigquery.LoadJobConfig(**load_config_kwargs)
+
+    # Parquet 원본은 임시 테이블에 먼저 autodetect로 적재한 뒤 대상 테이블 스키마에 맞춰 INSERT한다.
+    # pandas/pyarrow Parquet의 nullable/date 타입 차이가 대상 테이블 직접 적재를 막는 경우를 피하기 위함이다.
+    load_job = client.load_table_from_uri(gcs_uri, temp_table_ref, job_config=job_config)
     load_job.result()
+
+    target_table = client.get_table(table_ref)
+    temp_table = client.get_table(temp_table_ref)
+    source_columns = {field.name for field in temp_table.schema}
+    target_columns = [field.name.replace("`", "") for field in target_table.schema]
+    select_exprs = [_field_expr(field, source_columns) for field in target_table.schema]
+
+    insert_sql = f"""
+    INSERT INTO `{table_ref}` ({", ".join(f"`{column}`" for column in target_columns)})
+    SELECT {", ".join(select_exprs)}
+    FROM `{temp_table_ref}`
+    """
+    query_job = client.query(insert_sql)
+    query_job.result()
+    client.delete_table(temp_table_ref, not_found_ok=True)
 
     row_count = client.get_table(table_ref).num_rows
     print(f"[bq-load] {gcs_uri} → {table_ref} | disposition={write_disp} total_rows={row_count}")

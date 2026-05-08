@@ -33,6 +33,12 @@ resource "google_compute_global_forwarding_rule" "psc_googleapis" {
   depends_on = [
     google_compute_global_address.psc_googleapis_ip,
   ]
+
+  lifecycle {
+    replace_triggered_by = [
+      google_compute_global_address.psc_googleapis_ip,
+    ]
+  }
 }
 
 resource "google_dns_managed_zone" "googleapis_private" {

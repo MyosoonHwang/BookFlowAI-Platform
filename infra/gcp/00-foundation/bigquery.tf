@@ -19,10 +19,14 @@ resource "google_bigquery_table" "sales_fact" {
   dataset_id = google_bigquery_dataset.bookflow_dw.dataset_id
   table_id   = var.bigquery_table_ids.sales_fact
 
-  deletion_protection = true
+  deletion_protection = false
   description         = "Daily sales aggregate used as the forecasting target."
 
   clustering = ["isbn13", "store_id"]
+
+  lifecycle {
+    ignore_changes = [schema]
+  }
 
   schema = jsonencode([
     { name = "sale_date", type = "DATE", mode = "REQUIRED", description = "Sales date." },
@@ -46,7 +50,7 @@ resource "google_bigquery_table" "inventory_daily" {
   description         = "Daily inventory snapshot imported from the historical seed dataset."
 
   schema = jsonencode([
-    { name = "snapshot_date", type = "DATE", mode = "REQUIRED", description = "Daily inventory snapshot date." },
+    { name = "snapshot_date", type = "DATE", mode = "NULLABLE", description = "Daily inventory snapshot date." },
     { name = "isbn13", type = "STRING", mode = "NULLABLE", description = "Book ISBN-13." },
     { name = "location_id", type = "INTEGER", mode = "NULLABLE", description = "Location id, 1-14." },
     { name = "on_hand", type = "INTEGER", mode = "NULLABLE", description = "On-hand inventory quantity." },
@@ -66,8 +70,8 @@ resource "google_bigquery_table" "features" {
   clustering = ["isbn13"]
 
   schema = jsonencode([
-    { name = "feature_date", type = "DATE", mode = "REQUIRED", description = "Feature date." },
-    { name = "isbn13", type = "STRING", mode = "REQUIRED", description = "Book ISBN-13." },
+    { name = "feature_date", type = "DATE", mode = "NULLABLE", description = "Feature date." },
+    { name = "isbn13", type = "STRING", mode = "NULLABLE", description = "Book ISBN-13." },
     { name = "is_holiday", type = "BOOLEAN", mode = "NULLABLE", description = "Whether the date is a public holiday." },
     { name = "holiday_name", type = "STRING", mode = "NULLABLE", description = "Holiday name." },
     { name = "season", type = "STRING", mode = "NULLABLE", description = "SPRING, SUMMER, FALL, or WINTER." },
@@ -95,7 +99,7 @@ resource "google_bigquery_table" "books_static" {
   clustering = ["isbn13"]
 
   schema = jsonencode([
-    { name = "isbn13", type = "STRING", mode = "REQUIRED", description = "Book ISBN-13." },
+    { name = "isbn13", type = "STRING", mode = "NULLABLE", description = "Book ISBN-13." },
     { name = "author", type = "STRING", mode = "NULLABLE", description = "Primary author." },
     { name = "publisher", type = "STRING", mode = "NULLABLE", description = "Publisher name." },
     { name = "category_id", type = "INTEGER", mode = "NULLABLE", description = "Aladin category id." },
@@ -123,7 +127,7 @@ resource "google_bigquery_table" "locations_static" {
   clustering = ["location_id"]
 
   schema = jsonencode([
-    { name = "location_id", type = "INTEGER", mode = "REQUIRED", description = "Location id." },
+    { name = "location_id", type = "INTEGER", mode = "NULLABLE", description = "Location id." },
     { name = "location_type", type = "STRING", mode = "NULLABLE", description = "WH, STORE_OFFLINE, or STORE_ONLINE." },
     { name = "wh_id", type = "INTEGER", mode = "NULLABLE", description = "Warehouse region id, 1 or 2." },
     { name = "size", type = "STRING", mode = "NULLABLE", description = "Offline store size: L, M, or S." },
@@ -142,9 +146,9 @@ resource "google_bigquery_table" "store_location_map" {
   clustering = ["store_id"]
 
   schema = jsonencode([
-    { name = "store_id", type = "INTEGER", mode = "REQUIRED", description = "Sales store id, 1-12." },
-    { name = "location_id", type = "INTEGER", mode = "REQUIRED", description = "Dashboard or sales location id." },
-    { name = "inventory_location_id", type = "INTEGER", mode = "REQUIRED", description = "Real inventory location id used for stock joins." },
+    { name = "store_id", type = "INTEGER", mode = "NULLABLE", description = "Sales store id, 1-12." },
+    { name = "location_id", type = "INTEGER", mode = "NULLABLE", description = "Dashboard or sales location id." },
+    { name = "inventory_location_id", type = "INTEGER", mode = "NULLABLE", description = "Real inventory location id used for stock joins." },
     { name = "mapping_rule", type = "STRING", mode = "NULLABLE", description = "Human-readable mapping rule." },
   ])
 }
