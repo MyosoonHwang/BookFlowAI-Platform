@@ -34,7 +34,9 @@ def deploy() -> None:
         ]
     parallel_deploy(wave_a, label=f"{len(wave_a)} stacks (eks-cluster + endpoints" + ('' if tgw_active else ' + 2 peerings') + ')')
 
-    # Wave B: eks-cluster 의존 · 3종 동시 (~5min)
+    # Wave B: eks-cluster 의존 · 4종 동시 (~10min)
+    # NOTE: eks-addons (VPC CNI) 가 nodes Ready 의 전제조건이므로 nodegroup 과 병렬 필수.
+    #       addons 를 nodegroup 뒤에 두면 NotReady → nodegroup CREATE_IN_PROGRESS deadlock.
     parallel_deploy([
         Stack(tier="30", name="eks-alb-controller-irsa",
               template="30-compute-cluster/eks-alb-controller-irsa.yaml"),
@@ -42,11 +44,9 @@ def deploy() -> None:
               template="30-compute-cluster/eks-eso-irsa.yaml"),
         Stack(tier="40", name="eks-nodegroup",
               template="40-compute-runtime/eks-nodegroup.yaml"),
-    ], label="2 IRSAs + eks-nodegroup")
-
-    # Wave C: nodegroup 의존
-    Stack(tier="40", name="eks-addons",
-          template="40-compute-runtime/eks-addons.yaml").deploy()
+        Stack(tier="40", name="eks-addons",
+              template="40-compute-runtime/eks-addons.yaml"),
+    ], label="2 IRSAs + eks-nodegroup + eks-addons (CNI)")
 
     log.step("=== task-msa-pods done ===")
     log.info("kubeconfig: aws eks update-kubeconfig --name bookflow-eks --region ap-northeast-1")
