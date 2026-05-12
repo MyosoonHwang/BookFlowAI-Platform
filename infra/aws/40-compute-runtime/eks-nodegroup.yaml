@@ -23,10 +23,10 @@ Parameters:
     Description: t3.medium max-pods 17 한계 · 7 Pod + ESO/cert/ingress addon = 25+ → 2 노드 필요
   MinSize:
     Type: Number
-    Default: 2
+    Default: 1
   MaxSize:
     Type: Number
-    Default: 3
+    Default: 2
   DiskSize:
     Type: Number
     Default: 20
