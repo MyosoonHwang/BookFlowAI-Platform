@@ -133,11 +133,11 @@ def deploy() -> None:
     if not ans.exists():
         log.err("ansible-node not deployed · check Tier 30"); raise SystemExit(1)
 
-    # 2026-05-12 TGW 모드 (Phase 4) — peering-ansible-data 자원 불필요.
-    # ansible-node (bookflow-ai VPC) → TGW → data VPC RDS 자동 라우팅.
-    # 잔존 ROLLBACK_COMPLETE stack 이 있으면 정리만 (재시드 차단 방지).
+    # peering 모드 (default) 에선 ansible-data peering 이 seed 라우팅 (10.4→10.3) 필수.
+    # TGW 모드 (Phase 4) 에선 TGW 가 라우팅 → peering 잔재 정리. tier 60 tgw stack 존재로 모드 감지.
+    tgw_active = Stack(tier="60", name="tgw", template="").exists()
     leftover = Stack(tier="10", name="peering-ansible-data", template="")
-    if leftover.exists():
+    if leftover.exists() and tgw_active:
         log.info("  peering-ansible-data leftover · destroy (TGW 모드 정합)")
         leftover.destroy()
 
@@ -160,9 +160,10 @@ def deploy() -> None:
 
 
 def destroy() -> None:
-    log.step("=== task-rds-seed-down · noop (TGW 모드 · peering 자원 없음) ===")
-    # 잔존 stack 있으면 cleanup
+    log.step("=== task-rds-seed-down · noop (peering 모드는 ops/peering.sh 가 cleanup) ===")
+    # TGW 모드 잔재만 정리. peering 모드는 ops/peering.sh down 이 5 peering 일괄 정리.
+    tgw_active = Stack(tier="60", name="tgw", template="").exists()
     leftover = Stack(tier="10", name="peering-ansible-data", template="")
-    if leftover.exists():
+    if leftover.exists() and tgw_active:
         leftover.destroy()
     log.step("=== task-rds-seed-down complete ===")
