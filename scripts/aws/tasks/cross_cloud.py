@@ -112,6 +112,30 @@ def _attach_vpn_to_tgw_rt() -> None:
             else:
                 log.warn(f"  propagate fail: {e}")
 
+    # GCS PSC 정적 라우트 — GCP VPN attachment에만 추가
+    # BGP가 10.50.0.0/24(PSC subnet)를 광고하지 않으므로 수동 정적 라우트 필요
+    # PHZ: storage.googleapis.com → 10.50.0.10 (GCS PSC endpoint)
+    gcs_psc_cidr = os.environ.get("BOOKFLOW_GCP_PSC_CIDR", "10.50.0.0/24")
+    gcp_atts = [
+        a for a in attachments
+        if any(t["Key"] == "Name" and "gcp" in t["Value"].lower()
+               for t in a.get("Tags", []))
+    ]
+    for att in gcp_atts:
+        att_id = att["TransitGatewayAttachmentId"]
+        try:
+            ec2.create_transit_gateway_route(
+                TransitGatewayRouteTableId=tgw_rt_id,
+                DestinationCidrBlock=gcs_psc_cidr,
+                TransitGatewayAttachmentId=att_id,
+            )
+            log.info(f"  GCS PSC static route {gcs_psc_cidr} → {att_id}")
+        except ec2.exceptions.ClientError as e:
+            if "RouteAlreadyExists" in str(e) or "already exists" in str(e).lower():
+                log.info(f"  GCS PSC static route {gcs_psc_cidr} already exists · skip")
+            else:
+                log.warn(f"  GCS PSC static route fail: {e}")
+
 
 def destroy() -> None:
     log.step("=== cross-cloud destroy ===")

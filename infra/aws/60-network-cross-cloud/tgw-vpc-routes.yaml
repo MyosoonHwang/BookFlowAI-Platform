@@ -12,6 +12,10 @@ Parameters:
     Type: String
     Default: 192.168.10.0/24
     Description: GCP VPC CIDR (BGP    route )
+  GcpPscCidr:
+    Type: String
+    Default: 10.50.0.0/24
+    Description: GCP PSC endpoint CIDR (PHZ storage.googleapis.com → 10.50.0.10)
 
 Resources:
   # ─── bookflow-ai VPC RT (10.0.0.0/16) →  VPC + Azure + GCP ───
@@ -44,6 +48,12 @@ Resources:
     Properties:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
       DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtBookflowAiToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-bookflow-ai-private' }
+      DestinationCidrBlock: !Ref GcpPscCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
   RtBookflowAiToAnsible:
     Type: AWS::EC2::Route
@@ -82,6 +92,12 @@ Resources:
     Properties:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
       DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtSalesDataToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-sales-data-private' }
+      DestinationCidrBlock: !Ref GcpPscCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
   RtSalesDataToAnsible:
     Type: AWS::EC2::Route
@@ -122,6 +138,12 @@ Resources:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
       DestinationCidrBlock: !Ref GcpVpcCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtEgressToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-egress-public' }
+      DestinationCidrBlock: !Ref GcpPscCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
   RtEgressToAnsible:
     Type: AWS::EC2::Route
     Properties:
@@ -159,6 +181,12 @@ Resources:
     Properties:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
       DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataPrivateToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-private' }
+      DestinationCidrBlock: !Ref GcpPscCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
   RtDataPrivateToAnsible:
     Type: AWS::EC2::Route
@@ -198,6 +226,12 @@ Resources:
     Properties:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
       DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtDataDbToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-data-db' }
+      DestinationCidrBlock: !Ref GcpPscCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
   RtDataDbToAnsible:
     Type: AWS::EC2::Route
@@ -243,6 +277,12 @@ Resources:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-ansible-private' }
       DestinationCidrBlock: !Ref GcpVpcCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtAnsibleToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-ansible-private' }
+      DestinationCidrBlock: !Ref GcpPscCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
 
   # ─── ansible VPC public RT (ansible-node 가 실제 배치된 곳) → 4 VPC + Azure + GCP ───
   RtAnsiblePubToBookflowAi:
@@ -280,4 +320,10 @@ Resources:
     Properties:
       RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-ansible-public' }
       DestinationCidrBlock: !Ref GcpVpcCidr
+      TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
+  RtAnsiblePubToGcpPsc:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !ImportValue { Fn::Sub: '${ProjectName}-rt-ansible-public' }
+      DestinationCidrBlock: !Ref GcpPscCidr
       TransitGatewayId: !ImportValue { Fn::Sub: '${ProjectName}-tgw-id' }
