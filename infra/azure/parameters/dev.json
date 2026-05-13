@@ -4,7 +4,7 @@
   "parameters": {
     "environment": { "value": "dev" },
     "location": { "value": "japanwest" },
-    "prefix": { "value": "bookflow01" },
+    "prefix": { "value": "bookflowmj" },
     "vnetAddressPrefix": { "value": "172.16.0.0/16" },
     "gatewaySubnetPrefix": { "value": "172.16.1.0/27" },
     "servicesSubnetPrefix": { "value": "172.16.2.0/24" },
@@ -15,6 +15,8 @@
     "awsTgwActiveIp": { "value": "52.194.91.158" },
     "awsTgwBgpPeeringIp": { "value": "169.254.21.5" },
     "vpnPreSharedKey": { "value": "bookflow" },
-    "vpnCustomBgpIpAddresses": { "value": ["169.254.21.6"] }
+    "vpnCustomBgpIpAddresses": { "value": ["169.254.21.6"] },
+    "digestRecipients": { "value": "[{\"address\":\"ms8405493@gmail.com\",\"displayName\":\"본사/경영진\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류센터\"},{\"address\":\"admin@bleach10905gmail.onmicrosoft.com\",\"displayName\":\"지점\"}]" },
+    "dashboardBaseUrl": { "value": "https://bookflow.duckdns.org" }
   }
 }

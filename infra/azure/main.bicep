@@ -112,10 +112,25 @@ module eventgrid 'modules/eventgrid.bicep' = {
   }
 }
 
-// ── 8. Logic Apps (관리 ID, Key Vault 참조) ───────────────
+// ── 수신자 파라미터 (JSON 배열 문자열) ──────────────────────
+// 형식: '[{"address":"a@b.com","displayName":"이름"},...]'
+param digestRecipients string   // 일일 요약·계획 완료: 본사+경영진+WH+지점 전체
+param dashboardBaseUrl string = 'https://bookflow.duckdns.org'
+
+// ── 8. ACS Email ──────────────────────────────────────────
+module acs 'modules/acs.bicep' = {
+  name: 'acs-deploy'
+  dependsOn: [identity]
+  params: {
+    prefix: prefix
+    logicappIdentityPrincipalId: identity.outputs.logicappIdentityPrincipalId
+  }
+}
+
+// ── 9-1. Logic Apps (관리 ID, Key Vault, ACS 참조) ────────
 module logicapp 'modules/logicapp.bicep' = {
   name: 'logicapp-deploy'
-  dependsOn: [identity, keyvault]
+  dependsOn: [identity, keyvault, acs]
   params: {
     location: location
     prefix: prefix
@@ -123,10 +138,14 @@ module logicapp 'modules/logicapp.bicep' = {
     logicappIdentityClientId: identity.outputs.logicappIdentityClientId
     keyVaultUri: keyvault.outputs.keyVaultUri
     logAnalyticsWorkspaceId: monitor.outputs.workspaceId
+    acsEndpoint: acs.outputs.acsEndpoint
+    acsSenderAddress: acs.outputs.acsSenderAddress
+    digestRecipients: digestRecipients
+    dashboardBaseUrl: dashboardBaseUrl
   }
 }
 
-// ── 9. VPN Gateway (VNet 참조) ──
+// ── 9-2. VPN Gateway (VNet 참조) ──
 module vpn 'modules/vpn.bicep' = {
   name: 'vpn-deploy'
   dependsOn: [vnet]
