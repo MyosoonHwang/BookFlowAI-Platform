@@ -10,7 +10,7 @@
     "logAnalyticsWorkspaceId": { "value": "/subscriptions/e98a94bb-7532-4e49-8a36-bc42e30d5a81/resourceGroups/rg-bookflow/providers/Microsoft.OperationalInsights/workspaces/law-bookflowmj" },
     "acsEndpoint": { "value": "acs-bookflowmj.japan.communication.azure.com" },
     "acsSenderAddress": { "value": "DoNotReply@2ccec47b-b5b4-41a4-a704-c9f38070133a.azurecomm.net" },
-    "digestRecipients": { "value": "[{\"address\":\"ms8405493@gmail.com\",\"displayName\":\"본사/경영진\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류센터\"},{\"address\":\"admin@bleach10905gmail.onmicrosoft.com\",\"displayName\":\"지점\"}]" },
+    "digestRecipients": { "value": "[{\"address\":\"ms8405493@gmail.com\",\"displayName\":\"본사/경영진\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류센터\"},{\"address\":\"woohek00@gmail.com\",\"displayName\":\"지점\"}]" },
     "dashboardBaseUrl": { "value": "https://bookflow.duckdns.org" },
     "functionSubnetId": { "value": "/subscriptions/e98a94bb-7532-4e49-8a36-bc42e30d5a81/resourceGroups/rg-bookflow/providers/Microsoft.Network/virtualNetworks/vnet-bookflowmj/subnets/snet-function" },
     "servicesSubnetId": { "value": "/subscriptions/e98a94bb-7532-4e49-8a36-bc42e30d5a81/resourceGroups/rg-bookflow/providers/Microsoft.Network/virtualNetworks/vnet-bookflowmj/subnets/snet-bookflowmj-services" },

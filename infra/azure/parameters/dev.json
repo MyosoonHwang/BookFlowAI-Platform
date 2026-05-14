@@ -16,7 +16,7 @@
     "awsTgwBgpPeeringIp": { "value": "169.254.21.5" },
     "vpnPreSharedKey": { "value": "bookflow" },
     "vpnCustomBgpIpAddresses": { "value": ["169.254.21.6"] },
-    "digestRecipients": { "value": "[{\"address\":\"ms8405493@gmail.com\",\"displayName\":\"본사/경영진\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류센터\"},{\"address\":\"admin@bleach10905gmail.onmicrosoft.com\",\"displayName\":\"지점\"}]" },
+    "digestRecipients": { "value": "[{\"address\":\"ms8405493@gmail.com\",\"displayName\":\"본사/경영진\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류센터\"},{\"address\":\"woohek00@gmail.com\",\"displayName\":\"지점\"}]" },
     "dashboardBaseUrl": { "value": "https://bookflow.duckdns.org" }
   }
 }
