@@ -127,10 +127,10 @@ module acs 'modules/acs.bicep' = {
   }
 }
 
-// ── 9-1. Logic Apps (관리 ID, Key Vault, ACS 참조) ────────
+// ── 9-1. Logic Apps Standard (관리 ID, Key Vault, ACS, VNet 참조) ────────
 module logicapp 'modules/logicapp.bicep' = {
   name: 'logicapp-deploy'
-  dependsOn: [identity, keyvault, acs]
+  dependsOn: [identity, keyvault, acs, vnet]
   params: {
     location: location
     prefix: prefix
@@ -142,6 +142,9 @@ module logicapp 'modules/logicapp.bicep' = {
     acsSenderAddress: acs.outputs.acsSenderAddress
     digestRecipients: digestRecipients
     dashboardBaseUrl: dashboardBaseUrl
+    functionSubnetId: vnet.outputs.functionSubnetId
+    servicesSubnetId: vnet.outputs.servicesSubnetId
+    vnetId: vnet.outputs.vnetId
   }
 }
 

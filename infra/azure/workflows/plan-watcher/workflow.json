@@ -1,0 +1,59 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "Recurrence_Hourly": {
+        "type": "Recurrence",
+        "recurrence": {
+          "frequency": "Hour",
+          "interval": 1
+        }
+      }
+    },
+    "actions": {
+      "HTTP_GetPendingSummary": {
+        "type": "Http",
+        "inputs": {
+          "method": "GET",
+          "uri": "@{concat(appsetting('DASHBOARD_URL'), '/dashboard/pending/summary?days=1')}"
+        }
+      },
+      "Check_AllPendingZero": {
+        "type": "If",
+        "runAfter": { "HTTP_GetPendingSummary": ["Succeeded"] },
+        "expression": {
+          "and": [
+            { "equals": ["@body('HTTP_GetPendingSummary')?['pending_count']", 0] }
+          ]
+        },
+        "actions": {
+          "Email_PlanFinalized": {
+            "type": "Http",
+            "operationOptions": "DisableAsyncPattern",
+            "inputs": {
+              "method": "POST",
+              "uri": "@appsetting('ACS_EMAIL_URI')",
+              "authentication": {
+                "type": "ManagedServiceIdentity",
+                "identity": "@appsetting('LA_IDENTITY_ID')",
+                "audience": "https://communication.azure.com"
+              },
+              "body": {
+                "senderAddress": "@appsetting('ACS_SENDER')",
+                "recipients": { "to": "@json(appsetting('DIGEST_RECIPIENTS'))" },
+                "content": {
+                  "subject": "✅ [최종확정] @{formatDateTime(utcNow(), 'yyyy-MM-dd')} 의사결정 모두 완료 · 운송 시작",
+                  "html": "<p>오늘의 모든 PENDING이 처리됐습니다. 운송 시작 가능 상태입니다.</p><ul><li>총 @{body('HTTP_GetPendingSummary')?['total']}건 처리 완료</li></ul><p><a href=\"@{appsetting('DASHBOARD_URL')}/decision?date=@{formatDateTime(utcNow(), 'yyyy-MM-dd')}\">최종 계획안 보기</a></p>"
+                },
+                "importance": "normal"
+              }
+            }
+          }
+        },
+        "else": { "actions": {} }
+      }
+    }
+  },
+  "kind": "Stateful"
+}
