@@ -1,0 +1,55 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "Recurrence_0200KST": {
+        "type": "Recurrence",
+        "recurrence": {
+          "frequency": "Day",
+          "interval": 1,
+          "schedule": { "hours": ["17"], "minutes": [0] },
+          "timeZone": "UTC"
+        }
+      }
+    },
+    "actions": {
+      "List_Secrets": {
+        "type": "Http",
+        "inputs": {
+          "method": "GET",
+          "uri": "@{concat(appsetting('KEY_VAULT_URI'), 'secrets?api-version=7.4')}",
+          "authentication": {
+            "type": "ManagedServiceIdentity",
+            "identity": "@appsetting('LA_IDENTITY_ID')",
+            "audience": "https://vault.azure.net"
+          }
+        }
+      },
+      "Notify_DevOps": {
+        "type": "Http",
+        "operationOptions": "DisableAsyncPattern",
+        "runAfter": { "List_Secrets": ["Succeeded"] },
+        "inputs": {
+          "method": "POST",
+          "uri": "@appsetting('ACS_EMAIL_URI')",
+          "authentication": {
+            "type": "ManagedServiceIdentity",
+            "identity": "@appsetting('LA_IDENTITY_ID')",
+            "audience": "https://communication.azure.com"
+          },
+          "body": {
+            "senderAddress": "@appsetting('ACS_SENDER')",
+            "recipients": { "to": "@json(appsetting('DIGEST_RECIPIENTS'))" },
+            "content": {
+              "subject": "[BOOKFLOW] Key Vault 시크릿 만료 점검 실행",
+              "html": "<p>Key Vault 시크릿 만료 점검이 실행됐습니다.</p><p>시크릿 목록: @{body('List_Secrets')?['value']}</p>"
+            },
+            "importance": "normal"
+          }
+        }
+      }
+    }
+  },
+  "kind": "Stateful"
+}

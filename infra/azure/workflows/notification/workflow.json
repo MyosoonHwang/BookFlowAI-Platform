@@ -1,0 +1,260 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "manual": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "event_type": { "type": "string" },
+              "severity":   { "type": "string" },
+              "payload":    { "type": "object" },
+              "recipients": { "type": "array" }
+            },
+            "required": ["event_type", "severity", "payload", "recipients"]
+          }
+        }
+      }
+    },
+    "actions": {
+      "Switch_EventType": {
+        "type": "Switch",
+        "expression": "@triggerBody()?['event_type']",
+        "cases": {
+          "AutoExecutedUrgent": {
+            "case": "AutoExecutedUrgent",
+            "actions": {
+              "Email_AutoExecutedUrgent": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "🤖 [특이] AI 자동 승인 @{triggerBody()?['payload']?['n']}건 · 본사 검토 필요",
+                      "html": "<p>07:00 batch가 긴급도/예측 근거로 본사 검토 없이 자동 승인했습니다.</p><ul><li>CRITICAL (@{triggerBody()?['payload']?['critical']}건): 가용 ≤ 0 + 24h 내 품절 예측</li><li>URGENT (@{triggerBody()?['payload']?['urgent']}건): 가용 &lt; 안전재고 + 7일 평균 판매 초과</li></ul><p>⚠️ 비용 발생 · 사후 회수 불가</p><p><a href=\"@{appsetting('DASHBOARD_URL')}/decision?status=AUTO_EXECUTED&date=@{utcNow('yyyy-MM-dd')}\">자동 승인 내역 확인</a></p>"
+                    },
+                    "importance": "high"
+                  }
+                }
+              }
+            }
+          },
+          "DailyPlanFinalized": {
+            "case": "DailyPlanFinalized",
+            "actions": {
+              "Email_DailyPlanFinalized": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "✅ [최종확정] @{triggerBody()?['payload']?['today']} 의사결정 모두 완료 · 운송 시작",
+                      "html": "<p>오늘 처리해야 할 의사결정이 모두 완료됐습니다 — 운송 시작 가능 상태.</p><ul><li>총 @{triggerBody()?['payload']?['total']}건 발의</li><li>✅ 승인 (자동+수동): @{triggerBody()?['payload']?['approved']}건</li><li>❌ 거절: @{triggerBody()?['payload']?['rejected']}건</li><li>자동 실행: @{triggerBody()?['payload']?['auto']}건</li></ul><p>Stage 1(권역 내): @{triggerBody()?['payload']?['s1']}건 · Stage 2(권역 간): @{triggerBody()?['payload']?['s2']}건 · Stage 3(발주): @{triggerBody()?['payload']?['s3']}건</p><p><a href=\"@{appsetting('DASHBOARD_URL')}/decision?date=@{triggerBody()?['payload']?['today']}\">최종 계획안 보기</a></p>"
+                    },
+                    "importance": "normal"
+                  }
+                }
+              }
+            }
+          },
+          "SpikeUrgent": {
+            "case": "SpikeUrgent",
+            "actions": {
+              "Email_SpikeUrgent": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "🔥 [긴급] SNS 급등: \"@{triggerBody()?['payload']?['title']}\" (z-score @{triggerBody()?['payload']?['z_score']})",
+                      "html": "<p>SNS 화제 도서가 감지됐습니다. 24h 내 폭증 매출 가능성.</p><ul><li>📚 도서: @{triggerBody()?['payload']?['title']} (@{triggerBody()?['payload']?['isbn13']})</li><li>📈 z-score: @{triggerBody()?['payload']?['z_score']} · 멘션: @{triggerBody()?['payload']?['mentions_count']}회</li><li>🏪 안전재고 미달: @{triggerBody()?['payload']?['shortage_stores']}개 매장</li></ul><p><a href=\"@{appsetting('DASHBOARD_URL')}/spikes\">즉시 발의 화면</a></p>"
+                    },
+                    "importance": "high"
+                  }
+                }
+              }
+            }
+          },
+          "ApprovalDelayed": {
+            "case": "ApprovalDelayed",
+            "actions": {
+              "Email_ApprovalDelayed": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "⏳ [협의지연] 권역 이동 @{triggerBody()?['payload']?['n']}건 · 24h+ 양쪽 승인 대기",
+                      "html": "<p>권역 간 이동 협의가 24시간 이상 정체됐습니다.</p><ul><li>수도권→영남 대기: @{triggerBody()?['payload']?['a']}건</li><li>영남→수도권 대기: @{triggerBody()?['payload']?['b']}건</li></ul><p><a href=\"@{appsetting('DASHBOARD_URL')}/decision\">본사 강제 승인</a></p>"
+                    },
+                    "importance": "normal"
+                  }
+                }
+              }
+            }
+          },
+          "InboundRejected": {
+            "case": "InboundRejected",
+            "actions": {
+              "Email_InboundRejected": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "📦 [입고거부] @{triggerBody()?['payload']?['n']}건 · 최근 5분 (@{triggerBody()?['payload']?['region']})",
+                      "html": "<p>@{triggerBody()?['payload']?['region']} 매장 입고 거부 @{triggerBody()?['payload']?['n']}건 발생.</p><p>거부 사유: @{triggerBody()?['payload']?['reasons']}</p><p><a href=\"@{appsetting('DASHBOARD_URL')}/wh-instructions?status=REJECTED\">입고 거부 목록</a></p>"
+                    },
+                    "importance": "normal"
+                  }
+                }
+              }
+            }
+          },
+          "NewBookRequest": {
+            "case": "NewBookRequest",
+            "actions": {
+              "Email_NewBookRequest": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "📚 [신간] 출판사 신간 신청 @{triggerBody()?['payload']?['n']}건 · 편입 결정 필요",
+                      "html": "<p>출판사에서 신간 판매 신청 @{triggerBody()?['payload']?['n']}건이 접수됐습니다.</p><p><a href=\"@{appsetting('DASHBOARD_URL')}/requests\">신간 편입 결정</a></p>"
+                    },
+                    "importance": "normal"
+                  }
+                }
+              }
+            }
+          },
+          "LambdaAlarm": {
+            "case": "LambdaAlarm",
+            "actions": {
+              "Email_LambdaAlarm": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "🚨 [시스템] Lambda fail: @{triggerBody()?['payload']?['function_name']}",
+                      "html": "<p>🔧 Function: @{triggerBody()?['payload']?['function_name']}</p><p>❌ @{triggerBody()?['payload']?['error_message']}</p><p>📍 Request ID: @{triggerBody()?['payload']?['request_id']}</p><p><a href=\"@{triggerBody()?['payload']?['cloudwatch_url']}\">CloudWatch Logs</a></p>"
+                    },
+                    "importance": "high"
+                  }
+                }
+              }
+            }
+          },
+          "DeploymentRollback": {
+            "case": "DeploymentRollback",
+            "actions": {
+              "Email_DeploymentRollback": {
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@appsetting('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@appsetting('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@appsetting('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "🔄 [배포] CodePipeline rollback: @{triggerBody()?['payload']?['pipeline_name']}",
+                      "html": "<p>CodePipeline이 자동 rollback 했습니다.</p><ul><li>🌿 Branch: @{triggerBody()?['payload']?['branch']} · Commit: @{triggerBody()?['payload']?['commit_sha']}</li><li>❌ 실패 단계: @{triggerBody()?['payload']?['failed_stage']}</li></ul><p><a href=\"@{triggerBody()?['payload']?['codepipeline_url']}\">Pipeline 확인</a></p>"
+                    },
+                    "importance": "high"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "default": { "actions": {} }
+      },
+      "Response": {
+        "type": "Response",
+        "runAfter": {
+          "Switch_EventType": ["Succeeded", "Failed", "Skipped", "TimedOut"]
+        },
+        "inputs": {
+          "statusCode": 200,
+          "body": { "result": "ok" }
+        }
+      }
+    }
+  },
+  "kind": "Stateful"
+}
