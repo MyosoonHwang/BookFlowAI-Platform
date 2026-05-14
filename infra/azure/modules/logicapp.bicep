@@ -247,6 +247,60 @@ resource logicAppNotification 'Microsoft.Logic/workflows@2019-05-01' = {
               }
             }
 
+            // ── 7. Lambda 장애 (CRITICAL · 즉시 · DevOps) ───────────────
+            LambdaAlarm: {
+              case: 'LambdaAlarm'
+              actions: {
+                Email_LambdaAlarm: {
+                  type: 'Http'
+                  operationOptions: 'DisableAsyncPattern'
+                  inputs: {
+                    method: 'POST'
+                    uri: acsEmailUri
+                    authentication: acsAuth
+                    body: {
+                      senderAddress: acsSenderAddress
+                      recipients: {
+                        to: '@triggerBody()?[\'recipients\']'
+                      }
+                      content: {
+                        subject: '🚨 [시스템] Lambda fail: @{triggerBody()?[\'payload\']?[\'function_name\']}'
+                        html: '<p>🔧 Function: @{triggerBody()?[\'payload\']?[\'function_name\']}</p><p>⏰ @{triggerBody()?[\'payload\']?[\'timestamp\']}</p><p>❌ @{triggerBody()?[\'payload\']?[\'error_message\']}</p><p>📍 Request ID: @{triggerBody()?[\'payload\']?[\'request_id\']}</p><p>영향 범위: @{triggerBody()?[\'payload\']?[\'impact\']}</p><p><a href="@{triggerBody()?[\'payload\']?[\'cloudwatch_url\']}">CloudWatch Logs</a></p>'
+                      }
+                      importance: 'high'
+                    }
+                  }
+                }
+              }
+            }
+
+            // ── 8. 배포 롤백 (CRITICAL · 즉시 · DevOps) ─────────────────
+            DeploymentRollback: {
+              case: 'DeploymentRollback'
+              actions: {
+                Email_DeploymentRollback: {
+                  type: 'Http'
+                  operationOptions: 'DisableAsyncPattern'
+                  inputs: {
+                    method: 'POST'
+                    uri: acsEmailUri
+                    authentication: acsAuth
+                    body: {
+                      senderAddress: acsSenderAddress
+                      recipients: {
+                        to: '@triggerBody()?[\'recipients\']'
+                      }
+                      content: {
+                        subject: '🔄 [배포] CodePipeline rollback: @{triggerBody()?[\'payload\']?[\'pipeline_name\']}'
+                        html: '<p>CodePipeline이 자동 rollback 했습니다.</p><ul><li>🔧 Pipeline: @{triggerBody()?[\'payload\']?[\'pipeline_name\']}</li><li>🌿 Branch: @{triggerBody()?[\'payload\']?[\'branch\']} · Commit: @{triggerBody()?[\'payload\']?[\'commit_sha\']}</li><li>⏰ Rollback 시각: @{triggerBody()?[\'payload\']?[\'timestamp\']}</li><li>❌ 실패 단계: @{triggerBody()?[\'payload\']?[\'failed_stage\']}</li></ul><p>조치: 코드 변경 검토 + 재배포 결정</p><p><a href="@{triggerBody()?[\'payload\']?[\'codepipeline_url\']}">Pipeline 확인</a></p>'
+                      }
+                      importance: 'high'
+                    }
+                  }
+                }
+              }
+            }
+
           }
           default: {
             actions: {}
