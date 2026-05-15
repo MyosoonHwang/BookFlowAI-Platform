@@ -38,7 +38,7 @@
             "case": "DailyPlanFinalized",
             "actions": {
               "Email_DailyPlanFinalized": {
-                "description": "패턴 2 — 의사결정 완료 알림. 수신자: 본사+물류센터+지점. 역할별 WhTransfer 분석 뷰 링크 포함.",
+                "description": "의사결정 완료 알림. 수신자: 본사+물류센터+지점. 역할별 WhTransfer 분석 뷰 링크 포함.",
                 "type": "Http",
                 "operationOptions": "DisableAsyncPattern",
                 "inputs": {
@@ -66,7 +66,7 @@
             "case": "SpikeUrgent",
             "actions": {
               "Email_SpikeUrgent": {
-                "description": "패턴 3 — SNS 화제 도서 감지 · 매출 폭증 가능성 긴급 알림. 수신자: 본사+물류센터. 본사 강제 승인 링크 + WhTransfer 분석 뷰 포함.",
+                "description": "SNS 화제 도서 감지 · 매출 폭증 가능성 긴급 알림. 수신자: 본사+물류센터. 본사 강제 승인 링크 + WhTransfer 분석 뷰 포함.",
                 "type": "Http",
                 "operationOptions": "DisableAsyncPattern",
                 "inputs": {
@@ -113,6 +113,34 @@
                       "html": "<p>협의가 지연되고 있습니다. 확인 및 조치가 필요합니다.</p><h4>즉시 조치</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/decision/force-approve\">본사 강제 승인</a></li></ul><h4>WhTransfer 분석 뷰</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=hq\">본사 담당자 접속</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=warehouse\">물류센터 담당자 접속</a></li></ul>"
                     },
                     "importance": "high"
+                  }
+                }
+              }
+            }
+          },
+          "DeliveryCompleted": {
+            "case": "DeliveryCompleted",
+            "actions": {
+              "Email_DeliveryCompleted": {
+                "description": "운송 완료 · 재고 입고 알림. inventory-svc 또는 WMS가 운송 완료를 확인한 시점에 notification-svc를 통해 호출. 수신자: 본사+물류센터+지점.",
+                "type": "Http",
+                "operationOptions": "DisableAsyncPattern",
+                "inputs": {
+                  "method": "POST",
+                  "uri": "@parameters('ACS_EMAIL_URI')",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "identity": "@parameters('LA_IDENTITY_ID')",
+                    "audience": "https://communication.azure.com"
+                  },
+                  "body": {
+                    "senderAddress": "@parameters('ACS_SENDER')",
+                    "recipients": { "to": "@triggerBody()?['recipients']" },
+                    "content": {
+                      "subject": "[운송완료] 재고 입고 완료 · 현황 확인",
+                      "html": "<p>운송이 완료되어 재고가 입고되었습니다.</p><h4>재고 입고 현황 확인</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/inventory?role=hq\">본사 — 재고 현황 확인</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/inventory?role=warehouse\">물류센터 — 입고 현황 확인</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/inventory?role=branch\">지점 — 입고 현황 확인</a></li></ul>"
+                    },
+                    "importance": "normal"
                   }
                 }
               }

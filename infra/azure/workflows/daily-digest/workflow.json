@@ -2,7 +2,7 @@
   "definition": {
     "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
     "contentVersion": "1.0.0.0",
-    "description": "매일 09:00 KST(UTC 00:00) DIGEST_RECIPIENTS에 역할별 대시보드 링크 브리핑 메일을 발송한다. 내부 수치 데이터(재고·매출·건수)는 포함하지 않는다.",
+    "description": "매일 09:00 KST(UTC 00:00) DIGEST_RECIPIENTS에 발주·재분배 최종 계획안과 운송 시작 안내 메일을 발송한다. 내부 수치 데이터 미포함, 역할별 대시보드 링크만 포함.",
     "parameters": {
       "ACS_EMAIL_URI":     { "type": "string", "defaultValue": "" },
       "LA_IDENTITY_ID":    { "type": "string", "defaultValue": "" },
@@ -12,7 +12,7 @@
     },
     "triggers": {
       "Recurrence_0900KST": {
-        "description": "매일 UTC 00:00 (KST 09:00) 에 실행",
+        "description": "매일 UTC 00:00 (KST 09:00) 에 실행. 담당자들이 발주승인을 마친 후 최종 계획안을 확인하는 시각.",
         "type": "Recurrence",
         "recurrence": {
           "frequency": "Day",
@@ -24,7 +24,7 @@
     },
     "actions": {
       "Send_DailyDigest": {
-        "description": "역할별 WhTransfer 분석 뷰 링크와 본사 강제 승인 링크만 포함한 일일 브리핑 메일 발송. 내부 API 미호출.",
+        "description": "발주·재분배 최종 계획안 확인 및 운송 시작 안내. 역할별 WhTransfer 분석 뷰 링크와 본사 강제 승인 링크 포함. 내부 API 미호출.",
         "type": "Http",
         "operationOptions": "DisableAsyncPattern",
         "inputs": {
@@ -39,8 +39,8 @@
             "senderAddress": "@parameters('ACS_SENDER')",
             "recipients": { "to": "@json(parameters('DIGEST_RECIPIENTS'))" },
             "content": {
-              "subject": "[일일브리핑] BookFlow @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
-              "html": "<h2>BookFlow 일일 업무 브리핑</h2><p>@{formatDateTime(utcNow(), 'yyyy-MM-dd')} 오늘의 운영 현황을 아래 링크에서 확인하세요.</p><h4>WhTransfer 분석 뷰</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=hq\">본사 담당자</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=warehouse\">물류센터 담당자</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=branch\">지점 담당자</a></li></ul><h4>본사 강제 승인</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/decision/force-approve\">강제 승인 바로가기</a></li></ul>"
+              "subject": "[최종계획안] BookFlow @{formatDateTime(utcNow(), 'yyyy-MM-dd')} 발주·재분배 확정 · 운송 시작",
+              "html": "<h2>BookFlow 발주·재분배 최종 계획안</h2><p>@{formatDateTime(utcNow(), 'yyyy-MM-dd')} 최종 계획안입니다. 아래 링크에서 확인 후 운송을 시작하세요.</p><h4>WhTransfer 분석 뷰</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=hq\">본사 담당자</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=warehouse\">물류센터 담당자</a></li><li><a href=\"@{parameters('DASHBOARD_URL')}/wh-transfer?role=branch\">지점 담당자</a></li></ul><h4>본사 강제 승인</h4><ul><li><a href=\"@{parameters('DASHBOARD_URL')}/decision/force-approve\">강제 승인 바로가기</a></li></ul>"
             },
             "importance": "normal"
           }
