@@ -263,35 +263,29 @@ def gen_inventory(
                 ]
                 wh_demand_5d = sum(fc_d1[k] for k in wh_stores) * 5
                 safety = max(int(wh_demand_5d), 100) if wh_stores else 100
-                # WH on_hand 도 다양화 — Stage 2 partner_surplus 가능하도록
-                # 70% 충분 (safety × 2~4 · partner_surplus 양수) · 20% 빠듯 (safety × 0.8~1.2) · 10% 부족 (Stage 3 강제)
+                # 2026-05-15 v3: soldout (on_hand=0) 회피 — 시연 어색 방지
+                # 80% 충분 (safety × 2~4 · partner_surplus 양수) · 20% 빠듯 (safety × 1.0~1.5)
                 wh_bucket = random.random()
-                if wh_bucket < 0.70:
+                if wh_bucket < 0.80:
                     on_hand = random.randint(safety * 2, safety * 4 + 1)
-                elif wh_bucket < 0.90:
-                    on_hand = random.randint(int(safety * 0.8), int(safety * 1.2) + 1)
                 else:
-                    on_hand = random.randint(0, max(1, int(safety * 0.5)))
+                    on_hand = random.randint(int(safety * 1.0), int(safety * 1.5) + 1)
             elif l["location_id"] in short_locs:
                 # 시나리오 B 의도 부족 — on_hand 0~2, safety 는 forecast × 5 (재고 < 안전재고 보장)
                 on_hand = random.randint(0, 2)
                 pred = fc_d1.get((isbn, l["location_id"]), 1.0)
                 safety = max(int(pred * 5), 5)
             else:
-                # cascade 시연 다양성 — 매장별로 분포 다양화 (사용자 결정 2026-05-13).
-                # 60% 충분 (Stage 1 source 후보) · 25% 약간 부족 (Stage 1 target 후보) · 15% 심각 부족 (Stage 2/3 trigger)
+                # 2026-05-15 v3: soldout 회피 + 충분 우선 (시연 어색 방지).
+                # 시나리오 B 8 도서만 의도 부족 (위 short_locs 매핑) · 나머지는 모두 충분
+                # 85% 충분 (safety × 1.5~3) · 15% 약간 부족 (safety × 0.6~1.0 · on_hand>0 보장)
                 pred = fc_d1.get((isbn, l["location_id"]), 1.0)
                 safety = max(int(pred * 5), 5)
                 bucket = random.random()
-                if bucket < 0.60:
-                    # 충분 — safety_stock 의 1.5~3배 (Stage 1 에서 다른 매장으로 보낼 수 있음)
+                if bucket < 0.85:
                     on_hand = random.randint(int(safety * 1.5), int(safety * 3) + 1)
-                elif bucket < 0.85:
-                    # 약간 부족 — safety_stock 의 0.4~0.9배 (Stage 1 trigger 후보)
-                    on_hand = random.randint(int(safety * 0.4), max(int(safety * 0.4) + 1, int(safety * 0.9)))
                 else:
-                    # 심각 부족 — safety_stock 의 0~0.3배 (Stage 2/3 trigger)
-                    on_hand = random.randint(0, max(1, int(safety * 0.3)))
+                    on_hand = random.randint(max(1, int(safety * 0.6)), max(2, int(safety * 1.0)))
             reserved = random.randint(0, max(0, on_hand // 10))
             rows.append({
                 "isbn13": isbn,
@@ -549,63 +543,64 @@ def gen_pending_orders(books, locations, scenario_b_isbns) -> list[dict]:
     rows: list[dict] = []
     isbns = [b["isbn13"] for b in books]
 
-    # ── A. 신간 추론 — PUBLISHER_ORDER + urgency=NEWBOOK (출판사 신간 신청 결정) ──
-    # V6.2: 출판사 → WH 본체 → 매장 분배. target 은 WH 본체 (15/16) 만.
+    # 2026-05-15 v3 사용자 결정: 시드 시점 PENDING/APPROVED/IN_TRANSIT 모두 0.
+    # 아래 시나리오 fixture row 들은 모두 D-1 이전 완료 (EXECUTED) 상태로 시드.
+    # 시연 시 Plan 페이지의 [🎬 시연 발의] 버튼이 새 PENDING cascade 생성 → 양측 ✓ → APPROVED → dispatch → IN_TRANSIT → receive → EXECUTED 흐름.
+
+    # ── A. 신간 추론 history (PUBLISHER_ORDER · 4건 · D-1~D-2 완료) ──
     wh_locs = [l["location_id"] for l in locations if l["location_type"] == "WH"]
-    # 4건: 2 권역 × 2 status (APPROVED / PENDING)
-    for i, (isbn, status, hours) in enumerate([
-        (isbns[20], "APPROVED", 30), (isbns[21], "APPROVED", 28),  # WH-1 & WH-2 분배
-        (isbns[22], "PENDING",  10), (isbns[23], "PENDING",  6),
+    for i, (isbn, hours) in enumerate([
+        (isbns[20], 30), (isbns[21], 28),
+        (isbns[22], 32), (isbns[23], 26),
     ]):
         target_wh_loc = wh_locs[i % 2] if len(wh_locs) >= 2 else wh_locs[0]
         rows.append(_po_row("PUBLISHER_ORDER", isbn, None, target_wh_loc,
-                            qty=80, urgency="NEWBOOK", status=status,
+                            qty=80, urgency="NEWBOOK", status="EXECUTED",
                             auto_exec=False, hours_ago=hours, reason="new_book_distribution"))
 
-    # ── B. 재고 부족 cascade — scenario_b_isbns 8 도서 시드 의도 부족 ──
-    # B1. REBALANCE 3건 (수도권 매장 간 · source 5,6→target 1,2,3 — 같은 권역)
+    # ── B. 재고 부족 cascade history — 8 도서 모두 D-1 이전 완료 ──
+    # B1. REBALANCE 3건 (수도권 매장 간 · 과거 처리됨)
     for i, (isbn, src, tgt) in enumerate([
         (scenario_b_isbns[0], 5, 1), (scenario_b_isbns[1], 6, 2), (scenario_b_isbns[2], 5, 3),
     ]):
         rows.append(_po_row("REBALANCE", isbn, src, tgt, qty=20,
-                            urgency="NORMAL", status="PENDING" if i < 2 else "APPROVED",
-                            hours_ago=8 + i * 4, reason="rebalance_low_stock"))
+                            urgency="NORMAL", status="EXECUTED",
+                            hours_ago=30 + i * 4, reason="rebalance_low_stock"))
 
-    # B2. WH_TRANSFER 2건 (수도권 WH ↔ 영남 WH — V6.2 정의: WH 본체 간만)
+    # B2. WH_TRANSFER 2건 (수도권 ↔ 영남 WH · 과거 처리됨)
     wh1_loc = next((l["location_id"] for l in locations if l["location_type"] == "WH" and l["wh_id"] == 1), None)
     wh2_loc = next((l["location_id"] for l in locations if l["location_type"] == "WH" and l["wh_id"] == 2), None)
     if wh1_loc and wh2_loc:
         for i, (isbn, src, tgt) in enumerate([
-            (scenario_b_isbns[3], wh1_loc, wh2_loc),  # 수도권 WH → 영남 WH
-            (scenario_b_isbns[4], wh1_loc, wh2_loc),  # 수도권 WH → 영남 WH
+            (scenario_b_isbns[3], wh1_loc, wh2_loc),
+            (scenario_b_isbns[4], wh1_loc, wh2_loc),
         ]):
             rows.append(_po_row("WH_TRANSFER", isbn, src, tgt, qty=50,
-                                urgency="NORMAL", status="PENDING",
-                                hours_ago=4 + i * 2, reason="cross_region_balance"))
+                                urgency="NORMAL", status="EXECUTED",
+                                hours_ago=36 + i * 2, reason="cross_region_balance"))
 
-    # B3. PUBLISHER_ORDER 3건 (URGENT/CRITICAL · auto_execute_eligible)
-    # V6.2: 출판사 → WH 본체. target 은 WH 본체 (15/16) 만.
+    # B3. PUBLISHER_ORDER 3건 (URGENT/CRITICAL 자동 실행 · 과거 AUTO_EXECUTED)
     if wh1_loc and wh2_loc:
         for i, (isbn, urg, tgt) in enumerate([
-            (scenario_b_isbns[5], "URGENT",   wh1_loc),  # 수도권 WH
-            (scenario_b_isbns[6], "CRITICAL", wh2_loc),  # 영남 WH
-            (scenario_b_isbns[7], "URGENT",   wh1_loc),  # 수도권 WH
+            (scenario_b_isbns[5], "URGENT",   wh1_loc),
+            (scenario_b_isbns[6], "CRITICAL", wh2_loc),
+            (scenario_b_isbns[7], "URGENT",   wh1_loc),
         ]):
             rows.append(_po_row("PUBLISHER_ORDER", isbn, None, tgt, qty=100,
-                                urgency=urg, status="PENDING",
-                                auto_exec=True, hours_ago=2 + i, reason="forecast_shortage"))
+                                urgency=urg, status="AUTO_EXECUTED",
+                                auto_exec=True, hours_ago=40 + i, reason="forecast_shortage"))
 
-    # ── C. 권역 이동 4건 — V6.2 정의: WH 본체 간만. 시연 정합으로 모두 PENDING 시작 ──
+    # ── C. 권역 이동 4건 (WH 본체 간 · 과거 EXECUTED) ──
     if wh1_loc and wh2_loc:
         for i, (isbn, src, tgt) in enumerate([
-            (isbns[40], wh1_loc, wh2_loc),  # 수도권 → 영남
+            (isbns[40], wh1_loc, wh2_loc),
             (isbns[41], wh1_loc, wh2_loc),
-            (isbns[42], wh2_loc, wh1_loc),  # 영남 → 수도권
+            (isbns[42], wh2_loc, wh1_loc),
             (isbns[43], wh2_loc, wh1_loc),
         ]):
             rows.append(_po_row("WH_TRANSFER", isbn, src, tgt, qty=30,
-                                urgency="NORMAL", status="PENDING",
-                                hours_ago=12 + i * 6, reason="capacity_balance"))
+                                urgency="NORMAL", status="EXECUTED",
+                                hours_ago=48 + i * 6, reason="capacity_balance"))
 
     return rows
 
@@ -661,20 +656,14 @@ def gen_pending_orders_daily(books, locations, days: int = 7, per_day: int = 100
             )[0]
             urgency = random.choices(["NORMAL", "URGENT", "CRITICAL"], weights=[70, 25, 5])[0]
             auto_exec = urgency in ("URGENT", "CRITICAL")
-            # 4-step state machine v2 분포 (D-6~D-1 · 부분 진행 + 완료 혼합)
+            # 2026-05-15 v3 사용자 결정: 과거 (D-6~D-1) 모두 완료 상태만.
+            #   D-0 / 미래 row 는 시드에서 생성 X · 시연 발의 시점에 채워짐.
             if auto_exec:
-                # URGENT/CRITICAL — 07:00 cron 자동 처리. 일부는 dispatch+receive 완료(EXECUTED),
-                # 일부는 dispatch 직후 운송 중(IN_TRANSIT), 나머지는 AUTO_EXECUTED 상태 유지
-                status = random.choices(
-                    ["AUTO_EXECUTED", "EXECUTED", "IN_TRANSIT"],
-                    weights=[40, 50, 10],
-                )[0]
+                # URGENT/CRITICAL — 07:00 cron 후 자연 흐름. AUTO_EXECUTED 또는 EXECUTED 만.
+                status = random.choices(["AUTO_EXECUTED", "EXECUTED"], weights=[40, 60])[0]
             else:
-                # NORMAL — 사람이 처리. 완료(EXECUTED) · 운송 중(IN_TRANSIT) · 발송 대기(APPROVED) · 거절
-                status = random.choices(
-                    ["EXECUTED", "APPROVED", "IN_TRANSIT", "REJECTED"],
-                    weights=[35, 15, 5, 45],
-                )[0]
+                # NORMAL — 사람이 처리 끝. EXECUTED 또는 REJECTED 만.
+                status = random.choices(["EXECUTED", "REJECTED"], weights=[55, 45])[0]
             # REJECTED 시 rejection_stage 분포: PENDING 거부 50% · APPROVED 거부 30% · IN_TRANSIT 거부 20%
             rejection_stage = (
                 random.choices(["PENDING", "APPROVED", "IN_TRANSIT"], weights=[50, 30, 20])[0]
@@ -724,6 +713,13 @@ def gen_pending_orders_daily(books, locations, days: int = 7, per_day: int = 100
                 rejection_stage=rejection_stage,
             ))
     return rows
+
+
+# =========================================================================
+# 2026-05-15 v3 사용자 결정: D-0/미래 row 는 시드에서 생성 X.
+# 시연 시 Plan 페이지의 [🎬 시연 발의] 버튼 → decision-svc /plan-daily 호출 →
+# PENDING cascade 4 stage 자동 생성 → 양측 ✓ → APPROVED → dispatch → IN_TRANSIT → receive → EXECUTED 흐름.
+# 시드 시점에는 PENDING/APPROVED/IN_TRANSIT 모두 0. 과거 (D-1 이전) 만 완료 상태 row.
 
 
 # =========================================================================
