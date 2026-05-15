@@ -37,7 +37,6 @@ import logging
 import os
 from datetime import datetime, timezone
 
-import psycopg
 from google.cloud import bigquery
 
 log = logging.getLogger(__name__)
@@ -126,7 +125,7 @@ def upsert(rows: list[dict], dry_run: bool) -> int:
             float(row["predicted_demand"]),
             float(row["confidence_low"])  if row["confidence_low"]  is not None else None,
             float(row["confidence_high"]) if row["confidence_high"] is not None else None,
-            row["model_version"],
+            str(row["model_version"])[:30] if row["model_version"] is not None else None,
             now,
         )
         for row in rows
@@ -135,6 +134,8 @@ def upsert(rows: list[dict], dry_run: bool) -> int:
     if dry_run:
         log.info("dry-run: would upsert %d rows (skipping DB write)", len(params))
         return len(params)
+
+    import psycopg
 
     with psycopg.connect(_pg_connstr()) as conn:
         with conn.cursor() as cur:

@@ -24,7 +24,7 @@ variable "aws_tgw_bgp_asn" {
 }
 
 variable "vpn_shared_secret" {
-  description = "Pre-shared key reused by the HA VPN tunnels. Must match the AWS GcpPresharedKey parameter."
+  description = "Default pre-shared key for HA VPN tunnels. Per-tunnel bgp_sessions.shared_secret overrides this when AWS assigns distinct PSKs."
   type        = string
   sensitive   = true
 }
@@ -36,6 +36,7 @@ variable "bgp_sessions" {
     peer_external_gateway_interface = number
     router_ip_cidr                  = string
     peer_ip_address                 = string
+    shared_secret                   = optional(string)
     advertised_route_priority       = optional(number, 100)
   }))
 

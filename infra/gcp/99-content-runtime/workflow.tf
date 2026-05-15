@@ -44,15 +44,23 @@ main:
           object: $${object_name}
           status: "Ignored non-data object in staging bucket."
     - load_bigquery:
-        call: http.post
-        args:
-          url: "${google_cloudfunctions2_function.content["bq_load"].service_config[0].uri}"
-          auth:
-            type: OIDC
-          headers:
-            Content-Type: "application/json"
-          body: $${request}
-        result: bq_load_result
+        try:
+          call: http.post
+          args:
+            url: "${google_cloudfunctions2_function.content["bq_load"].service_config[0].uri}"
+            auth:
+              type: OIDC
+            headers:
+              Content-Type: "application/json"
+            body: $${request}
+          result: bq_load_result
+        retry:
+          predicate: $${http.default_retry_predicate}
+          max_retries: 5
+          backoff:
+            initial_delay: 2
+            max_delay: 60
+            multiplier: 2
     - choose_route:
         switch:
           - condition: $${len(text.find_all_regex(object_name, "new[-_]book|publisher|new_book")) > 0}
@@ -149,8 +157,17 @@ main:
                 locations_table: "${var.locations_static_table}"
                 store_location_map_table: "${var.store_location_map_table}"
                 training_table: "${var.training_table}"
+                validation_table: "${var.training_validation_table}"
+                baseline_table: "${var.forecast_baseline_table}"
                 model_name: "${var.existing_books_model_name}"
                 forecast_table: "${var.forecast_table}"
+                business_timezone: "${var.business_timezone}"
+                max_data_lag_days: ${var.max_data_lag_days}
+                min_training_rows: ${var.min_training_rows}
+                min_time_series_count: ${var.min_time_series_count}
+                max_required_null_ratio: ${var.max_required_null_ratio}
+                max_zero_sales_ratio: ${var.max_zero_sales_ratio}
+                baseline_holdout_days: ${var.baseline_holdout_days}
         result: pipeline_result
     - maybe_start_vertex_batch_prediction:
         switch:
