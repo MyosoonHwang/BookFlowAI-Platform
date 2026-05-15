@@ -109,6 +109,8 @@ terraform-provider-*.log
 tmp_pdf_images/
 
 scripts/gcp/data/
+scripts/automl_job_state.json
+scripts/gcp/automl_job_state.json
 # Local-only generated CSVs (regenerated from BOOKFLOW/01_데이터스키마/*.parquet)
 infra/aws/20-data-persistent/seed-data/parquet_csv/
 

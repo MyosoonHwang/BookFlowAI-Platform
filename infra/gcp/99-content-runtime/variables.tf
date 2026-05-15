@@ -211,9 +211,63 @@ variable "enable_existing_books_pipeline" {
 }
 
 variable "existing_books_pipeline_trigger_object_regex" {
-  description = "Regex for GCS mart objects allowed to trigger the existing-books Vertex AI Pipeline. Keep narrow to avoid one pipeline run per input table."
+  description = "Regex for GCS mart objects allowed to trigger the existing-books Vertex AI Pipeline. Use a completion marker or one explicit object to avoid one pipeline run per part file."
   type        = string
-  default     = "^mart/features/.+[.]parquet$"
+  default     = "^mart/features/.*/(_SUCCESS|_READY)$"
+}
+
+variable "training_validation_table" {
+  description = "BigQuery table where the existing-books pipeline writes training data validation results."
+  type        = string
+  default     = "training_validation_log"
+}
+
+variable "forecast_baseline_table" {
+  description = "BigQuery table where the existing-books pipeline writes baseline backtest metrics."
+  type        = string
+  default     = "forecast_baseline_metrics"
+}
+
+variable "business_timezone" {
+  description = "Business timezone used for forecast run dates and validation freshness checks."
+  type        = string
+  default     = "Asia/Seoul"
+}
+
+variable "max_data_lag_days" {
+  description = "Maximum allowed lag between the business run date and max training feature date."
+  type        = number
+  default     = 1
+}
+
+variable "min_training_rows" {
+  description = "Minimum row count required before the existing-books pipeline trains a model."
+  type        = number
+  default     = 1000000
+}
+
+variable "min_time_series_count" {
+  description = "Minimum time series count required before the existing-books pipeline trains a model."
+  type        = number
+  default     = 1000
+}
+
+variable "max_required_null_ratio" {
+  description = "Maximum allowed null ratio for required training covariates."
+  type        = number
+  default     = 0.01
+}
+
+variable "max_zero_sales_ratio" {
+  description = "Maximum allowed zero-sales ratio before treating the training data as suspicious."
+  type        = number
+  default     = 0.95
+}
+
+variable "baseline_holdout_days" {
+  description = "Holdout window size for simple baseline backtests."
+  type        = number
+  default     = 28
 }
 
 variable "enable_vertex_batch_prediction" {

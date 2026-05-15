@@ -1,0 +1,93 @@
+{
+  "model_version": "store-demand-champion-20260515-lowcost-v1",
+  "created_at_utc": "2026-05-15T06:53:38.523073+00:00",
+  "training_mode": "local_cpu_low_cost",
+  "input_csv": "D:\\gcp\\BookFlowAI-Platform\\artifacts\\tmp\\store_champion_train_25pct.csv",
+  "train_rows_high": 210873,
+  "holdout_rows": 196000,
+  "holdout_min_date": "2026-05-01",
+  "holdout_max_date": "2026-05-14",
+  "gate_passed": true,
+  "reject_reasons": [],
+  "thresholds": {
+    "max_all_wape": 0.526,
+    "max_high_wape": 0.522,
+    "max_medium_wape": 1.005
+  },
+  "metrics": [
+    {
+      "model_name": "store_demand_champion_hgb_high_ma7_medium",
+      "demand_segment": "all",
+      "row_count": 196000,
+      "actual_sum": 499059.0,
+      "predicted_sum": 483141.0067392617,
+      "mae": 1.3365732549143865,
+      "rmse": 2.445287166016415,
+      "wape": 0.5249246240689373,
+      "bias": -0.08121425133029765,
+      "p90_abs_error": 2.6009111581866726
+    },
+    {
+      "model_name": "store_demand_champion_hgb_high_ma7_medium",
+      "demand_segment": "high",
+      "row_count": 189309,
+      "actual_sum": 494324.0,
+      "predicted_sum": 480583.4353106902,
+      "mae": 1.3587253083149307,
+      "rmse": 2.4819888634865617,
+      "wape": 0.5203448131019154,
+      "bias": -0.07258273346385945,
+      "p90_abs_error": 2.806770042429257
+    },
+    {
+      "model_name": "store_demand_champion_hgb_high_ma7_medium",
+      "demand_segment": "medium",
+      "row_count": 6691,
+      "actual_sum": 4735.0,
+      "predicted_sum": 2557.5714285714284,
+      "mae": 0.7098234301940772,
+      "rmse": 0.9289380124212914,
+      "wape": 1.0030472167747773,
+      "bias": -0.32542647906569594,
+      "p90_abs_error": 1.7142857142857144
+    }
+  ],
+  "baseline_metrics": [
+    {
+      "model_name": "baseline_ma28",
+      "demand_segment": "all",
+      "row_count": 196000,
+      "actual_sum": 499059.0,
+      "predicted_sum": 488909.5714285715,
+      "mae": 1.3451027696793003,
+      "rmse": 2.4812576420338948,
+      "wape": 0.5282744983201242,
+      "bias": -0.05178279883381924,
+      "p90_abs_error": 2.6428571428571423
+    },
+    {
+      "model_name": "baseline_ma28",
+      "demand_segment": "high",
+      "row_count": 189309,
+      "actual_sum": 494324.0,
+      "predicted_sum": 486524.9642857143,
+      "mae": 1.3674746050108553,
+      "rmse": 2.518824941284549,
+      "wape": 0.5236954912162873,
+      "bias": -0.04119738477455226,
+      "p90_abs_error": 2.821428571428571
+    },
+    {
+      "model_name": "baseline_ma28",
+      "demand_segment": "medium",
+      "row_count": 6691,
+      "actual_sum": 4735.0,
+      "predicted_sum": 2384.607142857142,
+      "mae": 0.7121346371458462,
+      "rmse": 0.9176484321831999,
+      "wape": 1.0063131694071503,
+      "bias": -0.35127676836688954,
+      "p90_abs_error": 1.6428571428571428
+    }
+  ]
+}

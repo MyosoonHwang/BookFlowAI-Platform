@@ -213,11 +213,9 @@ def handler(request):
             {"Content-Type": "application/json"},
         )
 
-    # ── GCS URI: 같은 파티션 디렉토리의 모든 Parquet 와일드카드 로드 ──────
-    # 이유: 한 Glue 파티션에 여러 part-*.parquet 파일이 생성될 수 있음
-    # 예) gs://bucket/mart/pos_events/sale_date=2026-05-01/*.parquet
-    dir_path  = object_name.rsplit("/", 1)[0]
-    gcs_uri   = f"gs://{bucket}/{dir_path}/*.parquet"
+    # Load the exact finalized object. Loading a wildcard from each part-file
+    # event can duplicate rows when a partition contains multiple parquet parts.
+    gcs_uri = f"gs://{bucket}/{object_name}"
     table_ref = f"{project_id}.{dataset_id}.{table_name}"
 
     client = bigquery.Client(project=project_id, location=bq_location)
