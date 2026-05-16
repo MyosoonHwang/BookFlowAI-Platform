@@ -1,0 +1,80 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "description": "운송 시작 확인 알림. 출발지 담당자가 대시보드에서 모든 출고버튼 클릭 후 상태가 IN_TRANSIT으로 변경되면, notification-svc가 StockDepartPending 이벤트로 호출. 도착지 지점·물류센터에 운송 시작 확인 메일 발송.",
+    "parameters": {
+      "ACS_EMAIL_URI":  { "type": "string", "defaultValue": "" },
+      "LA_IDENTITY_ID": { "type": "string", "defaultValue": "" },
+      "ACS_SENDER":     { "type": "string", "defaultValue": "" },
+      "DASHBOARD_URL":  { "type": "string", "defaultValue": "" }
+    },
+    "triggers": {
+      "manual": {
+        "description": "notification-svc가 StockDepartPending 이벤트 발생 시 SAS URL로 POST 호출.",
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "event_type":     { "type": "string" },
+              "severity":       { "type": "string" },
+              "correlation_id": { "type": "string" },
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "order_id":         { "type": "string" },
+                  "isbn13":           { "type": "string" },
+                  "title":            { "type": "string" },
+                  "source_location":  { "type": "string" },
+                  "target_location":  { "type": "string" },
+                  "qty":              { "type": "integer" },
+                  "dispatched_at":    { "type": "string" },
+                  "expected_arrival": { "type": "string" }
+                }
+              },
+              "recipients": { "type": "array" }
+            }
+          }
+        }
+      }
+    },
+    "actions": {
+      "Send_StockDepart": {
+        "description": "도착지 지점/물류센터에 운송 시작 확인 메일 발송.",
+        "type": "Http",
+        "operationOptions": "DisableAsyncPattern",
+        "inputs": {
+          "method": "POST",
+          "uri": "@parameters('ACS_EMAIL_URI')",
+          "authentication": {
+            "type": "ManagedServiceIdentity",
+            "identity": "@parameters('LA_IDENTITY_ID')",
+            "audience": "https://communication.azure.com"
+          },
+          "body": {
+            "senderAddress": "@parameters('ACS_SENDER')",
+            "recipients": { "to": "@triggerBody()?['recipients']" },
+            "content": {
+              "subject": "[운송시작] @{triggerBody()?['payload']?['qty']}권 @{triggerBody()?['payload']?['isbn13']} — @{coalesce(triggerBody()?['payload']?['source_location'], '출발지')} 출발",
+              "html": "<h2 style=\"color:#1a73e8;\">도서 운송이 시작되었습니다</h2><p>아래 도서가 출발지에서 출고되어 귀 지점·물류센터로 운송 중입니다. 도착 후 대시보드에서 수령 확인을 진행해 주세요.</p><table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:14px;\"><thead style=\"background:#f1f3f4;\"><tr><th>항목</th><th>내용</th></tr></thead><tbody><tr><td>ISBN</td><td>@{triggerBody()?['payload']?['isbn13']}</td></tr><tr><td>도서명</td><td>@{coalesce(triggerBody()?['payload']?['title'], '—')}</td></tr><tr><td>운송 수량</td><td><strong>@{triggerBody()?['payload']?['qty']}권</strong></td></tr><tr><td>출발지</td><td>@{coalesce(triggerBody()?['payload']?['source_location'], '—')}</td></tr><tr><td>도착지 (귀하)</td><td><strong>@{coalesce(triggerBody()?['payload']?['target_location'], '—')}</strong></td></tr><tr><td>출발 시각</td><td>@{coalesce(triggerBody()?['payload']?['dispatched_at'], '—')}</td></tr><tr><td>예상 도착일</td><td><strong>@{coalesce(triggerBody()?['payload']?['expected_arrival'], '—')}</strong></td></tr><tr><td>주문 ID</td><td style=\"font-size:12px;\">@{triggerBody()?['payload']?['order_id']}</td></tr></tbody></table><br/><p><a href=\"@{parameters('DASHBOARD_URL')}\" style=\"background:#1a73e8;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;\">대시보드에서 수령 확인하기</a></p><hr/><p style=\"font-size:12px;color:#666;\">본 메일은 BookFlow 시스템에서 자동 발송되었습니다.</p>"
+            },
+            "importance": "normal"
+          }
+        }
+      },
+      "Response": {
+        "type": "Response",
+        "runAfter": {
+          "Send_StockDepart": ["Succeeded", "Failed", "Skipped", "TimedOut"]
+        },
+        "inputs": {
+          "statusCode": 200,
+          "body": { "result": "ok" }
+        }
+      }
+    }
+  },
+  "kind": "Stateful"
+}

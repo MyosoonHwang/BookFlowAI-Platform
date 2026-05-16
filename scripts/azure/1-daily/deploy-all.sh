@@ -353,14 +353,92 @@ echo "════════════════════════�
 
 echo ""
 echo "[5-1] Logic Apps "
-deploy_stack "logicapp-deploy" \
-  --template-file "${BICEP_DIR}/modules/logicapp.bicep" \
-  --parameters location="$LOCATION" \
-              prefix="$PREFIX" \
-              logicappIdentityId="$LOGICAPP_IDENTITY_ID" \
-              logicappIdentityClientId="$LOGICAPP_IDENTITY_CLIENT_ID" \
-              keyVaultUri="$KV_URI" \
-              logAnalyticsWorkspaceId="$LOG_ANALYTICS_ID"
+# Logic App (Consumption) 직접 배포 함수 (az rest PUT + envsubst)
+deploy_logicapp() {
+  local la_name=$1
+  local template=$2
+  local sub_id
+  sub_id=$(az account show --query id --output tsv)
+
+  local state
+  state=$(az rest --method GET \
+    --url "https://management.azure.com/subscriptions/${sub_id}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Logic/workflows/${la_name}?api-version=2016-06-01" \
+    --query "properties.state" --output tsv 2>/dev/null || echo "NotFound")
+
+  if [ "$state" = "Enabled" ]; then
+    echo "  스킵: $la_name 이미 배포됨"
+    return 0
+  fi
+
+  if [ ! -f "$template" ]; then
+    echo "  ✗ 템플릿 없음: $template"
+    return 1
+  fi
+
+  local tmp_file="/tmp/la-arm-${la_name}.json"
+  envsubst < "$template" > "$tmp_file"
+
+  echo "  배포 중: $la_name ..."
+  if az rest --method PUT \
+    --url "https://management.azure.com/subscriptions/${sub_id}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Logic/workflows/${la_name}?api-version=2016-06-01" \
+    --body "@${tmp_file}" \
+    --output none 2>/tmp/la_deploy_err; then
+    echo "  ✓ 배포 완료: $la_name"
+  else
+    echo "  ✗ 배포 실패: $la_name"
+    cat /tmp/la_deploy_err | sed 's/^/    /'
+    return 1
+  fi
+}
+
+SUB_ID=$(az account show --query id --output tsv)
+
+# ACS 리소스 조회
+ACS_ACCOUNT=$(az communication list \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "[0].name" --output tsv 2>/dev/null || echo "")
+ACS_HOST=$(az communication show \
+  --name "$ACS_ACCOUNT" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "hostName" --output tsv 2>/dev/null || echo "")
+export ACS_EMAIL_URI="https://${ACS_HOST}/emails:send?api-version=2023-03-31"
+echo "  ACS Email URI: $ACS_EMAIL_URI"
+
+ACS_EMAIL_SVC=$(az resource list \
+  --resource-group "$RESOURCE_GROUP" \
+  --resource-type "Microsoft.Communication/emailServices" \
+  --query "[0].name" --output tsv 2>/dev/null || echo "")
+ACS_DOMAIN=$(az rest --method GET \
+  --url "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Communication/emailServices/${ACS_EMAIL_SVC}/domains?api-version=2023-04-01" \
+  --query "value[0].properties.mailFromSenderDomain" --output tsv 2>/dev/null || echo "")
+export ACS_SENDER="DoNotReply@${ACS_DOMAIN}"
+echo "  ACS Sender:    $ACS_SENDER"
+
+export DASHBOARD_URL="https://bookflow.myosoon.store"
+export LOCATION LOGICAPP_IDENTITY_ID
+
+WORKFLOW_DIR="${BICEP_DIR}/workflows"
+
+deploy_logicapp "la-${PREFIX}-notification"     "${WORKFLOW_DIR}/notification/arm-deploy.json"
+deploy_logicapp "la-${PREFIX}-approval-request" "${WORKFLOW_DIR}/approval-request/arm-deploy.json"
+deploy_logicapp "la-${PREFIX}-daily-digest"     "${WORKFLOW_DIR}/daily-digest/arm-deploy.json"
+deploy_logicapp "la-${PREFIX}-stock-depart"     "${WORKFLOW_DIR}/stock-depart/arm-deploy.json"
+deploy_logicapp "la-${PREFIX}-stock-arrival"    "${WORKFLOW_DIR}/stock-arrival/arm-deploy.json"
+
+echo ""
+echo "[5-2] Logic Apps SAS URL (ConfigMap/Secret 업데이트 필요)"
+for la_name in \
+  "la-${PREFIX}-notification" \
+  "la-${PREFIX}-approval-request" \
+  "la-${PREFIX}-stock-depart" \
+  "la-${PREFIX}-stock-arrival"; do
+  sas_url=$(az rest --method POST \
+    --url "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Logic/workflows/${la_name}/triggers/manual/listCallbackUrl?api-version=2016-06-01" \
+    --query "value" --output tsv 2>/dev/null || echo "조회 실패")
+  echo "  ${la_name}:"
+  echo "    ${sas_url}"
+done
+echo "  위 URL을 notification-svc Secret에 설정하세요."
 
 # ════════════════════════════════════════════
 # STACK 6: Network (VPN Gateway, 30~45)
