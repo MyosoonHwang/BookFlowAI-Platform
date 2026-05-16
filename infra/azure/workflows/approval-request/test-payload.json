@@ -1,0 +1,15 @@
+{
+  "event_type": "ForecastCompleted",
+  "severity": "INFO",
+  "correlation_id": "test-forecast-001",
+  "payload": {
+    "snapshot_date": "2026-05-17",
+    "rows_created": 38,
+    "by_stage": {"0": 18, "1": 8, "2": 7, "3": 5}
+  },
+  "recipients": [
+    {"address": "redfox@yonsei.ac.kr", "displayName": "HQ"},
+    {"address": "rladudgjs0427@gmail.com", "displayName": "WH"},
+    {"address": "woohek00@gmail.com", "displayName": "Branch"}
+  ]
+}

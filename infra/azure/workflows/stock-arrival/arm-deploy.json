@@ -1,0 +1,85 @@
+{
+  "location": "${LOCATION}",
+  "identity": {
+    "type": "UserAssigned",
+    "userAssignedIdentities": { "${LOGICAPP_IDENTITY_ID}": {} }
+  },
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "ACS_EMAIL_URI":  { "type": "string", "defaultValue": "" },
+        "LA_IDENTITY_ID": { "type": "string", "defaultValue": "" },
+        "ACS_SENDER":     { "type": "string", "defaultValue": "" },
+        "DASHBOARD_URL":  { "type": "string", "defaultValue": "" }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "event_type":     { "type": "string" },
+                "severity":       { "type": "string" },
+                "correlation_id": { "type": "string" },
+                "payload": {
+                  "type": "object",
+                  "properties": {
+                    "order_id":        { "type": "string" },
+                    "isbn13":          { "type": "string" },
+                    "title":           { "type": "string" },
+                    "source_location": { "type": "string" },
+                    "target_location": { "type": "string" },
+                    "qty":             { "type": "integer" },
+                    "executed_at":     { "type": "string" }
+                  }
+                },
+                "recipients": { "type": "array" }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Send_StockArrival": {
+          "type": "Http",
+          "operationOptions": "DisableAsyncPattern",
+          "inputs": {
+            "method": "POST",
+            "uri": "@parameters('ACS_EMAIL_URI')",
+            "authentication": {
+              "type": "ManagedServiceIdentity",
+              "identity": "@parameters('LA_IDENTITY_ID')",
+              "audience": "https://communication.azure.com"
+            },
+            "body": {
+              "senderAddress": "@parameters('ACS_SENDER')",
+              "recipients": { "to": "@triggerBody()?['recipients']" },
+              "content": {
+                "subject": "[운송완료] @{triggerBody()?['payload']?['qty']}권 @{triggerBody()?['payload']?['isbn13']} — @{coalesce(triggerBody()?['payload']?['target_location'], '도착지')} 수령 완료",
+                "html": "<h2 style=\"color:#188038;\">도서 운송이 완료되었습니다</h2><p>귀 측에서 출발한 도서가 도착지에 정상 수령되었습니다.</p><table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:14px;\"><thead style=\"background:#f1f3f4;\"><tr><th>항목</th><th>내용</th></tr></thead><tbody><tr><td>ISBN</td><td>@{triggerBody()?['payload']?['isbn13']}</td></tr><tr><td>도서명</td><td>@{coalesce(triggerBody()?['payload']?['title'], '—')}</td></tr><tr><td>운송 수량</td><td><strong>@{triggerBody()?['payload']?['qty']}권</strong></td></tr><tr><td>출발지 (귀하)</td><td><strong>@{coalesce(triggerBody()?['payload']?['source_location'], '—')}</strong></td></tr><tr><td>도착지</td><td>@{coalesce(triggerBody()?['payload']?['target_location'], '—')}</td></tr><tr><td>수령 완료 시각</td><td>@{coalesce(triggerBody()?['payload']?['executed_at'], formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm'))}</td></tr><tr><td>주문 ID</td><td style=\"font-size:12px;\">@{triggerBody()?['payload']?['order_id']}</td></tr></tbody></table><br/><p><a href=\"@{parameters('DASHBOARD_URL')}\" style=\"background:#188038;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;\">BookFlow 대시보드 바로가기</a></p><hr/><p style=\"font-size:12px;color:#666;\">본 메일은 BookFlow 시스템에서 자동 발송되었습니다.</p>"
+              },
+              "importance": "normal"
+            }
+          }
+        },
+        "Response": {
+          "type": "Response",
+          "runAfter": {
+            "Send_StockArrival": ["Succeeded", "Failed", "Skipped", "TimedOut"]
+          },
+          "inputs": { "statusCode": 200, "body": { "result": "ok" } }
+        }
+      }
+    },
+    "parameters": {
+      "ACS_EMAIL_URI":  { "value": "${ACS_EMAIL_URI}" },
+      "LA_IDENTITY_ID": { "value": "${LOGICAPP_IDENTITY_ID}" },
+      "ACS_SENDER":     { "value": "${ACS_SENDER}" },
+      "DASHBOARD_URL":  { "value": "${DASHBOARD_URL}" }
+    }
+  }
+}

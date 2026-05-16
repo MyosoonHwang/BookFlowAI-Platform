@@ -1,0 +1,110 @@
+{
+  "location": "${LOCATION}",
+  "identity": {
+    "type": "UserAssigned",
+    "userAssignedIdentities": { "${LOGICAPP_IDENTITY_ID}": {} }
+  },
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "ACS_EMAIL_URI":  { "type": "string", "defaultValue": "" },
+        "LA_IDENTITY_ID": { "type": "string", "defaultValue": "" },
+        "ACS_SENDER":     { "type": "string", "defaultValue": "" },
+        "DASHBOARD_URL":  { "type": "string", "defaultValue": "" }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "event_type":     { "type": "string" },
+                "severity":       { "type": "string" },
+                "correlation_id": { "type": "string" },
+                "payload":        { "type": "object" },
+                "recipients": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "address":     { "type": "string" },
+                      "displayName": { "type": "string" }
+                    }
+                  }
+                }
+              },
+              "required": ["event_type", "severity", "payload", "recipients"]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Check_HasRecipients": {
+          "type": "If",
+          "expression": {
+            "and": [
+              { "greater": [ "@length(triggerBody()?['recipients'])", 0 ] }
+            ]
+          },
+          "actions": {
+            "Switch_EventType": {
+              "type": "Switch",
+              "expression": "@triggerBody()?['event_type']",
+              "cases": {
+                "ForecastCompleted": {
+                  "case": "ForecastCompleted",
+                  "actions": {
+                    "Send_ForecastApprovalRequest": {
+                      "type": "Http",
+                      "operationOptions": "DisableAsyncPattern",
+                      "inputs": {
+                        "method": "POST",
+                        "uri": "@parameters('ACS_EMAIL_URI')",
+                        "authentication": {
+                          "type": "ManagedServiceIdentity",
+                          "identity": "@parameters('LA_IDENTITY_ID')",
+                          "audience": "https://communication.azure.com"
+                        },
+                        "body": {
+                          "senderAddress": "@parameters('ACS_SENDER')",
+                          "recipients": { "to": "@triggerBody()?['recipients']" },
+                          "content": {
+                            "subject": "[승인요청] 수요예측 완료 — @{coalesce(triggerBody()?['payload']?['snapshot_date'], formatDateTime(utcNow(), 'yyyy-MM-dd'))} 발주 계획 승인 필요",
+                            "html": "<h2 style=\"color:#1a73e8;\">발주 계획 승인 요청</h2><p>수요예측이 완료되어 내일자 발주 계획이 생성되었습니다. 대시보드에서 내용을 확인하고 승인해 주세요.</p><table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:14px;\"><thead style=\"background:#f1f3f4;\"><tr><th>항목</th><th>내용</th></tr></thead><tbody><tr><td>계획 기준일</td><td><strong>@{coalesce(triggerBody()?['payload']?['snapshot_date'], '—')}</strong></td></tr><tr><td>생성된 발주 건수</td><td><strong>@{coalesce(triggerBody()?['payload']?['rows_created'], '—')}건</strong></td></tr><tr><td>단계별 현황</td><td>WH→지점: @{coalesce(triggerBody()?['payload']?['by_stage']?['0'], 0)}건 / 지점간이동: @{coalesce(triggerBody()?['payload']?['by_stage']?['1'], 0)}건 / 물류간이동: @{coalesce(triggerBody()?['payload']?['by_stage']?['2'], 0)}건 / 발주: @{coalesce(triggerBody()?['payload']?['by_stage']?['3'], 0)}건</td></tr></tbody></table><br/><p>담당 역할별 대시보드에서 발주 계획을 확인하고 승인 또는 거부를 진행해 주세요.</p><p><a href=\"@{parameters('DASHBOARD_URL')}\" style=\"background:#1a73e8;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;\">대시보드에서 발주 계획 승인하기</a></p><hr/><p style=\"font-size:12px;color:#666;\">본 메일은 BookFlow 수요예측 시스템에서 자동 발송되었습니다.</p>"
+                          },
+                          "importance": "normal"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "default": { "actions": {} }
+            }
+          },
+          "else": { "actions": {} }
+        },
+        "Response": {
+          "type": "Response",
+          "runAfter": {
+            "Check_HasRecipients": ["Succeeded", "Failed", "Skipped", "TimedOut"]
+          },
+          "inputs": {
+            "statusCode": 200,
+            "body": { "result": "ok" }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "ACS_EMAIL_URI":  { "value": "${ACS_EMAIL_URI}" },
+      "LA_IDENTITY_ID": { "value": "${LOGICAPP_IDENTITY_ID}" },
+      "ACS_SENDER":     { "value": "${ACS_SENDER}" },
+      "DASHBOARD_URL":  { "value": "${DASHBOARD_URL}" }
+    }
+  }
+}

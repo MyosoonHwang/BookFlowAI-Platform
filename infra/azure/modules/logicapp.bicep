@@ -1,9 +1,12 @@
 // modules/logicapp.bicep
-// Logic Apps Standard (WS1) — 4 workflows in one app
-//   1. notification    — HTTP Trigger, 8종 알람 (inbound via VPN private endpoint)
-//   2. daily-digest    — Recurrence 09:00 KST (outbound via VNet Integration)
-//   3. plan-watcher    — Recurrence 매시간 (outbound via VNet Integration)
-//   4. secret-rotation — Recurrence 02:00 KST
+// Logic Apps Standard (WS1) — 7 workflows in one app
+//   1. notification       — HTTP Trigger, SpikeUrgent(긴급발주)·DailyPlanFinalized·NegotiationDelay
+//   2. daily-digest       — Recurrence 09:00 KST, 승인완료→최종확인 메일 / 거부→HQ 거부지점+사유 확인 메일
+//   3. plan-watcher       — Recurrence 06:00 KST, 미승인 건 재알림
+//   4. secret-rotation    — Recurrence 02:00 KST
+//   5. approval-request   — HTTP Trigger, OrderPending → 승인요청 메일 (본사+물류+지점)
+//   6. stock-depart       — HTTP Trigger, StockDepartPending → 도착지로 운송시작 메일
+//   7. stock-arrival      — HTTP Trigger, StockArrivalPending → 출발지로 운송완료 메일
 //
 // Network:
 //   Inbound : Private Endpoint (snet-bookflowmj-services) → VPN → EKS
@@ -21,7 +24,10 @@ param logAnalyticsWorkspaceId string
 
 param acsEndpoint string
 param acsSenderAddress string
-param digestRecipients string
+param digestRecipients string      // 전 레벨 (본사+물류+지점) — daily-digest 전체 발송용
+param hqRecipients string          // 본사 단독 — 거부 알림 등 HQ only 용
+param whRecipients string          // 물류센터 — 향후 WH-only 워크플로 확장용
+param branchRecipients string      // 지점 전체 — 향후 Branch-only 워크플로 확장용
 param dashboardBaseUrl string
 
 // VNet 연동 서브넷
@@ -88,7 +94,11 @@ resource logicApp 'Microsoft.Web/sites@2023-12-01' = {
         // ACS 발신 설정 (workflow.json에서 @appsetting('...') 으로 참조)
         { name: 'ACS_EMAIL_URI',                            value: 'https://${acsEndpoint}/emails:send?api-version=2023-03-31' }
         { name: 'ACS_SENDER',                               value: acsSenderAddress }
+        // 수신자 그룹 (워크플로별 분기용)
         { name: 'DIGEST_RECIPIENTS',                        value: digestRecipients }
+        { name: 'HQ_RECIPIENTS',                            value: hqRecipients }
+        { name: 'WH_RECIPIENTS',                            value: whRecipients }
+        { name: 'BRANCH_RECIPIENTS',                        value: branchRecipients }
         { name: 'DASHBOARD_URL',                            value: dashboardBaseUrl }
         { name: 'KEY_VAULT_URI',                            value: keyVaultUri }
         // Managed Identity (User-Assigned) 참조용
