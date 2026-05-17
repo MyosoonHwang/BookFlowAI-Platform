@@ -144,8 +144,8 @@
       "ACS_EMAIL_URI":     { "value": "${ACS_EMAIL_URI}" },
       "LA_IDENTITY_ID":    { "value": "${LOGICAPP_IDENTITY_ID}" },
       "ACS_SENDER":        { "value": "${ACS_SENDER}" },
-      "DIGEST_RECIPIENTS": { "value": "[{\"address\":\"redfox@yonsei.ac.kr\",\"displayName\":\"본사\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류\"},{\"address\":\"woohek00@gmail.com\",\"displayName\":\"지점\"}]" },
-      "HQ_RECIPIENTS":     { "value": "[{\"address\":\"redfox@yonsei.ac.kr\",\"displayName\":\"본사/경영진\"}]" },
+      "DIGEST_RECIPIENTS": { "value": "[{\"address\":\"woohek00@gmail.com\",\"displayName\":\"본사/경영진\"},{\"address\":\"rladudgjs0427@gmail.com\",\"displayName\":\"물류센터\"},{\"address\":\"ms8405493@gmail.com\",\"displayName\":\"지점\"}]" },
+      "HQ_RECIPIENTS":     { "value": "[{\"address\":\"woohek00@gmail.com\",\"displayName\":\"본사/경영진\"}]" },
       "DASHBOARD_URL":     { "value": "${DASHBOARD_URL}" }
     }
   }
