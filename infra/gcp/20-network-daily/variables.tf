@@ -42,14 +42,15 @@ variable "bgp_sessions" {
 
   validation {
     condition = (
-      length(var.bgp_sessions) == 2 &&
+      length(var.bgp_sessions) >= 1 &&
+      length(var.bgp_sessions) <= 2 &&
       alltrue([
         for session in values(var.bgp_sessions) :
         contains([0, 1], session.vpn_gateway_interface) &&
         contains([0, 1], session.peer_external_gateway_interface)
       ])
     )
-    error_message = "bgp_sessions must define exactly two tunnels using GCP HA VPN interfaces 0/1 and AWS external gateway interfaces 0/1."
+    error_message = "bgp_sessions must define 1 or 2 tunnels using GCP HA VPN interfaces 0/1 and AWS external gateway interfaces 0/1."
   }
 }
 

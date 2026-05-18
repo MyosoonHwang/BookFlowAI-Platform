@@ -69,6 +69,19 @@ resource "google_dns_record_set" "private_googleapis" {
   rrdatas      = [local.psc_endpoint_ip]
 }
 
+# Catch-all wildcard for all *.googleapis.com subdomains via PSC.
+# Covers regional API endpoints like asia-northeast1-aiplatform.googleapis.com
+# (3-label names that don't match more specific wildcard records).
+# GCP recommends this for PSC-based private Google API access.
+resource "google_dns_record_set" "wildcard_googleapis" {
+  name         = "*.googleapis.com."
+  project      = var.project_id
+  managed_zone = google_dns_managed_zone.googleapis_private.name
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [local.psc_endpoint_ip]
+}
+
 resource "google_dns_record_set" "wildcard_private_googleapis" {
   name         = "*.private.googleapis.com."
   project      = var.project_id
@@ -85,4 +98,39 @@ resource "google_dns_record_set" "bigquery_googleapis" {
   type         = "A"
   ttl          = 300
   rrdatas      = [local.psc_endpoint_ip]
+}
+
+resource "google_dns_record_set" "aiplatform_googleapis" {
+  name         = "aiplatform.googleapis.com."
+  project      = var.project_id
+  managed_zone = google_dns_managed_zone.googleapis_private.name
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [local.psc_endpoint_ip]
+}
+
+resource "google_dns_record_set" "wildcard_aiplatform_googleapis" {
+  name         = "*.aiplatform.googleapis.com."
+  project      = var.project_id
+  managed_zone = google_dns_managed_zone.googleapis_private.name
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [local.psc_endpoint_ip]
+}
+
+# Private Google Access for on-premises:
+# Enables Cloud DNS inbound forwarding endpoints inside the GCP VPC so that
+# on-premises resolvers (EKS CoreDNS via VPN) can forward *.googleapis.com
+# queries to GCP Cloud DNS and receive PSC-backed private answers (10.50.0.10).
+resource "google_dns_policy" "inbound_forwarding" {
+  name    = "bookflow-dns-inbound"
+  project = var.project_id
+
+  enable_inbound_forwarding = true
+
+  networks {
+    network_url = data.google_compute_network.bookflow_vpc.id
+  }
+
+  depends_on = [google_project_service.dns]
 }

@@ -9,5 +9,6 @@ output "service_account_emails" {
     vertex_pipeline  = google_service_account.vertex_pipeline.email
     staging_cleanup  = google_service_account.staging_cleanup.email
     daily_forecast   = google_service_account.daily_existing_books_scheduler.email
+    forecast_reader  = google_service_account.forecast_reader.email
   }
 }
