@@ -96,6 +96,7 @@ t0, t1  = tunnels[0], tunnels[1]
 # project_id / region / vpc_name / gcp_router_asn 은 variables.tf 미선언 → 제외
 tfvars_content = f"""aws_peer_ips      = ["{t0['outside_ip']}", "{t1['outside_ip']}"]
 aws_tgw_bgp_asn   = $TGW_ASN
+gcp_router_asn    = 64514
 
 vpn_shared_secret = "{psk0}"
 
