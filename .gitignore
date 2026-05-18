@@ -28,6 +28,9 @@ scripts/gcp/config/gcp.local.ps1
 .env
 .env.*
 !.env.example
+scripts/aws/config/*.env
+scripts/azure/config/*.env
+scripts/gcp/config/*.env
 *.pem
 *.key
 credentials.json
