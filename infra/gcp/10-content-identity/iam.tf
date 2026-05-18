@@ -164,6 +164,27 @@ resource "google_project_iam_member" "daily_existing_books_scheduler_invoker" {
   member  = "serviceAccount:${google_service_account.daily_existing_books_scheduler.email}"
 }
 
+# forecast-reader: EKS forecast-svc 가 BigQuery forecast_results 를 읽기 위한 SA.
+# 키 파일을 발급해 AWS Secrets Manager bookflow/gcp/forecast-reader-sa-key 에 저장.
+resource "google_service_account" "forecast_reader" {
+  account_id   = "bookflow-forecast-reader"
+  project      = var.project_id
+  display_name = "BOOKFLOW forecast reader (EKS → BigQuery)"
+}
+
+resource "google_project_iam_member" "forecast_reader_job_user" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.forecast_reader.email}"
+}
+
+resource "google_bigquery_dataset_iam_member" "forecast_reader_data_viewer" {
+  project    = var.project_id
+  dataset_id = data.google_bigquery_dataset.bookflow_dw.dataset_id
+  role       = "roles/bigquery.dataViewer"
+  member     = "serviceAccount:${google_service_account.forecast_reader.email}"
+}
+
 resource "google_storage_bucket_iam_member" "storage_transfer_staging_object_admin" {
   bucket = data.google_storage_bucket.staging.name
   role   = "roles/storage.objectAdmin"
