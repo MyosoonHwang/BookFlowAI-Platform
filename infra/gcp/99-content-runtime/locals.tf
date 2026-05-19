@@ -84,6 +84,7 @@ locals {
       entry_point  = "handler"
       runtime      = "python312"
       memory       = "1024M"
+      cpu          = "1"
       timeout      = 540
       min_instance = 0
       max_instance = var.function_max_instance_count
