@@ -19,6 +19,10 @@ tmp/
 # ─── Local-only 임시 검증 task (일회성 · git push 안 함) ───
 scripts/aws/tasks/cicd_verify.py
 
+# ─── 관측 대시보드 빌드 산출물 (provisioning 이 빌드해 사용 · 커밋 불필요) ───
+infra/observability/dashboards/dist/
+infra/observability/dashboards/**/__pycache__/
+
 # ─── 개인별 설정 override ───
 scripts/aws/config/aws.local.ps1
 scripts/azure/config/azure.local.ps1
