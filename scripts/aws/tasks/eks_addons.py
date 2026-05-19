@@ -382,12 +382,39 @@ def _helm_install_grafana() -> None:
                 "root_url": "%(protocol)s://%(domain)s/grafana/",
                 "serve_from_sub_path": True,
             },
+            # auth.proxy — engineer 통합 로그인 (Phase ⑤).
+            # ingress forward-auth 가 BookFlow 인증 통과한 engineer 요청에만
+            # X-WEBAUTH-USER 헤더를 주입 → Grafana 가 그 헤더로 자동 로그인.
+            # Grafana 자체 로그인 화면은 안 뜸. whitelist 는 in-cluster CIDR
+            # (ingress-nginx Pod → grafana svc) 만 허용 — 외부 직접 위조 차단.
+            "auth.proxy": {
+                "enabled": True,
+                "header_name": "X-WEBAUTH-USER",
+                "header_property": "username",
+                "auto_sign_up": True,
+                "whitelist": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
+            },
+            "users": {
+                "auto_assign_org_role": "Editor",
+            },
         },
         "ingress": {
             "enabled": True,
             "ingressClassName": "nginx",
             "hosts": ["bookflow.myosoon.store"],
             "path": "/grafana",
+            # forward-auth: 모든 /grafana 요청을 dashboard-svc 가 검증.
+            # role==engineer 면 200 + X-WEBAUTH-USER 응답헤더 → auth-response-headers
+            # 로 upstream(Grafana) 에 전달. 아니면 401.
+            # configuration-snippet: 클라이언트가 위조해 보낸 X-WEBAUTH-USER 를
+            # 먼저 제거 → forward-auth 가 주입한 값만 Grafana 에 도달.
+            "annotations": {
+                "nginx.ingress.kubernetes.io/auth-url":
+                    "http://dashboard-svc.bookflow.svc.cluster.local/internal/grafana-auth",
+                "nginx.ingress.kubernetes.io/auth-response-headers": "X-WEBAUTH-USER",
+                "nginx.ingress.kubernetes.io/configuration-snippet":
+                    "more_clear_input_headers \"X-WEBAUTH-USER\";\n",
+            },
         },
     }
     # CloudWatch IRSA — Grafana SA 에 role-arn annotation (export 가용 시에만)
