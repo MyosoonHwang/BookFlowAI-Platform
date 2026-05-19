@@ -182,10 +182,9 @@ def _is_placeholder_cred(cred: dict, key: str) -> bool:
 
 def _helm_install_grafana() -> None:
     """Grafana — 엔지니어 운영 대시보드 Phase ② (B3) + Phase ③ 트랙 4 멀티클라우드 datasource.
-    Prometheus (default) + CloudWatch (IRSA) + Azure Monitor datasource provisioning.
+    Prometheus (default) + CloudWatch (IRSA) + Azure Monitor + GCP Monitoring datasource provisioning.
     ingress-nginx /grafana sub-path 서빙. admin password 는 Secrets Manager
     bookflow/grafana/admin (idempotent). 대시보드 패널은 다음 Phase ④.
-    # TODO Phase ③ C3: GCP Cloud Monitoring datasource — bookflow/gcp/grafana-monitor 준비되면 추가
     """
     import boto3, json, yaml as _yaml
     region = os.environ.get("AWS_REGION", "ap-northeast-1")
@@ -244,6 +243,29 @@ def _helm_install_grafana() -> None:
             log.info("  grafana Azure Monitor datasource · bookflow/azure/grafana-monitor 자격증명 사용")
     except sm.exceptions.ResourceNotFoundException:
         log.warn("bookflow/azure/grafana-monitor secret missing · Azure Monitor datasource skip")
+
+    # GCP Cloud Monitoring datasource — 자격증명은 Secrets Manager bookflow/gcp/grafana-monitor
+    # (GCP SA key JSON 전체). stackdriver datasource 는 Grafana core 번들 → plugin install 불필요.
+    try:
+        gcp_cred = json.loads(sm.get_secret_value(SecretId="bookflow/gcp/grafana-monitor")["SecretString"])
+        if _is_placeholder_cred(gcp_cred, "private_key"):
+            log.warn("bookflow/gcp/grafana-monitor secret 값 미투입 (placeholder) · GCP Monitoring datasource skip")
+        else:
+            datasources.append({
+                "name": "GCP Monitoring",
+                "type": "stackdriver",
+                "access": "proxy",
+                "jsonData": {
+                    "authenticationType": "jwt",
+                    "defaultProject": gcp_cred.get("project_id", "project-8ab6bf05-54d2-4f5d-b8d"),
+                    "clientEmail": gcp_cred["client_email"],
+                    "tokenUri": gcp_cred["token_uri"],
+                },
+                "secureJsonData": {"privateKey": gcp_cred["private_key"]},
+            })
+            log.info("  grafana GCP Monitoring datasource · bookflow/gcp/grafana-monitor 자격증명 사용")
+    except sm.exceptions.ResourceNotFoundException:
+        log.warn("bookflow/gcp/grafana-monitor secret missing · GCP Monitoring datasource skip")
 
     values_dict = {
         "adminUser": "admin",
