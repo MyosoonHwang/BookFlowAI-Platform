@@ -346,8 +346,8 @@ def gen_forecast_cache(books, scenario_b_isbns: list[str], days: int = 7,
     (기존: 매일 독립 난수 → safety_stock 과 화면 forecast 가 무관한 값으로 어긋남.)
 
     base_demand 분포:
-      - 시나리오 B fixture 8 도서 × SHORT_PAIRS 매장 = high spike (50~80권/day)
-      - PUBLISHER/WH_TRANSFER force 도서 = 50~160권/day (cascade 트리거)
+      - 시나리오 B fixture 8 도서 × SHORT_PAIRS 매장 = high spike (18~35권/day)
+      - PUBLISHER/WH_TRANSFER force 도서 = 18~45권/day (cascade 트리거 · BQ tail 수준)
       - 그 외 전 도서·매장 = GCP BQML champion 모델 실예측 분포 (bq_forecast_base.csv).
         seed 실 알라딘 책 ↔ BQ 책을 isbn 정렬 후 1:1 relabel — intermittent long-tail
         (실측: 80% ≲0.76권/day · 90분위 4.8 · 온라인/거점 고수요).
@@ -384,11 +384,11 @@ def gen_forecast_cache(books, scenario_b_isbns: list[str], days: int = 7,
         short_stores = set(SHORT_PAIRS.get(isbn, []))
         for store_id in range(1, 15):
             if is_publisher_force:
-                base = random.uniform(60, 160)       # cascade stage 3 트리거 (fixture)
+                base = random.uniform(20, 45)        # cascade stage 3 트리거 (fixture · BQ tail 수준)
             elif is_wh_transfer_force:
-                base = random.uniform(50, 80)        # WH_TRANSFER 도서 — 전 매장 고수요 (fixture)
+                base = random.uniform(18, 35)        # WH_TRANSFER 도서 — 고수요 (fixture)
             elif store_id in short_stores:
-                base = random.uniform(50, 80)        # 시나리오 B high spike (fixture)
+                base = random.uniform(18, 35)        # 시나리오 B high spike (fixture)
             else:
                 # GCP BQML champion 모델 실예측 (매핑된 BQ 책의 해당 매장 5일 평균 수요)
                 base = bq_base.get((bq_isbn, store_id), 0.0)
