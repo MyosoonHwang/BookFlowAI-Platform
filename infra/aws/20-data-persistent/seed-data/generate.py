@@ -336,37 +336,28 @@ def gen_reservations(books, locations) -> list[dict]:
 # =========================================================================
 # 8. forecast_cache (D+1 only · book × store, store_id 1~12)
 # =========================================================================
-def gen_forecast_cache(books, scenario_b_isbns: list[str], days: int = 7,
-                       publisher_force_isbns: list[str] | None = None,
-                       wh_transfer_force_isbns: list[str] | None = None) -> tuple[list[dict], dict]:
+def gen_forecast_cache(books, days: int = 7) -> tuple[list[dict], dict]:
     """forecast_cache · 7d rolling (D+0 ~ D+6) × 전 책 × 전 매장.
 
     2026-05-17 재설계 — base_demand 를 (책,매장) 별 1회 산출 → 매일 ±10% 노이즈만.
     날짜가 지나도 D+1 예측이 일관 → safety_stock(=base×5) 과 화면 5일치가 항상 ≈ 일치.
     (기존: 매일 독립 난수 → safety_stock 과 화면 forecast 가 무관한 값으로 어긋남.)
 
+    2026-05-19 cascade 발주 폭증 버그 정정 — fixture 도서(publisher_force·wh_transfer·
+    scenario_b SHORT_PAIRS)의 base_demand 인위 인플레이션(18~45권/day) 제거.
+    인플레이션된 base_demand 가 safety_stock(=base×5) 으로 전파되어 cascade desired/gap 이
+    BQ 실예측과 무관하게 부풀려졌다(WH safety ≈ 1000+ → /plan-daily 발주 ~2000).
+    이제 전 도서·매장이 BQ 실예측 분포만 사용 → safety_stock 이 항상 예측과 정합.
+    데모 시나리오의 cascade 트리거는 gen_inventory 의 on_hand 조작(publisher_force on_hand=0 ·
+    wh_transfer/short_stores on_hand 부족)만으로 유지 — base_demand 와 독립.
+
     base_demand 분포:
-      - 시나리오 B fixture 8 도서 × SHORT_PAIRS 매장 = high spike (18~35권/day)
-      - PUBLISHER/WH_TRANSFER force 도서 = 18~45권/day (cascade 트리거 · BQ tail 수준)
-      - 그 외 전 도서·매장 = GCP BQML champion 모델 실예측 분포 (bq_forecast_base.csv).
+      - 전 도서·매장 = GCP BQML champion 모델 실예측 분포 (bq_forecast_base.csv).
         seed 실 알라딘 책 ↔ BQ 책을 isbn 정렬 후 1:1 relabel — intermittent long-tail
         (실측: 80% ≲0.76권/day · 90분위 4.8 · 온라인/거점 고수요).
 
     반환: (forecast_rows, base_demand) — base_demand 는 gen_inventory 가 safety_stock 산출에 사용.
     """
-    SHORT_PAIRS: dict[str, list[int]] = {
-        scenario_b_isbns[0]: [1, 2],
-        scenario_b_isbns[1]: [2, 3],
-        scenario_b_isbns[2]: [3, 4],
-        scenario_b_isbns[3]: [7],
-        scenario_b_isbns[4]: [9],
-        scenario_b_isbns[5]: [1],
-        scenario_b_isbns[6]: [7],
-        scenario_b_isbns[7]: [2],
-    }
-    publisher_force_set = set(publisher_force_isbns or [])
-    wh_transfer_force_set = set(wh_transfer_force_isbns or [])
-
     # BQ 실예측 분포를 seed 책에 1:1 relabel — seed 책 ↔ BQ 책 결정적 bijection
     # (양쪽 isbn13 정렬 후 zip · 1000↔1000). 추후 GCP 가 실 isbn 으로 재학습하면 자연 정합.
     bq_base = read_bq_forecast_base(BQ_FORECAST_CSV)
@@ -379,20 +370,9 @@ def gen_forecast_cache(books, scenario_b_isbns: list[str], days: int = 7,
     for b in books:
         isbn = b["isbn13"]
         bq_isbn = seed_to_bq.get(isbn)
-        is_publisher_force = isbn in publisher_force_set
-        is_wh_transfer_force = isbn in wh_transfer_force_set
-        short_stores = set(SHORT_PAIRS.get(isbn, []))
         for store_id in range(1, 15):
-            if is_publisher_force:
-                base = random.uniform(20, 45)        # cascade stage 3 트리거 (fixture · BQ tail 수준)
-            elif is_wh_transfer_force:
-                base = random.uniform(18, 35)        # WH_TRANSFER 도서 — 고수요 (fixture)
-            elif store_id in short_stores:
-                base = random.uniform(18, 35)        # 시나리오 B high spike (fixture)
-            else:
-                # GCP BQML champion 모델 실예측 (매핑된 BQ 책의 해당 매장 5일 평균 수요)
-                base = bq_base.get((bq_isbn, store_id), 0.0)
-            base_demand[(isbn, store_id)] = base
+            # GCP BQML champion 모델 실예측 (매핑된 BQ 책의 해당 매장 5일 평균 수요)
+            base_demand[(isbn, store_id)] = bq_base.get((bq_isbn, store_id), 0.0)
 
     # 7일치 (D+0 ~ D+6) — 매일 base × ±10% 노이즈만 (일관성 유지)
     rows: list[dict] = []
@@ -1019,19 +999,18 @@ def main() -> None:
     users = gen_users(locations)
 
     # 시나리오 B (재고 부족 cascade) 의 8 도서 — books 앞쪽 인덱스에서 stable 추출.
-    # gen_inventory · gen_forecast_cache · gen_pending_orders 모두 같은 list 사용 → 정합 보장.
+    # gen_inventory · gen_pending_orders 가 같은 list 사용 → 정합 보장.
     scenario_b_isbns = [b["isbn13"] for b in books[:8]]
-    # PUBLISHER cascade 강제 — 2 도서 모든 location on_hand=0 (forecast 60~160/day)
+    # PUBLISHER cascade 강제 — 2 도서 모든 location on_hand=0
     # → stage 0/1/2 fail → stage 3 PUBLISHER_ORDER 발의 자연스럽게 생성 (2026-05-17: 5→2 축소)
+    # 2026-05-19: base_demand 인플레이션 제거 — 트리거는 on_hand=0 만으로 (BQ 실예측 기반 발주량).
     publisher_force_isbns = [b["isbn13"] for b in books[60:62]]
     # WH_TRANSFER cascade — 1 도서 영남 권역(매장+WH) 부족 · 수도권 WH 충분
     # → REBALANCE/WH_TO_STORE fail → 수도권→영남 WH_TRANSFER 발의 (2026-05-17 추가)
     wh_transfer_force_isbns = [b["isbn13"] for b in books[62:63]]
 
     # forecast 가 먼저 — base_demand 산출 → inventory.safety_stock = base_demand × 5
-    forecast_cache, base_demand = gen_forecast_cache(books, scenario_b_isbns, days=7,
-                                                     publisher_force_isbns=publisher_force_isbns,
-                                                     wh_transfer_force_isbns=wh_transfer_force_isbns)
+    forecast_cache, base_demand = gen_forecast_cache(books, days=7)
     # WH row 추가 (자기 권역 매장 합산 · 오프라인+온라인) — 사용자 결정 2026-05-13
     append_wh_forecast(forecast_cache, locations)
     inventory = gen_inventory(books, locations, scenario_b_isbns, base_demand,
