@@ -25,6 +25,11 @@ from grafana_foundation_sdk.builders.cloudwatch import (
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PromQuery
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 from grafana_foundation_sdk.models.common import BigValueGraphMode
 
 from lib import datasources as ds
@@ -64,6 +69,9 @@ def _aws_billing_query(label: str):
     return (
         CWQuery()
         .datasource(_cw())
+        .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(BILLING_REGION)
         .namespace("AWS/Billing")
         .metric_name("EstimatedCharges")

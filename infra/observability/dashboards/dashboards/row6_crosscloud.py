@@ -22,6 +22,11 @@ from grafana_foundation_sdk.builders.cloudwatch import (
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PromQuery
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 from grafana_foundation_sdk.models.common import BigValueGraphMode
 from grafana_foundation_sdk.models.dashboard import (
     DashboardSpecialValueMapOptions,
@@ -98,6 +103,9 @@ def _vpn_tunnel_state(title: str, vpn_id: str, legend: str, desc: str):
     query = (
         CWQuery()
         .datasource(_cw())
+        .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(AWS_REGION)
         .namespace("AWS/VPN")
         .metric_name("TunnelState")
@@ -192,6 +200,9 @@ def _vpn_traffic():
             panel = panel.with_target(
                 CWQuery()
                 .datasource(_cw())
+                .query_mode(CloudWatchQueryMode.METRICS)
+                .metric_query_type(MetricQueryType.SEARCH)
+                .metric_editor_mode(MetricEditorMode.BUILDER)
                 .region(AWS_REGION)
                 .namespace("AWS/VPN")
                 .metric_name(metric)
@@ -224,6 +235,9 @@ def _tgw_attachment_traffic():
         panel = panel.with_target(
             CWQuery()
             .datasource(_cw())
+            .query_mode(CloudWatchQueryMode.METRICS)
+            .metric_query_type(MetricQueryType.SEARCH)
+            .metric_editor_mode(MetricEditorMode.BUILDER)
             .region(AWS_REGION)
             .namespace("AWS/TransitGateway")
             .metric_name(metric)
@@ -257,6 +271,9 @@ def _tgw_route_drops():
         panel = panel.with_target(
             CWQuery()
             .datasource(_cw())
+            .query_mode(CloudWatchQueryMode.METRICS)
+            .metric_query_type(MetricQueryType.SEARCH)
+            .metric_editor_mode(MetricEditorMode.BUILDER)
             .region(AWS_REGION)
             .namespace("AWS/TransitGateway")
             .metric_name(metric)
@@ -291,6 +308,9 @@ def _tgw_attachment_count():
     query = (
         CWQuery()
         .datasource(_cw())
+        .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(AWS_REGION)
         .namespace("AWS/TransitGateway")
         .expression(search)

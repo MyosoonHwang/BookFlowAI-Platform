@@ -32,7 +32,11 @@ from grafana_foundation_sdk.builders.cloudwatch import (
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PromQuery
-from grafana_foundation_sdk.models.cloudwatch import CloudWatchQueryMode
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 from grafana_foundation_sdk.models.dashboard import (
     DashboardSpecialValueMapOptions,
     SpecialValueMap,
@@ -247,6 +251,8 @@ def _rds_available_stat() -> object:
         CloudWatchMetricsQuery()
         .datasource(ds.ref(ds.CLOUDWATCH))
         .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(_CW_REGION)
         .namespace("AWS/RDS")
         .metric_name("DatabaseConnections")
@@ -274,6 +280,8 @@ def _redis_available_stat() -> object:
         CloudWatchMetricsQuery()
         .datasource(ds.ref(ds.CLOUDWATCH))
         .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(_CW_REGION)
         .namespace("AWS/ElastiCache")
         .metric_name("CurrConnections")
