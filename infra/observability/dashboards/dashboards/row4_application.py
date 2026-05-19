@@ -101,18 +101,26 @@ def _p95_panel() -> object:
 
 # ── 에러율 ──────────────────────────────────────────────────────────────
 def _error_rate_panel() -> object:
-    """Pod별 5xx 에러율(%). 5xx 응답 비율. instrumentator status 라벨 활용."""
+    """Pod별 5xx 에러율(%). 5xx 응답 비율. instrumentator status 라벨 활용.
+
+    5xx 가 한 건도 없으면 status="5xx" 시계열 자체가 존재하지 않아 분자가
+    빈 벡터가 되고, PromQL 의 빈/비빈 나눗셈은 빈 결과 → 패널 "No data".
+    정상(에러 0건)인데도 no-data 로 보이는 것을 막기 위해, 분자에 전체
+    요청 rate ×0 을 fallback 으로 OR 해 모든 app 이 0 값을 갖도록 한다.
+    """
     panel = pb.timeseries_panel(
         "Pod별 에러율 (5xx %)",
         unit="percent",
         span=pb.SPAN_HALF,
-        description="5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100",
+        description="5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100 (에러 0건이면 0%)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
         PromQuery()
         .expr(
-            "100 * (sum by (app) "
+            "100 * ((sum by (app) "
             f'(rate(http_requests_total{{{_POD_SEL},status="5xx"}}[5m])) '
+            "or (sum by (app) "
+            f'(rate(http_requests_total{{{_POD_SEL}}}[5m])) * 0)) '
             "/ clamp_min(sum by (app) "
             f'(rate(http_requests_total{{{_POD_SEL}}}[5m])), 0.001))'
         )

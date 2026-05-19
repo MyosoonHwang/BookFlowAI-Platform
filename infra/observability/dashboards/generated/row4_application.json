@@ -302,7 +302,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100",
+      "description": "5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100 (에러 0건이면 0%)",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -337,7 +337,7 @@
       "repeatDirection": "h",
       "targets": [
         {
-          "expr": "100 * (sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",status=\"5xx\"}[5m])) / clamp_min(sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])), 0.001))",
+          "expr": "100 * ((sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",status=\"5xx\"}[5m])) or (sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])) * 0)) / clamp_min(sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])), 0.001))",
           "legendFormat": "{{app}}",
           "refId": ""
         }
