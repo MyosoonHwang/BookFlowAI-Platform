@@ -235,7 +235,7 @@
           "dimensions": {
             "JobName": "bookflow-raw-pos-mart",
             "JobRunId": "ALL",
-            "Type": "gauge"
+            "Type": "count"
           },
           "id": "",
           "label": "raw-pos-mart",
@@ -256,7 +256,7 @@
           "dimensions": {
             "JobName": "bookflow-raw-aladin-mart",
             "JobRunId": "ALL",
-            "Type": "gauge"
+            "Type": "count"
           },
           "id": "",
           "label": "raw-aladin-mart",
@@ -277,7 +277,7 @@
           "dimensions": {
             "JobName": "bookflow-raw-event-mart",
             "JobRunId": "ALL",
-            "Type": "gauge"
+            "Type": "count"
           },
           "id": "",
           "label": "raw-event-mart",
@@ -298,7 +298,7 @@
           "dimensions": {
             "JobName": "bookflow-raw-sns-mart",
             "JobRunId": "ALL",
-            "Type": "gauge"
+            "Type": "count"
           },
           "id": "",
           "label": "raw-sns-mart",
@@ -319,7 +319,7 @@
           "dimensions": {
             "JobName": "bookflow-sales-daily-agg",
             "JobRunId": "ALL",
-            "Type": "gauge"
+            "Type": "count"
           },
           "id": "",
           "label": "sales-daily-agg",
@@ -340,7 +340,7 @@
           "dimensions": {
             "JobName": "bookflow-features-build",
             "JobRunId": "ALL",
-            "Type": "gauge"
+            "Type": "count"
           },
           "id": "",
           "label": "features-build",
@@ -1213,7 +1213,7 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "BucketName": "bookflow-mart-354493396671",
+            "BucketName": "bookflow-mart-994878981869",
             "StorageType": "AllStorageTypes"
           },
           "id": "",
@@ -1277,7 +1277,7 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "BucketName": "bookflow-mart-354493396671",
+            "BucketName": "bookflow-mart-994878981869",
             "StorageType": "StandardStorage"
           },
           "id": "",
@@ -1341,7 +1341,7 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "BucketName": "bookflow-raw-354493396671",
+            "BucketName": "bookflow-raw-994878981869",
             "StorageType": "AllStorageTypes"
           },
           "id": "",

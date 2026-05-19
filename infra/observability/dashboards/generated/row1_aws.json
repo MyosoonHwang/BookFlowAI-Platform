@@ -1266,25 +1266,6 @@
           "refId": "I5",
           "region": "ap-northeast-1",
           "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "cloudwatch"
-          },
-          "dimensions": {
-            "FunctionName": "bookflow-mart-to-gcs"
-          },
-          "id": "",
-          "label": "mart-to-gcs",
-          "matchExact": true,
-          "metricName": "Invocations",
-          "namespace": "AWS/Lambda",
-          "period": "300",
-          "queryMode": "Metrics",
-          "refId": "I6",
-          "region": "ap-northeast-1",
-          "statistic": "Sum"
         }
       ],
       "title": "Lambda · 호출 수",
@@ -1557,44 +1538,6 @@
           "refId": "T5",
           "region": "ap-northeast-1",
           "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "cloudwatch"
-          },
-          "dimensions": {
-            "FunctionName": "bookflow-mart-to-gcs"
-          },
-          "id": "",
-          "label": "mart-to-gcs err",
-          "matchExact": true,
-          "metricName": "Errors",
-          "namespace": "AWS/Lambda",
-          "period": "300",
-          "queryMode": "Metrics",
-          "refId": "E6",
-          "region": "ap-northeast-1",
-          "statistic": "Sum"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "cloudwatch"
-          },
-          "dimensions": {
-            "FunctionName": "bookflow-mart-to-gcs"
-          },
-          "id": "",
-          "label": "mart-to-gcs throttle",
-          "matchExact": true,
-          "metricName": "Throttles",
-          "namespace": "AWS/Lambda",
-          "period": "300",
-          "queryMode": "Metrics",
-          "refId": "T6",
-          "region": "ap-northeast-1",
-          "statistic": "Sum"
         }
       ],
       "title": "Lambda · 에러 / Throttle",
@@ -1751,25 +1694,6 @@
           "period": "300",
           "queryMode": "Metrics",
           "refId": "D5",
-          "region": "ap-northeast-1",
-          "statistic": "Average"
-        },
-        {
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "cloudwatch"
-          },
-          "dimensions": {
-            "FunctionName": "bookflow-mart-to-gcs"
-          },
-          "id": "",
-          "label": "mart-to-gcs",
-          "matchExact": true,
-          "metricName": "Duration",
-          "namespace": "AWS/Lambda",
-          "period": "300",
-          "queryMode": "Metrics",
-          "refId": "D6",
           "region": "ap-northeast-1",
           "statistic": "Average"
         }
@@ -1962,7 +1886,7 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "LoadBalancer": "app/bookflow-alb-external/89f4008ac9c171df"
+            "LoadBalancer": "app/bookflow-alb-external/57e62cdd02356761"
           },
           "id": "",
           "label": "요청",
@@ -2025,7 +1949,7 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "LoadBalancer": "app/bookflow-alb-external/89f4008ac9c171df"
+            "LoadBalancer": "app/bookflow-alb-external/57e62cdd02356761"
           },
           "id": "",
           "label": "ELB 5xx",
@@ -2044,7 +1968,7 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "LoadBalancer": "app/bookflow-alb-external/89f4008ac9c171df"
+            "LoadBalancer": "app/bookflow-alb-external/57e62cdd02356761"
           },
           "id": "",
           "label": "Target 5xx",
@@ -2067,7 +1991,7 @@
         "type": "cloudwatch",
         "uid": "cloudwatch"
       },
-      "description": "AWS/ApplicationELB HealthyHostCount — bookflow-alb-external.",
+      "description": "AWS/ApplicationELB HealthyHostCount — bookflow-alb-external · TargetGroup bookflow-inventory-api-tg. target 메트릭은 LoadBalancer+TargetGroup 2개 차원 필요.",
       "fieldConfig": {
         "defaults": {
           "thresholds": {
@@ -2117,7 +2041,8 @@
             "uid": "cloudwatch"
           },
           "dimensions": {
-            "LoadBalancer": "app/bookflow-alb-external/89f4008ac9c171df"
+            "LoadBalancer": "app/bookflow-alb-external/57e62cdd02356761",
+            "TargetGroup": "targetgroup/bookflow-inventory-api-tg/45c463eca58f093b"
           },
           "id": "",
           "label": "healthy",

@@ -13,7 +13,8 @@ Notion 설계 (365b4343-5916-81e3-82e1-f49ed2951cbb · §4 Row 1) 기준:
 
 데이터소스: 전부 CloudWatch (고정 UID `cloudwatch`). 리전 ap-northeast-1.
 
-라이브 CloudWatch 실측 (2026-05-19 · 354493396671 deploy 계정):
+라이브 CloudWatch 실측 (2026-05-19 · 994878981869 — Grafana CloudWatch
+datasource 가 가리키는 계정):
   - EKS 클러스터  : bookflow-eks  (AWS/EKS 컨트롤플레인 메트릭만 — Container
     Insights 미활성 → 노드/Pod 단위 메트릭 없음. 노드·Pod·CronJob 헬스는
     Prometheus(Row 4·Row 8)가 담당. 여기선 컨트롤플레인 메트릭으로 대체.)
@@ -22,9 +23,10 @@ Notion 설계 (365b4343-5916-81e3-82e1-f49ed2951cbb · §4 Row 1) 기준:
   - RDS          : bookflow-postgres (db.t3.micro)
   - ElastiCache  : bookflow-redis (node 0001)
   - Lambda       : bookflow-{pos-ingestor,spike-detect,aladin-sync,sns-gen,
-                   event-sync,forecast-trigger,mart-to-gcs} — 7개
+                   event-sync,forecast-trigger} — 6개 (라이브 실재 함수)
   - Kinesis      : bookflow-pos-events
-  - ALB          : bookflow-alb-external (External ALB)
+  - ALB          : bookflow-alb-external — app/bookflow-alb-external/57e62cdd02356761
+                   (TargetGroup bookflow-inventory-api-tg)
   - CodePipeline : cp-eks·cp-ecs·publisher-bg — 메트릭 미발행(데일리 자원·미배포)
   - CloudTrail   : 트레일 미생성 → CloudWatch Logs 그룹 미존재
 """
@@ -55,9 +57,12 @@ RDS_ID = "bookflow-postgres"
 REDIS_ID = "bookflow-redis"
 KINESIS_STREAM = "bookflow-pos-events"
 # ALB ID — External ALB 는 데일리 destroy/create 라 식별자가 매일 회전한다.
-# 2026-05-19 실측: 현재 활성 LB 가 데이터를 발행하는 식별자. 재배포 시
-# 갱신 필요(IaC named LB / EventBridge 동적 주입이 항구 해법).
-ALB_EXTERNAL = "app/bookflow-alb-external/89f4008ac9c171df"
+# 2026-05-19 실측(elbv2 describe-load-balancers): 현재 활성 LB 가 데이터를
+# 발행하는 식별자. 재배포 시 갱신 필요(IaC named LB / EventBridge 동적
+# 주입이 항구 해법). HealthyHostCount 등 target 메트릭은 LoadBalancer +
+# TargetGroup 2개 차원이 필요하다.
+ALB_EXTERNAL = "app/bookflow-alb-external/57e62cdd02356761"
+ALB_TARGET_GROUP = "targetgroup/bookflow-inventory-api-tg/45c463eca58f093b"
 
 ECS_SERVICES = ["inventory-api", "online-sim", "offline-sim"]
 LAMBDA_FUNCS = [
@@ -67,7 +72,6 @@ LAMBDA_FUNCS = [
     "bookflow-sns-gen",
     "bookflow-event-sync",
     "bookflow-forecast-trigger",
-    "bookflow-mart-to-gcs",
 ]
 CODEPIPELINES = ["cp-eks", "cp-ecs", "publisher-bg"]
 # CloudTrail → CloudWatch Logs 그룹 (트레일 CWLG 연동 시 부여 예정 명칭)
@@ -422,11 +426,16 @@ def _alb_targets():
         unit="short",
         color_mode=pb.BigValueColorMode.VALUE,
         thresholds=pb._thresholds([(None, pb.RED), (1, pb.GREEN)]),
-        description="AWS/ApplicationELB HealthyHostCount — bookflow-alb-external.",
+        description=(
+            "AWS/ApplicationELB HealthyHostCount — bookflow-alb-external · "
+            "TargetGroup bookflow-inventory-api-tg. target 메트릭은 "
+            "LoadBalancer+TargetGroup 2개 차원 필요."
+        ),
     )
     return p.datasource(ds.ref(ds.CLOUDWATCH)).with_target(
         _metric("A", "AWS/ApplicationELB", "HealthyHostCount",
-                {"LoadBalancer": ALB_EXTERNAL}, stat="Average", label="healthy"),
+                {"LoadBalancer": ALB_EXTERNAL, "TargetGroup": ALB_TARGET_GROUP},
+                stat="Average", label="healthy"),
     )
 
 
