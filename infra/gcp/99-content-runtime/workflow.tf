@@ -35,7 +35,7 @@ main:
               bq_location: "${var.bigquery_location}"
     - filter_internal_artifacts:
         switch:
-          - condition: $${len(text.find_all_regex(object_name, "^functions/|^pipelines/|\\.zip$|\\.json$")) > 0}
+          - condition: $${len(text.find_all_regex(object_name, "^functions/|^pipelines/|\\.zip$|\\.json$|\\.spark-staging-|/_temporary/")) > 0}
             next: return_ignored_artifact
         next: load_bigquery
     - return_ignored_artifact:

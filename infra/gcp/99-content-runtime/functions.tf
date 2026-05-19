@@ -43,6 +43,7 @@ resource "google_cloudfunctions2_function" "content" {
     min_instance_count = each.value.min_instance
     max_instance_count = each.value.max_instance
     available_memory   = each.value.memory
+    available_cpu      = try(each.value.cpu, null)
     timeout_seconds    = each.value.timeout
     ingress_settings   = "ALLOW_INTERNAL_ONLY"
     service_account_email = {
