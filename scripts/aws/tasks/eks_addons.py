@@ -406,14 +406,13 @@ def _helm_install_grafana() -> None:
             # forward-auth: 모든 /grafana 요청을 dashboard-svc 가 검증.
             # role==engineer 면 200 + X-WEBAUTH-USER 응답헤더 → auth-response-headers
             # 로 upstream(Grafana) 에 전달. 아니면 401.
-            # configuration-snippet: 클라이언트가 위조해 보낸 X-WEBAUTH-USER 를
-            # 먼저 제거 → forward-auth 가 주입한 값만 Grafana 에 도달.
+            # configuration-snippet(more_clear_input_headers) 제거: 클러스터 보안정책
+            # allow-snippet-annotations=false 로 비활성 · auth-response-headers 의
+            # proxy_set_header 가 위조 X-WEBAUTH-USER 를 auth 응답값으로 override → 중복 방어.
             "annotations": {
                 "nginx.ingress.kubernetes.io/auth-url":
                     "http://dashboard-svc.bookflow.svc.cluster.local/internal/grafana-auth",
                 "nginx.ingress.kubernetes.io/auth-response-headers": "X-WEBAUTH-USER",
-                "nginx.ingress.kubernetes.io/configuration-snippet":
-                    "more_clear_input_headers \"X-WEBAUTH-USER\";\n",
             },
         },
     }
