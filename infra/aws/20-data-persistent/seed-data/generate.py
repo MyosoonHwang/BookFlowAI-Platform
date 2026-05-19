@@ -231,6 +231,7 @@ def gen_inventory(
     base_demand: dict[tuple[str, int], float],
     publisher_force_isbns: list[str] | None = None,
     wh_transfer_force_isbns: list[str] | None = None,
+    wh_to_store_force_isbns: list[str] | None = None,
 ) -> list[dict]:
     """inventory 시드 — 2026-05-17 재설계 (안정 baseline + 격리된 데모 시나리오).
 
@@ -243,6 +244,8 @@ def gen_inventory(
       - publisher_force 책: 전 위치 on_hand 0 (cascade stage 0/1/2 fail → stage 3 PUBLISHER)
       - wh_transfer_force 책: 영남 권역(wh_id=2) 매장+WH 부족 · 수도권 WH 는 충분
         → REBALANCE/WH_TO_STORE fail → 수도권→영남 WH_TRANSFER 트리거
+      - wh_to_store_force 책: 수도권(wh_id=1) 오프라인 매장 전부(loc 1~6) 부족 · 수도권 WH 본체는 충분
+        → 같은 wh 매장 surplus 없어 REBALANCE fail → 자기 wh 본체→매장 WH_TO_STORE 트리거
     """
     SHORT_PAIRS: dict[str, list[int]] = {
         scenario_b_isbns[0]: [1, 2],   # 강남·광화문 부족 → REBALANCE 3건의 source/target
@@ -256,6 +259,7 @@ def gen_inventory(
     }
     publisher_force_set = set(publisher_force_isbns or [])
     wh_transfer_force_set = set(wh_transfer_force_isbns or [])
+    wh_to_store_force_set = set(wh_to_store_force_isbns or [])
     target_locs = [l for l in locations if not (l.get("is_virtual") in ("true", True))]
     # store_id → wh_id (WH safety = 권역 매장 base_demand 합 × 5)
     store_wh = {
@@ -269,6 +273,7 @@ def gen_inventory(
         short_locs = set(SHORT_PAIRS.get(isbn, []))
         is_publisher_force = isbn in publisher_force_set
         is_wh_transfer_force = isbn in wh_transfer_force_set
+        is_wh_to_store_force = isbn in wh_to_store_force_set
         for l in target_locs:
             lid = l["location_id"]
             if l["location_type"] == "WH":
@@ -283,7 +288,7 @@ def gen_inventory(
                 elif is_wh_transfer_force and wh_id == 2:
                     on_hand = 0                                                  # 영남 WH 결품 → WH_TO_STORE fail
                 else:
-                    on_hand = random.randint(safety * 2, safety * 4 + 1)         # 충분 (수도권 WH = 이전 source)
+                    on_hand = random.randint(safety * 2, safety * 4 + 1)         # 충분 (수도권 WH = WH_TO_STORE source)
             else:
                 base = base_demand.get((isbn, lid), 1.0)
                 safety = max(int(base * 5), 5)
@@ -291,6 +296,8 @@ def gen_inventory(
                     on_hand = 0                                                  # 전 매장 결품
                 elif is_wh_transfer_force and l.get("wh_id") == 2:
                     on_hand = random.randint(1, max(2, int(safety * 0.25)))       # 영남 매장 부족 → REBALANCE fail
+                elif is_wh_to_store_force and l.get("wh_id") == 1:
+                    on_hand = random.randint(1, max(2, int(safety * 0.25)))       # 수도권 매장 전부 부족 → REBALANCE fail → WH_TO_STORE
                 elif lid in short_locs:
                     on_hand = random.randint(1, max(2, int(safety * 0.25)))       # 의도 부족 (결품 X)
                 else:
@@ -1008,6 +1015,9 @@ def main() -> None:
     # WH_TRANSFER cascade — 1 도서 영남 권역(매장+WH) 부족 · 수도권 WH 충분
     # → REBALANCE/WH_TO_STORE fail → 수도권→영남 WH_TRANSFER 발의 (2026-05-17 추가)
     wh_transfer_force_isbns = [b["isbn13"] for b in books[62:63]]
+    # WH_TO_STORE cascade (stage 1) — 1 도서 수도권(wh_id=1) 매장 전부(loc 1~6) 부족 · 수도권 WH 본체 충분
+    # → 같은 wh 매장 surplus 없어 REBALANCE fail → 자기 wh 본체→매장 WH_TO_STORE 발의 (2026-05-19 추가)
+    wh_to_store_force_isbns = [books[63]["isbn13"]]
 
     # forecast 가 먼저 — base_demand 산출 → inventory.safety_stock = base_demand × 5
     forecast_cache, base_demand = gen_forecast_cache(books, days=7)
@@ -1015,7 +1025,8 @@ def main() -> None:
     append_wh_forecast(forecast_cache, locations)
     inventory = gen_inventory(books, locations, scenario_b_isbns, base_demand,
                               publisher_force_isbns=publisher_force_isbns,
-                              wh_transfer_force_isbns=wh_transfer_force_isbns)
+                              wh_transfer_force_isbns=wh_transfer_force_isbns,
+                              wh_to_store_force_isbns=wh_to_store_force_isbns)
     reservations = gen_reservations(books, locations)
     # 시연 정합: D-1~D-6 처리완료 (600 row) · D-0 0 row (cascade 발의 버튼이 동적 생성)
     # D-7 ~ D-365 history (~17950 row) — 일자별 상세 history view 용.
