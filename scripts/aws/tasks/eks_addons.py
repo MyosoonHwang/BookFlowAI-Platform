@@ -30,6 +30,8 @@ CERT_MANAGER_VERSION = "v1.16.1"
 INGRESS_NGINX_VERSION = "4.11.3"
 WEBHOOK_DUCKDNS_VERSION = "v1.2.3"
 EXTERNAL_SECRETS_VERSION = "0.10.4"
+PROMETHEUS_VERSION = "25.27.0"
+GRAFANA_VERSION = "8.5.1"
 
 DEFAULT_APPS_DIR_REL = "../BookFlowAI-Apps"
 
@@ -64,6 +66,8 @@ def _helm_repo_add() -> None:
         ("jetstack", "https://charts.jetstack.io"),
         ("mmontes11", "https://mmontes11.github.io/charts"),
         ("external-secrets", "https://charts.external-secrets.io"),
+        ("prometheus-community", "https://prometheus-community.github.io/helm-charts"),
+        ("grafana", "https://grafana.github.io/helm-charts"),
     ]
     for name, url in repos:
         subprocess.run(["helm", "repo", "add", name, url], check=False)
@@ -128,6 +132,93 @@ def _helm_install_external_secrets() -> None:
         "--set-string", f"serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn={eso_role_arn}",
         "--wait", "--timeout", "5m",
     ], check=True)
+
+
+def _helm_install_prometheus() -> None:
+    """Prometheus server only — 엔지니어 운영 대시보드 Phase ② (B2).
+    alertmanager / pushgateway / node-exporter / kube-state-metrics 는 비활성 (최소 구성).
+    차트 기본 prometheus.yml 의 kubernetes-pods scrape job 은 그대로 둠 —
+    BookFlow 8 Pod 가 prometheus.io/scrape annotation 으로 수집됨.
+    """
+    log.info("helm upgrade --install prometheus (server only)")
+    subprocess.run([
+        "helm", "upgrade", "--install", "prometheus", "prometheus-community/prometheus",
+        "--namespace", "monitoring", "--create-namespace",
+        "--version", PROMETHEUS_VERSION,
+        "--set", "alertmanager.enabled=false",
+        "--set", "prometheus-pushgateway.enabled=false",
+        "--set", "prometheus-node-exporter.enabled=false",
+        "--set", "kube-state-metrics.enabled=false",
+        "--wait", "--timeout", "5m",
+    ], check=True)
+
+
+def _ensure_grafana_admin_password() -> str:
+    """Grafana admin password — Secrets Manager `bookflow/grafana/admin` 조회 후 없으면 생성.
+    bookflow/rds/master-password 패턴 참고. 매 redeploy 시 동일 값 (idempotent).
+    """
+    import boto3, json, secrets
+    sm = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION", "ap-northeast-1"))
+    try:
+        val = json.loads(sm.get_secret_value(SecretId="bookflow/grafana/admin")["SecretString"])
+        log.info("  grafana admin password · 기존 Secrets Manager 값 사용")
+        return val["password"]
+    except sm.exceptions.ResourceNotFoundException:
+        pw = secrets.token_urlsafe(16)
+        sm.create_secret(
+            Name="bookflow/grafana/admin",
+            SecretString=json.dumps({"username": "admin", "password": pw}),
+        )
+        log.info("  grafana admin password · bookflow/grafana/admin Secret 신규 생성")
+        return pw
+
+
+def _helm_install_grafana() -> None:
+    """Grafana — 엔지니어 운영 대시보드 Phase ② (B3).
+    Prometheus datasource (default) provisioning · ingress-nginx /grafana sub-path 서빙.
+    admin password 는 Secrets Manager bookflow/grafana/admin (idempotent).
+    대시보드 패널은 다음 Phase ④.
+    """
+    admin_pw = _ensure_grafana_admin_password()
+    values = """
+adminUser: admin
+adminPassword: __ADMIN_PW__
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.monitoring.svc.cluster.local
+        isDefault: true
+grafana.ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s/grafana/"
+    serve_from_sub_path: true
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - bookflow.myosoon.store
+  path: /grafana
+""".lstrip().replace("__ADMIN_PW__", admin_pw)
+
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8") as f:
+        f.write(values)
+        values_path = f.name
+    try:
+        log.info("helm upgrade --install grafana")
+        subprocess.run([
+            "helm", "upgrade", "--install", "grafana", "grafana/grafana",
+            "--namespace", "monitoring", "--create-namespace",
+            "--version", GRAFANA_VERSION,
+            "--values", values_path,
+            "--wait", "--timeout", "5m",
+        ], check=True)
+    finally:
+        os.unlink(values_path)
 
 
 ROUTE53_HOSTED_ZONE_ID = "Z0061717U502ZCK2HCCF"  # myosoon.store (deploy 계정 소유 영구 zone)
@@ -415,6 +506,8 @@ def deploy() -> None:
     _helm_install_cert_manager()
     _helm_install_external_secrets()
     _apply_cluster_secret_store()
+    _helm_install_prometheus()
+    _helm_install_grafana()
     _update_route53_a_alias()
     _apply_manifests()
     _sync_rds_pod_roles()
@@ -439,9 +532,12 @@ def destroy() -> None:
 
     # Reverse order
     for cmd in [
+        ["helm", "uninstall", "grafana", "-n", "monitoring", "--ignore-not-found"],
+        ["helm", "uninstall", "prometheus", "-n", "monitoring", "--ignore-not-found"],
         ["helm", "uninstall", "cert-manager-webhook-duckdns", "-n", "cert-manager", "--ignore-not-found"],
         ["helm", "uninstall", "cert-manager", "-n", "cert-manager", "--ignore-not-found"],
         ["helm", "uninstall", "ingress-nginx", "-n", "ingress-nginx", "--ignore-not-found"],
+        ["kubectl", "delete", "namespace", "monitoring", "--ignore-not-found=true"],
         ["kubectl", "delete", "namespace", "cert-manager", "--ignore-not-found=true"],
         ["kubectl", "delete", "namespace", "ingress-nginx", "--ignore-not-found=true"],
     ]:
