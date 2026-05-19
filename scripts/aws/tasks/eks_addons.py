@@ -174,35 +174,92 @@ def _ensure_grafana_admin_password() -> str:
 
 
 def _helm_install_grafana() -> None:
-    """Grafana — 엔지니어 운영 대시보드 Phase ② (B3).
-    Prometheus datasource (default) provisioning · ingress-nginx /grafana sub-path 서빙.
-    admin password 는 Secrets Manager bookflow/grafana/admin (idempotent).
-    대시보드 패널은 다음 Phase ④.
+    """Grafana — 엔지니어 운영 대시보드 Phase ② (B3) + Phase ③ 트랙 4 멀티클라우드 datasource.
+    Prometheus (default) + CloudWatch (IRSA) + Azure Monitor datasource provisioning.
+    ingress-nginx /grafana sub-path 서빙. admin password 는 Secrets Manager
+    bookflow/grafana/admin (idempotent). 대시보드 패널은 다음 Phase ④.
+    # TODO Phase ③ C3: GCP Cloud Monitoring datasource — bookflow/gcp/grafana-monitor 준비되면 추가
     """
+    import boto3, json, yaml as _yaml
+    region = os.environ.get("AWS_REGION", "ap-northeast-1")
     admin_pw = _ensure_grafana_admin_password()
-    values = """
-adminUser: admin
-adminPassword: __ADMIN_PW__
-datasources:
-  datasources.yaml:
-    apiVersion: 1
-    datasources:
-      - name: Prometheus
-        type: prometheus
-        access: proxy
-        url: http://prometheus-server.monitoring.svc.cluster.local
-        isDefault: true
-grafana.ini:
-  server:
-    root_url: "%(protocol)s://%(domain)s/grafana/"
-    serve_from_sub_path: true
-ingress:
-  enabled: true
-  ingressClassName: nginx
-  hosts:
-    - bookflow.myosoon.store
-  path: /grafana
-""".lstrip().replace("__ADMIN_PW__", admin_pw)
+
+    # datasource 목록 — Prometheus 는 항상 · CloudWatch/Azure 는 자격증명 가용 시
+    datasources = [
+        {
+            "name": "Prometheus",
+            "type": "prometheus",
+            "access": "proxy",
+            "url": "http://prometheus-server.monitoring.svc.cluster.local",
+            "isDefault": True,
+        },
+    ]
+
+    # CloudWatch datasource — authType default → Grafana Pod 의 IRSA 사용.
+    # IRSA role ARN 은 CFN export bookflow-grafana-cloudwatch-role-arn (cert-manager 패턴).
+    cf = boto3.client("cloudformation", region_name=region)
+    cw_role_arn = next(
+        (e["Value"] for e in cf.list_exports()["Exports"] if e["Name"] == "bookflow-grafana-cloudwatch-role-arn"),
+        None,
+    )
+    datasources.append({
+        "name": "CloudWatch",
+        "type": "cloudwatch",
+        "access": "proxy",
+        "jsonData": {"authType": "default", "defaultRegion": "ap-northeast-1"},
+    })
+    if cw_role_arn:
+        log.info(f"  grafana CloudWatch datasource · IRSA={cw_role_arn}")
+    else:
+        log.warn("bookflow-grafana-cloudwatch-role-arn export missing · IRSA annotation 없이 진행 (CloudWatch 인증 미동작 가능)")
+
+    # Azure Monitor datasource — 자격증명은 Secrets Manager bookflow/azure/grafana-monitor.
+    # grafana-azure-monitor-datasource 는 Grafana core 번들 → 별도 plugin install 불필요.
+    sm = boto3.client("secretsmanager", region_name=region)
+    try:
+        azure_cred = json.loads(sm.get_secret_value(SecretId="bookflow/azure/grafana-monitor")["SecretString"])
+        datasources.append({
+            "name": "Azure Monitor",
+            "type": "grafana-azure-monitor-datasource",
+            "access": "proxy",
+            "jsonData": {
+                "azureAuthType": "clientsecret",
+                "cloudName": "azuremonitor",
+                "tenantId": azure_cred["tenantId"],
+                "clientId": azure_cred["clientId"],
+                "subscriptionId": azure_cred["subscriptionId"],
+            },
+            "secureJsonData": {"clientSecret": azure_cred["clientSecret"]},
+        })
+        log.info("  grafana Azure Monitor datasource · bookflow/azure/grafana-monitor 자격증명 사용")
+    except sm.exceptions.ResourceNotFoundException:
+        log.warn("bookflow/azure/grafana-monitor secret missing · Azure Monitor datasource skip")
+
+    values_dict = {
+        "adminUser": "admin",
+        "adminPassword": admin_pw,
+        "datasources": {
+            "datasources.yaml": {"apiVersion": 1, "datasources": datasources},
+        },
+        "grafana.ini": {
+            "server": {
+                "root_url": "%(protocol)s://%(domain)s/grafana/",
+                "serve_from_sub_path": True,
+            },
+        },
+        "ingress": {
+            "enabled": True,
+            "ingressClassName": "nginx",
+            "hosts": ["bookflow.myosoon.store"],
+            "path": "/grafana",
+        },
+    }
+    # CloudWatch IRSA — Grafana SA 에 role-arn annotation (export 가용 시에만)
+    if cw_role_arn:
+        values_dict["serviceAccount"] = {
+            "annotations": {"eks.amazonaws.com/role-arn": cw_role_arn},
+        }
+    values = _yaml.safe_dump(values_dict, sort_keys=False, allow_unicode=True)
 
     import tempfile
     with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8") as f:
