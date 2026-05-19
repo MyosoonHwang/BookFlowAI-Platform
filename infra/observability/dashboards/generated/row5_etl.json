@@ -1450,6 +1450,6 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "BookFlow 운영 — ETL / 데이터 파이프라인 (Row 5)",
+  "title": "BookFlow 운영 — ETL 데이터 파이프라인",
   "uid": "bookflow-ops-row5-etl"
 }

@@ -2420,6 +2420,6 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "BookFlow 운영 — AWS (Row 1)",
+  "title": "BookFlow 운영 — AWS 인프라",
   "uid": "bookflow-ops-row1-aws"
 }

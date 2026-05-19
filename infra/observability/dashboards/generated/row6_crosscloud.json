@@ -295,6 +295,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "max(bookflow_vpn_bgp_state{link=\"aws-gcp\"}) or vector(2)",
           "instant": true,
           "legendFormat": "aws-gcp",
@@ -389,6 +393,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "max(bookflow_vpn_bgp_state{link=\"aws-azure\"}) or vector(2)",
           "instant": true,
           "legendFormat": "aws-azure",
@@ -746,6 +754,6 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "BookFlow 운영 — cross-cloud 연결 (Row 6)",
+  "title": "BookFlow 운영 — Cross-cloud 연결",
   "uid": "bookflow-ops-row6-crosscloud"
 }

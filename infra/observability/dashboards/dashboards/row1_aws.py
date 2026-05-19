@@ -41,7 +41,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row1-aws"
-TITLE = "BookFlow 운영 — AWS (Row 1)"
+TITLE = "BookFlow 운영 — AWS 인프라"
 DESCRIPTION = (
     "AWS 인프라 헬스 (CloudWatch · ap-northeast-1). EKS 컨트롤플레인 · ECS 3 "
     "서비스 · RDS · Redis · Lambda 7 · Kinesis · ALB · CodePipeline · "

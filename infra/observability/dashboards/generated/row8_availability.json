@@ -73,6 +73,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * ((avg(avg_over_time(up{job=\"kubernetes-pods\",namespace=\"bookflow\"}[24h])) + avg(avg_over_time(probe_success{job=~\"blackbox.*\"}[24h]))) / 2)",
           "instant": true,
           "legendFormat": "종합 SLO",
@@ -141,6 +145,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * ((avg(avg_over_time(up{job=\"kubernetes-pods\",namespace=\"bookflow\"}[1h])) + avg(avg_over_time(probe_success{job=~\"blackbox.*\"}[1h]))) / 2)",
           "legendFormat": "종합 SLO",
           "refId": ""
@@ -205,6 +213,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * avg(avg_over_time(up{job=\"kubernetes-pods\",namespace=\"bookflow\"}[24h]))",
           "instant": true,
           "legendFormat": "Pod 평균",
@@ -273,6 +285,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * avg by (app) (avg_over_time(up{job=\"kubernetes-pods\",namespace=\"bookflow\"}[24h]))",
           "legendFormat": "{{app}}",
           "refId": ""
@@ -339,6 +355,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * avg_over_time(probe_success{job=~\"blackbox.*\"}[24h])",
           "legendFormat": "{{instance}}",
           "refId": ""
@@ -423,6 +443,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "probe_http_status_code{job=~\"blackbox.*\"}",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -474,6 +498,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "probe_duration_seconds{job=~\"blackbox.*\"}",
           "legendFormat": "{{instance}}",
           "refId": ""
@@ -538,6 +566,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "(probe_ssl_earliest_cert_expiry{job=~\"blackbox.*\"} - time()) / 86400",
           "instant": true,
           "legendFormat": "{{instance}}",
@@ -606,6 +638,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * avg_over_time(up{job=\"kubernetes-nodes\"}[24h])",
           "legendFormat": "{{instance}}",
           "refId": ""
@@ -822,6 +858,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * vector(1)",
           "instant": true,
           "legendFormat": "AWS↔GCP",
@@ -900,6 +940,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * vector(0)",
           "instant": true,
           "legendFormat": "AWS↔Azure",
@@ -924,6 +968,6 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "BookFlow 운영 — 가용성 / SLO (Row 8)",
+  "title": "BookFlow 운영 — 가용성·SLO",
   "uid": "bookflow-ops-row8-availability"
 }

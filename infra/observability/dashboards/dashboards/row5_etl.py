@@ -43,7 +43,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row5-etl"
-TITLE = "BookFlow 운영 — ETL / 데이터 파이프라인 (Row 5)"
+TITLE = "BookFlow 운영 — ETL 데이터 파이프라인"
 DESCRIPTION = (
     "POS → Kinesis → Glue ETL → S3 Mart → GCS → BQ → forecast 파이프라인 "
     "관측 (CloudWatch · ap-northeast-1). Glue job 상태·duration·에러 · 단계별 "

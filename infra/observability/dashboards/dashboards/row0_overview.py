@@ -34,7 +34,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row0-overview"
-TITLE = "BookFlow 운영 — 전체 개요 (Row 0)"
+TITLE = "BookFlow 운영 — 전체 개요"
 DESCRIPTION = (
     "멀티클라우드 전 인프라 rollup. 3사 헬스 신호등 · 3사 비용 vs $203 예산 · "
     "cross-cloud VPN 상태 · 종합 가용성 SLO. 상세는 Row 1~8 참조."
@@ -85,7 +85,7 @@ def _aws_health() -> object:
         description="EKS bookflow 네임스페이스 Pod up 비율 → 신호등",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("AWS")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("AWS")
     )
 
 
@@ -102,7 +102,7 @@ def _azure_health() -> object:
         description="auth-pod OIDC(Entra) 로그인 경로 probe → 신호등",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("Azure")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("Azure")
     )
 
 
@@ -119,7 +119,7 @@ def _gcp_health() -> object:
         description="GCP Monitoring 연동 헬스 (Cloud Monitoring 연결 시 교체)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("GCP")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("GCP")
     )
 
 
@@ -142,7 +142,7 @@ def _cost_gauge() -> object:
         description=f"AWS+Azure+GCP 월 누적 비용 vs ${MONTHLY_BUDGET:.0f} 예산",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr("sum(bookflow_cloud_cost_usd) or vector(0)")
         .instant()
         .legend_format("3사 합계")
@@ -164,7 +164,7 @@ def _vpn_aws_gcp() -> object:
         description="AWS↔GCP HA VPN 터널 상태 (CloudWatch VPN 메트릭 연결 시 교체)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("AWS↔GCP")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("AWS↔GCP")
     )
 
 
@@ -181,7 +181,7 @@ def _vpn_aws_azure() -> object:
         description="AWS↔Azure S2S VPN 터널 상태 (Notion §5 Phase 1 연결 대기)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("AWS↔Azure")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("AWS↔Azure")
     )
 
 
@@ -208,7 +208,7 @@ def _slo_gauge() -> object:
         description="전체 가용성 % (Pod up + 외부 probe 평균, 24h). 상세는 Row 8.",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("종합 SLO")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("종합 SLO")
     )
 
 

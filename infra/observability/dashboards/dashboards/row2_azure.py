@@ -38,7 +38,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row2-azure"
-TITLE = "BookFlow 운영 — Azure (Row 2)"
+TITLE = "BookFlow 운영 — Azure"
 DESCRIPTION = (
     "Azure Monitor 기반 Azure 리소스 운영 현황. Logic Apps 12개 실행/메일 발송률 · "
     "Function App 호출·에러 · Event Grid 이벤트 · Key Vault 접근/가용성. "

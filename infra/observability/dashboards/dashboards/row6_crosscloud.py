@@ -37,7 +37,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row6-crosscloud"
-TITLE = "BookFlow 운영 — cross-cloud 연결 (Row 6)"
+TITLE = "BookFlow 운영 — Cross-cloud 연결"
 DESCRIPTION = (
     "멀티클라우드 연결 토폴로지. AWS↔GCP·AWS↔Azure S2S VPN 터널·BGP · "
     "TGW attachment 상태·라우트 전파. 순간 상태값 전용 — 가용성 %·다운 이력은 Row 8."
@@ -146,7 +146,7 @@ def _bgp_peer(title: str, legend: str, desc: str):
         description=desc,
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f'max(bookflow_vpn_bgp_state{{link="{legend}"}}) or vector(2)')
         .instant()
         .legend_format(legend)

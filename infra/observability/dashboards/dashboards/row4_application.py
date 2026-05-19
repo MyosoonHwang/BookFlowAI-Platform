@@ -31,7 +31,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row4-application"
-TITLE = "BookFlow 운영 — 애플리케이션 (Row 4)"
+TITLE = "BookFlow 운영 — 애플리케이션"
 DESCRIPTION = (
     "EKS bookflow 7 service Pod 의 prometheus-fastapi-instrumentator 계측. "
     "Pod별 RPS·p50/p95 지연·에러율 · cascade 발의/처리 · notification 발송 · "
@@ -56,7 +56,7 @@ def _rps_panel() -> object:
         description="Pod(app)별 초당 요청수 — sum by(app) rate(http_requests_total[5m])",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f'sum by (app) (rate(http_requests_total{{{_POD_SEL}}}[5m]))')
         .legend_format("{{app}}")
     )
@@ -72,7 +72,7 @@ def _p50_panel() -> object:
         description="histogram_quantile(0.50, http_request_duration_highr_seconds_bucket) — app별",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "histogram_quantile(0.50, sum by (app, le) "
             f"(rate(http_request_duration_highr_seconds_bucket{{{_POD_SEL}}}[5m])))"
@@ -90,7 +90,7 @@ def _p95_panel() -> object:
         description="histogram_quantile(0.95, http_request_duration_highr_seconds_bucket) — app별",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "histogram_quantile(0.95, sum by (app, le) "
             f"(rate(http_request_duration_highr_seconds_bucket{{{_POD_SEL}}}[5m])))"
@@ -115,7 +115,7 @@ def _error_rate_panel() -> object:
         description="5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100 (에러 0건이면 0%)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "100 * ((sum by (app) "
             f'(rate(http_requests_total{{{_POD_SEL},status="5xx"}}[5m])) '
@@ -140,7 +140,7 @@ def _total_rps_stat() -> object:
         description="bookflow 7 service Pod 초당 요청수 합계",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f'sum(rate(http_requests_total{{{_POD_SEL}}}[5m]))')
         .instant()
         .legend_format("전체 RPS")
@@ -158,7 +158,7 @@ def _total_4xx_stat() -> object:
         description="전체 요청 중 4xx 비율(%) — 클라이언트 오류 추세",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "100 * (sum"
             f'(rate(http_requests_total{{{_POD_SEL},status="4xx"}}[5m])) '
@@ -187,7 +187,7 @@ def _cascade_panel() -> object:
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "sum by (handler) (rate(http_requests_total{"
             f'{_POD_SEL},app="intervention-svc",'
@@ -214,7 +214,7 @@ def _notification_panel() -> object:
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "sum by (status) (rate(http_requests_total{"
             f'{_POD_SEL},app="notification-svc",'
@@ -243,7 +243,7 @@ def _newbook_panel() -> object:
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "sum (rate(http_requests_total{"
             f'{_POD_SEL},app="dashboard-svc",'
@@ -273,7 +273,7 @@ def _websocket_panel() -> object:
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f'sum by (app) (process_open_fds{{{_POD_SEL},app="dashboard-svc"}})')
         .legend_format("{{app}} open fds")
     )

@@ -32,7 +32,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row3-gcp"
-TITLE = "BookFlow 운영 — GCP (Row 3)"
+TITLE = "BookFlow 운영 — GCP"
 DESCRIPTION = (
     "GCP Cloud Monitoring 기반 GCP 리소스 운영 현황. BigQuery 쿼리/슬롯/row/적재 · "
     "Vertex AI 예측 · Cloud Functions 3개 호출·에러 · Workflows 실행 · GCS 버킷. "

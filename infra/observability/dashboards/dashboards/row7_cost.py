@@ -33,7 +33,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row7-cost"
-TITLE = "BookFlow 운영 — 멀티클라우드 비용 (Row 7)"
+TITLE = "BookFlow 운영 — 멀티클라우드 비용"
 DESCRIPTION = (
     "AWS·Azure·GCP 비용 상세 + $203/월 예산 추적 "
     "(영구 $16 · daily $111 · phase $77 분해). "
@@ -110,7 +110,7 @@ def _azure_cost_stat():
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr('sum(bookflow_cloud_cost_usd{cloud="azure"}) or vector(0)')
         .instant()
         .legend_format("Azure")
@@ -136,7 +136,7 @@ def _gcp_cost_stat():
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr('sum(bookflow_cloud_cost_usd{cloud="gcp"}) or vector(0)')
         .instant()
         .legend_format("GCP")
@@ -166,7 +166,7 @@ def _total_budget_gauge():
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr("sum(bookflow_cloud_cost_usd) or vector(0)")
         .instant()
         .legend_format("3사 합계")
@@ -192,7 +192,7 @@ def _budget_bucket_gauge(title: str, bucket: str, budget: float, desc: str):
         description=desc,
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f'sum(bookflow_cloud_cost_usd{{bucket="{bucket}"}}) or vector(0)')
         .instant()
         .legend_format(bucket)
@@ -266,7 +266,7 @@ def _cloud_cost_trend():
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr("sum by (cloud) (bookflow_cloud_cost_usd) or vector(0)")
         .legend_format("{{cloud}}")
     )
@@ -291,7 +291,7 @@ def _service_cost_table():
         ),
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr("sum by (cloud, service) (bookflow_cloud_cost_usd) or vector(0)")
         .instant()
         .format("table")
