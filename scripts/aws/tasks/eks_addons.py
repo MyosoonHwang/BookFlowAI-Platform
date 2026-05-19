@@ -386,6 +386,35 @@ spec:
     log.info("  ✓ ClusterSecretStore bookflow-aws-secrets")
 
 
+def _apply_storage_class() -> None:
+    """default StorageClass `gp3` (EBS CSI) — k8s 1.33 에서 in-tree provisioner(kubernetes.io/aws-ebs)
+    가 제거돼 기본 gp2 SC 가 죽음. ebs.csi.aws.com 애드온을 쓰는 gp3 SC 를 새 default 로 지정.
+    WaitForFirstConsumer 로 Pod scheduling 후 zone 일치하는 EBS 생성. Prometheus PVC bind 전제.
+    """
+    yaml = """
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+parameters:
+  type: gp3
+""".lstrip()
+    subprocess.run(["kubectl", "apply", "-f", "-"], input=yaml, text=True, check=True)
+    log.info("  ✓ StorageClass gp3 (default · ebs.csi.aws.com)")
+    # 기존 in-tree gp2 SC 의 default annotation 제거 — 둘 다 default 면 충돌. gp2 없으면 무시.
+    subprocess.run(
+        ["kubectl", "patch", "storageclass", "gp2", "-p",
+         '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'],
+        check=False,
+    )
+    log.info("  ✓ StorageClass gp2 default annotation 제거 (있을 경우)")
+
+
 def _helm_install_webhook_duckdns(token: str) -> None:
     log.info("helm upgrade --install cert-manager-webhook-duckdns")
     subprocess.run([
@@ -595,6 +624,7 @@ def deploy() -> None:
     _helm_install_cert_manager()
     _helm_install_external_secrets()
     _apply_cluster_secret_store()
+    _apply_storage_class()
     _helm_install_prometheus()
     _helm_install_grafana()
     _update_route53_a_alias()
