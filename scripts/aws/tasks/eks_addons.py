@@ -411,6 +411,9 @@ def _helm_install_grafana() -> None:
                 "header_property": "username",
                 "auto_sign_up": True,
                 "whitelist": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
+                # forward-auth 가 매 요청 X-WEBAUTH-USER 주입 → Grafana 세션 로그인 토큰 불필요.
+                # 차트 기본값 true 면 SPA 가 auth-tokens/rotate 401 → 새로고침 루프 발생.
+                "enable_login_token": False,
             },
             "users": {
                 "auto_assign_org_role": "Editor",
