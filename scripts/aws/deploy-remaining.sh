@@ -158,11 +158,18 @@ sam deploy \
 
 cd "${PROJECT_ROOT}"
 
+APPS_ROOT="$(dirname "${PROJECT_ROOT}")/BookFlowAI-Apps"
+
 echo "  Glue scripts sync → s3://${GLUE_BUCKET}/scripts/"
-aws s3 sync "${PROJECT_ROOT}/glue-jobs/" "s3://${GLUE_BUCKET}/scripts/" \
-    --region "${REGION}" \
-    --exclude "*.pyc" \
-    --exclude "__pycache__/*"
+find "${APPS_ROOT}/glue-jobs" -name "*.py" ! -path "*/__pycache__/*" | while read -r f; do
+    fname="$(basename "${f}")"
+    aws s3 cp "${f}" "s3://${GLUE_BUCKET}/scripts/${fname}" --region "${REGION}"
+    echo "    uploaded: ${fname}"
+done
+
+echo "  GCS connector jar → s3://${GLUE_BUCKET}/jars/"
+aws s3 cp "${APPS_ROOT}/gcs-connector-hadoop3-latest.jar" \
+    "s3://${GLUE_BUCKET}/jars/gcs-connector-hadoop3-latest.jar" --region "${REGION}"
 
 # ─────────────────────────────────────────────────────────────
 echo
