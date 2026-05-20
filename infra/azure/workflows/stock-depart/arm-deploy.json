@@ -48,14 +48,12 @@
         "Send_StockDepart": {
           "type": "Http",
           "operationOptions": "DisableAsyncPattern",
-          "runtimeConfiguration": {
+          "inputs": {
             "retryPolicy": {
               "type": "fixed",
               "count": 2,
               "interval": "PT15S"
-            }
-          },
-          "inputs": {
+            },
             "method": "POST",
             "uri": "@parameters('ACS_EMAIL_URI')",
             "authentication": {
