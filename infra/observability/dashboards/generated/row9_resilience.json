@@ -1,0 +1,1952 @@
+{
+  "annotations": {},
+  "description": "장애 시나리오 8개의 발생→복구를 한 화면에서 검증한다. 각 시나리오 = 현재 상태 신호등 + 발생/복구 타임라인 + 트리거 명령. EKS Pod·노드 오토스케일링·RDS Failover·Publisher ASG·GCP Cloud Function·GCP VPN 터널·Azure Logic Apps·Client VPN. 시나리오/드릴 검증 관점 — 정상상태 모니터링은 Row 1~8.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 1 · EKS Pod 장애 — Pod 죽음→재생성 (무중단)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Prometheus up{namespace=\"bookflow\"}==1 합계. 설계 7 Pod.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 7
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(up{namespace=\"bookflow\"} == 1)",
+          "instant": true,
+          "legendFormat": "정상 Pod",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "① 현재 상태 · 정상 Pod 수",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "changes(container_start_time_seconds{namespace=\"bookflow\"}[1h]) — kube-state-metrics 미설치 → cAdvisor 시작시각 변화로 재시작 감지.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "changes(container_start_time_seconds{namespace=\"bookflow\",pod!=\"\"}[1h])",
+          "instant": false,
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "② 컨테이너 재시작 감지",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "options": {
+        "content": "**Pod 강제 장애**\n```\nkubectl delete pod -n bookflow <pod>\n```\n**기대**: Terminating → 신규 Pod Running · 5xx 0건(무중단).",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — EKS Pod 장애",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Prometheus up{namespace=\"bookflow\"} — Pod 별 1=Up/0=Down. kubectl delete pod 시 해당 시리즈 0→1 복구가 보인다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 1
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "up{namespace=\"bookflow\"}",
+          "instant": false,
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "② 발생→복구 · Pod 별 가동 상태",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 2 · 노드 오토스케일링 — drain→scale-up",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Prometheus count(up{job=\"kubernetes-nodes\"}==1).",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 10
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(up{job=\"kubernetes-nodes\"} == 1)",
+          "instant": true,
+          "legendFormat": "Ready 노드",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "① 현재 상태 · Ready 노드 수",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "노드별 실행 컨테이너 수 (cAdvisor). node drain 시 한 노드가 0 으로 떨어지고 다른 노드로 Pod 가 재배치되는 게 보인다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 10
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(container_start_time_seconds{namespace=\"bookflow\",pod!=\"\"}) by (instance)",
+          "instant": false,
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "② 노드별 Pod 분포 (재배치)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 10
+      },
+      "options": {
+        "content": "**노드 강제 drain**\n```\nkubectl drain <node> \\\n  --ignore-daemonsets --delete-emptydir-data\n```\n**기대**: Pod 정상 노드 재배치 · 신규 노드 Ready · CA scale-up.",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — 노드 오토스케일링",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "count(up{job=\"kubernetes-nodes\"}==1) 추세. node drain 후 Cluster Autoscaler 가 신규 노드를 띄우면 계단형 증가가 보인다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 10
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(up{job=\"kubernetes-nodes\"} == 1)",
+          "instant": false,
+          "legendFormat": "Ready 노드",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "② 발생→복구 · 노드 수 추세 (scale-up)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 3 · RDS Failover — Multi-AZ 이중화",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/RDS DatabaseConnections — bookflow-postgres. 0=단절.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 19
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "bookflow-postgres"
+          },
+          "id": "",
+          "label": "연결",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "DatabaseConnections",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "① 현재 상태 · RDS 연결 수",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/RDS WriteIOPS — failover 후 write 트래픽 재개 신호.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "iops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 19
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "bookflow-postgres"
+          },
+          "id": "",
+          "label": "Write",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "WriteIOPS",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "② RDS Write IOPS",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 19
+      },
+      "options": {
+        "content": "**Failover 강제 트리거**\n```\naws rds failover-db-cluster \\\n  --db-cluster-identifier bookflow-rds \\\n  --region ap-northeast-1\n```\n**기대**: Multi-AZ failover 완료 · 30초~2분 내 복구.",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — RDS Failover",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/RDS DatabaseConnections·CPUUtilization. failover-db-cluster 트리거 시 연결 순간 단절(30초~2분)→재연결이 보인다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 19
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "bookflow-postgres"
+          },
+          "id": "",
+          "label": "연결 수",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "DatabaseConnections",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "DBInstanceIdentifier": "bookflow-postgres"
+          },
+          "id": "",
+          "label": "CPU %",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/RDS",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "② 발생→복구 · RDS 연결 / CPU (failover blip)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 4 · Publisher ASG — EC2 오토스케일 아웃 2→3",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/AutoScaling GroupInServiceInstances · publisher ASG SEARCH. Min2/Max4. 데일리 CodeDeploy ASG 미배포 시 N/A(placeholder).",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 28
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/AutoScaling,AutoScalingGroupName} AutoScalingGroupName=\"CodeDeploy_bookflow-publisher\" MetricName=\"GroupInServiceInstances\"', 'Average', 300)",
+          "id": "",
+          "label": "InService",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/AutoScaling",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "① 현재 상태 · Publisher InService",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 28
+      },
+      "options": {
+        "content": "**TargetTracking CPU 0.3% 정책 → 스케일아웃**\n```\npython publisher_asg_test.py test\n```\n대상 ASG `CodeDeploy_bookflow-publisher-bg_d-TOW7F0I5J`\n**기대**: Desired 2 → 3 · 자동 원복.",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — Publisher ASG",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/AutoScaling GroupDesiredCapacity·GroupInServiceInstances · publisher ASG SEARCH. CPU 0.3% TargetTracking 트리거 시 2→3. placeholder — CodeDeploy ASG 데일리 자원·현재 미배포.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/AutoScaling,AutoScalingGroupName} AutoScalingGroupName=\"CodeDeploy_bookflow-publisher\" MetricName=\"GroupDesiredCapacity\"', 'Average', 300)",
+          "id": "",
+          "label": "Desired",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/AutoScaling",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/AutoScaling,AutoScalingGroupName} AutoScalingGroupName=\"CodeDeploy_bookflow-publisher\" MetricName=\"GroupInServiceInstances\"', 'Average', 300)",
+          "id": "",
+          "label": "InService",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/AutoScaling",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "② 발생→복구 · ASG Desired / InService (2→3 스케일아웃)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 5 · GCP Cloud Function 장애 — 에러 스파이크",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "gcp-monitoring"
+      },
+      "description": "cloudfunctions execution_count · status!=ok 합계. 0=정상. placeholder — admin GCP oauth egress 차단.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 37
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "aliasBy": "에러 호출",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "gcp-monitoring"
+          },
+          "queryType": "timeSeriesList",
+          "refId": "",
+          "timeSeriesList": {
+            "alignmentPeriod": "+300s",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "filters": [
+              "metric.type=\"cloudfunctions.googleapis.com/function/execution_count\"",
+              "metric.label.status!=\"ok\""
+            ],
+            "perSeriesAligner": "ALIGN_SUM",
+            "projectName": "project-8ab6bf05-54d2-4f5d-b8d"
+          }
+        }
+      ],
+      "title": "① 현재 상태 · CF 에러 호출 수",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "gcp-monitoring"
+      },
+      "description": "cloudfunctions execution_count · function_name 별. bq-load·feature-assemble·vertex-invoke. placeholder.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 37
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "aliasBy": "{{resource.label.function_name}}",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "gcp-monitoring"
+          },
+          "queryType": "timeSeriesList",
+          "refId": "",
+          "timeSeriesList": {
+            "alignmentPeriod": "+3600s",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "filters": [
+              "metric.type=\"cloudfunctions.googleapis.com/function/execution_count\""
+            ],
+            "groupBys": [
+              "resource.label.function_name"
+            ],
+            "perSeriesAligner": "ALIGN_SUM",
+            "projectName": "project-8ab6bf05-54d2-4f5d-b8d"
+          }
+        }
+      ],
+      "title": "② CF 함수별 호출 수",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 37
+      },
+      "options": {
+        "content": "**실행 로그 확인**\n```\ngcloud functions logs read bq-load \\\n  --region asia-northeast1 --limit 50\n```\n**기대**: 에러 로그 발생 시 status!=ok 스파이크 · BQ 적재 지연.",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — GCP Cloud Function",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "gcp-monitoring"
+      },
+      "description": "cloudfunctions execution_count · status 별 ALIGN_SUM. bq-load 등 함수 장애 시 error/timeout status 스파이크. placeholder — admin GCP oauth egress 차단(Row 3 와 동일 쿼리).",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 37
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "aliasBy": "{{metric.label.status}}",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "gcp-monitoring"
+          },
+          "queryType": "timeSeriesList",
+          "refId": "",
+          "timeSeriesList": {
+            "alignmentPeriod": "+3600s",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "filters": [
+              "metric.type=\"cloudfunctions.googleapis.com/function/execution_count\""
+            ],
+            "groupBys": [
+              "metric.label.status"
+            ],
+            "perSeriesAligner": "ALIGN_SUM",
+            "projectName": "project-8ab6bf05-54d2-4f5d-b8d"
+          }
+        }
+      ],
+      "title": "② 발생→복구 · CF 호출 status 별 (에러 스파이크)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 6 · GCP VPN 터널 장애 — AWS↔GCP 끊김→복구",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/VPN TunnelState · Maximum (터널 중 하나라도 UP 이면 1). AWS↔GCP HA VPN.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 46
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "VpnId": "vpn-0acce17f17cf493e7"
+          },
+          "id": "",
+          "label": "AWS↔GCP",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "① 현재 상태 · AWS↔GCP VPN 터널",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/VPN TunnelDataIn·Out — 장애 구간엔 트래픽이 멈춘다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 46
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "VpnId": "vpn-0acce17f17cf493e7"
+          },
+          "id": "",
+          "label": "In",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelDataIn",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "VpnId": "vpn-0acce17f17cf493e7"
+          },
+          "id": "",
+          "label": "Out",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelDataOut",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "ap-northeast-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "② VPN 터널 트래픽 (In/Out)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 46
+      },
+      "options": {
+        "content": "**터널 상태 확인**\n```\naws ec2 describe-vpn-connections \\\n  --region ap-northeast-1\ngcloud compute vpn-tunnels list \\\n  --region asia-northeast1\n```\n**기대**: 장애 시 forecast-svc BigQuery 연결 실패.",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — GCP VPN 터널",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/VPN TunnelState — 1=UP/0=DOWN. 터널 장애 시 0 으로 떨어졌다 재협상 후 1 로 복구되는 게 보인다.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 46
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "dimensions": {
+            "VpnId": "vpn-0acce17f17cf493e7"
+          },
+          "id": "",
+          "label": "터널 상태",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TunnelState",
+          "metricQueryType": 0,
+          "namespace": "AWS/VPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "② 발생→복구 · VPN 터널 상태 (끊김→복구)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 7 · Azure Logic Apps 장애 — 2026-05-19 실사건 재현",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor"
+      },
+      "description": "AzureDiagnostics MICROSOFT.LOGIC 최근 1h Failed 실행 수. 2026-05-19 실사건: 14건 동시 실패(429 rate limit).",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 55
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "query": "AzureDiagnostics | where ResourceProvider == 'MICROSOFT.LOGIC' | where TimeGenerated > ago(1h) | summarize 실패=countif(status_s=='Failed') | project 실패",
+            "resources": [
+              "/subscriptions/e98a94bb-7532-4e49-8a36-bc42e30d5a81/resourceGroups/rg-bookflow/providers/Microsoft.OperationalInsights/workspaces/law-bookflowmj"
+            ],
+            "resultFormat": "table"
+          },
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor"
+          },
+          "queryType": "Azure Log Analytics",
+          "refId": "",
+          "subscription": "e98a94bb-7532-4e49-8a36-bc42e30d5a81"
+        }
+      ],
+      "title": "① 현재 상태 · Logic App 실패 (1h)",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor"
+      },
+      "description": "AzureDiagnostics 6h — 워크플로별 실행/성공/실패. stock-depart·stock-arrival 의 동시 실패가 표로.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true,
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 6,
+        "y": 55
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "query": "AzureDiagnostics | where ResourceProvider == 'MICROSOFT.LOGIC' | where TimeGenerated > ago(6h) | summarize 실행=count(), 성공=countif(status_s=='Succeeded'), 실패=countif(status_s=='Failed') by 워크플로=resource_workflowName_s | where 실패 > 0 or 실행 > 0 | order by 실패 desc, 실행 desc",
+            "resources": [
+              "/subscriptions/e98a94bb-7532-4e49-8a36-bc42e30d5a81/resourceGroups/rg-bookflow/providers/Microsoft.OperationalInsights/workspaces/law-bookflowmj"
+            ],
+            "resultFormat": "table"
+          },
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor"
+          },
+          "queryType": "Azure Log Analytics",
+          "refId": "",
+          "subscription": "e98a94bb-7532-4e49-8a36-bc42e30d5a81"
+        }
+      ],
+      "title": "② 워크플로별 실행/실패 현황",
+      "transparent": false,
+      "type": "table"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 55
+      },
+      "options": {
+        "content": "**다수 알림 동시 발송 (15건)**\n```\nfor i in $(seq 1 15); do\n  kubectl exec -n bookflow deploy/notification-svc -- \\\n    curl -sX POST localhost:8080/notify ... &\ndone; wait\n```\n**기대**: 429 rate limit → 504 (세마포어 fix 후 정상).",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — Azure Logic Apps",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "azure-monitor"
+      },
+      "description": "AzureDiagnostics WorkflowRuntime 5m 집계. 2026-05-19 실사건의 14건 동시 실패 스파이크 재현 · 세마포어 fix 후 Failed 0 정상화.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 55
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "azureLogAnalytics": {
+            "dashboardTime": true,
+            "query": "AzureDiagnostics | where ResourceProvider == 'MICROSOFT.LOGIC' | where TimeGenerated > ago(6h) | summarize 완료=countif(status_s=='Succeeded'), 실패=countif(status_s=='Failed') by bin(TimeGenerated, 5m) | order by TimeGenerated asc",
+            "resources": [
+              "/subscriptions/e98a94bb-7532-4e49-8a36-bc42e30d5a81/resourceGroups/rg-bookflow/providers/Microsoft.OperationalInsights/workspaces/law-bookflowmj"
+            ],
+            "resultFormat": "time_series"
+          },
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "azure-monitor"
+          },
+          "queryType": "Azure Log Analytics",
+          "refId": "",
+          "subscription": "e98a94bb-7532-4e49-8a36-bc42e30d5a81"
+        }
+      ],
+      "title": "② 발생→복구 · Logic App 실행 (완료/실패 · 동시 실패 스파이크)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "id": 0,
+      "panels": [],
+      "title": "시나리오 8 · Client VPN 장애 — 담당자 연결 끊김",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/ClientVPN ActiveConnectionsCount SEARCH 합계. placeholder — admin 계정 Client VPN endpoint 메트릭 미발행.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "yellow",
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 65
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/ClientVPN,Endpoint} MetricName=\"ActiveConnectionsCount\"', 'Average', 300)",
+          "id": "",
+          "label": "활성 연결",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/ClientVPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "① 현재 상태 · Client VPN 활성 연결",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/ClientVPN IngressBytes·EgressBytes SEARCH. placeholder — admin 계정 메트릭 미발행.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 65
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/ClientVPN,Endpoint} MetricName=\"IngressBytes\"', 'Sum', 300)",
+          "id": "",
+          "label": "In",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/ClientVPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/ClientVPN,Endpoint} MetricName=\"EgressBytes\"', 'Sum', 300)",
+          "id": "",
+          "label": "Out",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/ClientVPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "ap-northeast-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "② Client VPN 트래픽 (In/Out)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 65
+      },
+      "options": {
+        "content": "**Client VPN endpoint 상태 확인**\n```\naws ec2 describe-client-vpn-endpoints \\\n  --region ap-northeast-1\naws ec2 \\\n  describe-client-vpn-connections \\\n  --client-vpn-endpoint-id <id>\n```\n**기대**: 연결 끊김 시 ActiveConnectionsCount 하락.",
+        "mode": "markdown"
+      },
+      "repeatDirection": "h",
+      "title": "③ 트리거 — Client VPN",
+      "transparent": false,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "description": "AWS/ClientVPN ActiveConnectionsCount·AuthenticationFailures SEARCH. 담당자 연결 끊김이 추세로. placeholder — 메트릭 미발행.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 18,
+        "y": 65
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/ClientVPN,Endpoint} MetricName=\"ActiveConnectionsCount\"', 'Average', 300)",
+          "id": "",
+          "label": "활성 연결",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/ClientVPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "ap-northeast-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "expression": "SEARCH('{AWS/ClientVPN,Endpoint} MetricName=\"AuthenticationFailures\"', 'Sum', 300)",
+          "id": "",
+          "label": "인증 실패",
+          "metricEditorMode": 0,
+          "metricQueryType": 0,
+          "namespace": "AWS/ClientVPN",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "ap-northeast-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "② 발생→복구 · Client VPN 연결 수 (끊김)",
+      "transparent": false,
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "bookflow",
+    "ops"
+  ],
+  "templating": {},
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "BookFlow 운영 — 장애 시나리오·복원력",
+  "uid": "bookflow-ops-row9-resilience"
+}

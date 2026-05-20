@@ -82,7 +82,9 @@
           },
           "id": "",
           "label": "AWS",
+          "metricEditorMode": 0,
           "metricName": "EstimatedCharges",
+          "metricQueryType": 0,
           "namespace": "AWS/Billing",
           "period": "21600",
           "queryMode": "Metrics",
@@ -150,6 +152,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(bookflow_cloud_cost_usd{cloud=\"azure\"}) or vector(0)",
           "instant": true,
           "legendFormat": "Azure",
@@ -216,6 +222,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(bookflow_cloud_cost_usd{cloud=\"gcp\"}) or vector(0)",
           "instant": true,
           "legendFormat": "GCP",
@@ -282,6 +292,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(bookflow_cloud_cost_usd) or vector(0)",
           "instant": true,
           "legendFormat": "3사 합계",
@@ -348,6 +362,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(bookflow_cloud_cost_usd{bucket=\"permanent\"}) or vector(0)",
           "instant": true,
           "legendFormat": "permanent",
@@ -414,6 +432,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(bookflow_cloud_cost_usd{bucket=\"daily\"}) or vector(0)",
           "instant": true,
           "legendFormat": "daily",
@@ -480,6 +502,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(bookflow_cloud_cost_usd{bucket=\"phase\"}) or vector(0)",
           "instant": true,
           "legendFormat": "phase",
@@ -540,7 +566,9 @@
           },
           "id": "",
           "label": "AWS 누적",
+          "metricEditorMode": 0,
           "metricName": "EstimatedCharges",
+          "metricQueryType": 0,
           "namespace": "AWS/Billing",
           "period": "21600",
           "queryMode": "Metrics",
@@ -593,6 +621,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (cloud) (bookflow_cloud_cost_usd) or vector(0)",
           "legendFormat": "{{cloud}}",
           "refId": ""
@@ -627,6 +659,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (cloud, service) (bookflow_cloud_cost_usd) or vector(0)",
           "format": "table",
           "instant": true,
@@ -651,6 +687,6 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "BookFlow 운영 — 멀티클라우드 비용 (Row 7)",
+  "title": "BookFlow 운영 — 멀티클라우드 비용",
   "uid": "bookflow-ops-row7-cost"
 }

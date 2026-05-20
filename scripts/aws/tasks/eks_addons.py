@@ -385,13 +385,16 @@ def _helm_install_grafana() -> None:
         },
         # 대시보드 sidecar — monitoring ns 의 라벨된 configmap 을 자동 로드.
         # _apply_grafana_dashboards() 가 grafana_dashboard=1 라벨 configmap 을 만든다.
+        # folderAnnotation: configmap 의 grafana_folder annotation 값을 Grafana
+        # 폴더명으로 사용 → 9개 운영 대시보드를 "BookFlow 운영" 폴더로 묶는다.
         "sidecar": {
             "dashboards": {
                 "enabled": True,
                 "label": "grafana_dashboard",
                 "labelValue": "1",
                 "folder": "/tmp/dashboards",
-                "provider": {"foldersFromFilesStructure": False},
+                "folderAnnotation": "grafana_folder",
+                "provider": {"foldersFromFilesStructure": True},
                 "searchNamespace": "monitoring",
             },
         },
@@ -411,9 +414,10 @@ def _helm_install_grafana() -> None:
                 "header_property": "username",
                 "auto_sign_up": True,
                 "whitelist": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
-                # forward-auth 가 매 요청 X-WEBAUTH-USER 주입 → Grafana 세션 로그인 토큰 불필요.
-                # 차트 기본값 true 면 SPA 가 auth-tokens/rotate 401 → 새로고침 루프 발생.
-                "enable_login_token": False,
+                # true 필수 — Grafana 가 X-WEBAUTH-USER 검증 후 세션 로그인 토큰을 발급.
+                # false 면 토큰이 없는데도 Grafana SPA 가 auth-tokens/rotate · live/ws 를
+                # 호출 → 401 "user token not found" → unauthorized + 새로고침 루프.
+                "enable_login_token": True,
             },
             "users": {
                 "auto_assign_org_role": "Editor",
@@ -484,6 +488,9 @@ def _apply_grafana_dashboards() -> None:
             "name": "bookflow-ops-dashboards",
             "namespace": "monitoring",
             "labels": {"grafana_dashboard": "1", "app.kubernetes.io/part-of": "bookflow"},
+            # grafana_folder — sidecar folderAnnotation 이 이 값을 Grafana 폴더명으로
+            # 사용 → 9개 운영 대시보드가 "BookFlow 운영" 폴더 하나로 묶인다.
+            "annotations": {"grafana_folder": "BookFlow 운영"},
         },
         "data": {f.name: f.read_text(encoding="utf-8") for f in json_files},
     }

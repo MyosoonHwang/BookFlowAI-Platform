@@ -15,7 +15,8 @@ Notion 설계 (365b4343-5916-81e3-82e1-f49ed2951cbb · §4 Row 5) 기준:
   - GCS·BQ·forecast_cache 단계는 GCP/RDS 영역 → Row 3·Row 5 텍스트로만
     표기하고, AWS→GCP 경계인 mart-to-gcs Lambda 까지를 본 대시보드가 커버.
 
-라이브 CloudWatch 실측 (2026-05-19 · 354493396671 deploy 계정):
+라이브 CloudWatch 실측 (2026-05-19 · 994878981869 — Grafana CloudWatch
+datasource 가 가리키는 계정):
   - Glue jobs : bookflow-raw-pos-mart·raw-aladin-mart·raw-event-mart·
     raw-sns-mart·rds-inventory-mart·rds-inventory-seed·rds-locations-mart·
     rds-store-location-map-mart·sales-daily-agg·features-build (10개)
@@ -24,8 +25,9 @@ Notion 설계 (365b4343-5916-81e3-82e1-f49ed2951cbb · §4 Row 5) 기준:
   - AWS/Glue ResourceUsage: Type=count/gauge — DPU·잡 카운트
   - Crawler/Data Catalog: AWS/Glue 는 Crawler·Catalog 메트릭 네이티브 미발행
     → CloudWatch Logs(/aws-glue/jobs/error) 또는 카운트 패널로 대체
-  - S3 : bookflow-mart-354493396671 · bookflow-raw-354493396671
-    (BucketSizeBytes·NumberOfObjects — 일 1회 갱신)
+  - S3 : bookflow-mart-994878981869 · bookflow-raw-994878981869
+    (BucketSizeBytes·NumberOfObjects — 일 1회 갱신. mart 버킷은 현재
+    비어 있어 S3 메트릭 미게시 · raw 버킷은 데이터 게시)
   - Lambda 파이프라인: bookflow-pos-ingestor(POS→Kinesis) ·
     bookflow-mart-to-gcs(S3 Mart→GCS) · bookflow-forecast-trigger
   - Kinesis : bookflow-pos-events
@@ -36,14 +38,18 @@ from grafana_foundation_sdk.builders.cloudwatch import (
     CloudWatchMetricsQuery as CWMetrics,
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
-from grafana_foundation_sdk.models.cloudwatch import CloudWatchQueryMode
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 
 from lib import datasources as ds
 from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row5-etl"
-TITLE = "BookFlow 운영 — ETL / 데이터 파이프라인 (Row 5)"
+TITLE = "BookFlow 운영 — ETL 데이터 파이프라인"
 DESCRIPTION = (
     "POS → Kinesis → Glue ETL → S3 Mart → GCS → BQ → forecast 파이프라인 "
     "관측 (CloudWatch · ap-northeast-1). Glue job 상태·duration·에러 · 단계별 "
@@ -52,8 +58,10 @@ DESCRIPTION = (
 
 REGION = "ap-northeast-1"
 KINESIS_STREAM = "bookflow-pos-events"
-S3_MART = "bookflow-mart-354493396671"
-S3_RAW = "bookflow-raw-354493396671"
+# S3 버킷 — CloudWatch datasource 가 가리키는 계정(994878981869)의 실재 버킷.
+# 2026-05-19 실측(s3api list-buckets): mart/raw 버킷 계정 suffix 갱신.
+S3_MART = "bookflow-mart-994878981869"
+S3_RAW = "bookflow-raw-994878981869"
 GLUE_ERROR_LOG_GROUP = "/aws-glue/jobs/error"
 GLUE_OUTPUT_LOG_GROUP = "/aws-glue/jobs/output"
 
@@ -79,6 +87,8 @@ def _metric(ref_id, namespace, metric, dims, stat="Average", period="300", label
         CWMetrics()
         .datasource(ds.ref(ds.CLOUDWATCH))
         .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(REGION)
         .namespace(namespace)
         .metric_name(metric)
@@ -140,7 +150,7 @@ def _glue_duration():
     for i, job in enumerate(GLUE_PIPELINE_JOBS):
         p = p.with_target(_metric(
             f"D{i}", "Glue", "glue.driver.aggregate.elapsedTime",
-            {"JobName": job, "JobRunId": "ALL", "Type": "gauge"},
+            {"JobName": job, "JobRunId": "ALL", "Type": "count"},
             stat="Maximum", label=job.replace("bookflow-", "")))
     return p
 

@@ -13,7 +13,8 @@ Notion 설계 (365b4343-5916-81e3-82e1-f49ed2951cbb · §4 Row 1) 기준:
 
 데이터소스: 전부 CloudWatch (고정 UID `cloudwatch`). 리전 ap-northeast-1.
 
-라이브 CloudWatch 실측 (2026-05-19 · 354493396671 deploy 계정):
+라이브 CloudWatch 실측 (2026-05-19 · 994878981869 — Grafana CloudWatch
+datasource 가 가리키는 계정):
   - EKS 클러스터  : bookflow-eks  (AWS/EKS 컨트롤플레인 메트릭만 — Container
     Insights 미활성 → 노드/Pod 단위 메트릭 없음. 노드·Pod·CronJob 헬스는
     Prometheus(Row 4·Row 8)가 담당. 여기선 컨트롤플레인 메트릭으로 대체.)
@@ -22,9 +23,10 @@ Notion 설계 (365b4343-5916-81e3-82e1-f49ed2951cbb · §4 Row 1) 기준:
   - RDS          : bookflow-postgres (db.t3.micro)
   - ElastiCache  : bookflow-redis (node 0001)
   - Lambda       : bookflow-{pos-ingestor,spike-detect,aladin-sync,sns-gen,
-                   event-sync,forecast-trigger,mart-to-gcs} — 7개
+                   event-sync,forecast-trigger} — 6개 (라이브 실재 함수)
   - Kinesis      : bookflow-pos-events
-  - ALB          : bookflow-alb-external (External ALB)
+  - ALB          : bookflow-alb-external — app/bookflow-alb-external/57e62cdd02356761
+                   (TargetGroup bookflow-inventory-api-tg)
   - CodePipeline : cp-eks·cp-ecs·publisher-bg — 메트릭 미발행(데일리 자원·미배포)
   - CloudTrail   : 트레일 미생성 → CloudWatch Logs 그룹 미존재
 """
@@ -34,14 +36,19 @@ from grafana_foundation_sdk.builders.cloudwatch import (
     CloudWatchMetricsQuery as CWMetrics,
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
-from grafana_foundation_sdk.models.cloudwatch import CloudWatchQueryMode
+from grafana_foundation_sdk.builders.prometheus import Dataquery as PromQuery
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 
 from lib import datasources as ds
 from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row1-aws"
-TITLE = "BookFlow 운영 — AWS (Row 1)"
+TITLE = "BookFlow 운영 — AWS 인프라"
 DESCRIPTION = (
     "AWS 인프라 헬스 (CloudWatch · ap-northeast-1). EKS 컨트롤플레인 · ECS 3 "
     "서비스 · RDS · Redis · Lambda 7 · Kinesis · ALB · CodePipeline · "
@@ -55,9 +62,12 @@ RDS_ID = "bookflow-postgres"
 REDIS_ID = "bookflow-redis"
 KINESIS_STREAM = "bookflow-pos-events"
 # ALB ID — External ALB 는 데일리 destroy/create 라 식별자가 매일 회전한다.
-# 2026-05-19 실측: 현재 활성 LB 가 데이터를 발행하는 식별자. 재배포 시
-# 갱신 필요(IaC named LB / EventBridge 동적 주입이 항구 해법).
-ALB_EXTERNAL = "app/bookflow-alb-external/89f4008ac9c171df"
+# 2026-05-19 실측(elbv2 describe-load-balancers): 현재 활성 LB 가 데이터를
+# 발행하는 식별자. 재배포 시 갱신 필요(IaC named LB / EventBridge 동적
+# 주입이 항구 해법). HealthyHostCount 등 target 메트릭은 LoadBalancer +
+# TargetGroup 2개 차원이 필요하다.
+ALB_EXTERNAL = "app/bookflow-alb-external/57e62cdd02356761"
+ALB_TARGET_GROUP = "targetgroup/bookflow-inventory-api-tg/45c463eca58f093b"
 
 ECS_SERVICES = ["inventory-api", "online-sim", "offline-sim"]
 LAMBDA_FUNCS = [
@@ -67,7 +77,6 @@ LAMBDA_FUNCS = [
     "bookflow-sns-gen",
     "bookflow-event-sync",
     "bookflow-forecast-trigger",
-    "bookflow-mart-to-gcs",
 ]
 CODEPIPELINES = ["cp-eks", "cp-ecs", "publisher-bg"]
 # CloudTrail → CloudWatch Logs 그룹 (트레일 CWLG 연동 시 부여 예정 명칭)
@@ -81,6 +90,8 @@ def _metric(ref_id, namespace, metric, dims, stat="Average", period="300", label
         CWMetrics()
         .datasource(ds.ref(ds.CLOUDWATCH))
         .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(REGION)
         .namespace(namespace)
         .metric_name(metric)
@@ -109,54 +120,58 @@ def _logs(ref_id, log_group, expression):
 
 
 # ── EKS ─────────────────────────────────────────────────────────────────
+def _prom(ref_id, expr, label=""):
+    """Prometheus 쿼리 빌더 — EKS 컨트롤플레인 등 CloudWatch 에 없는 메트릭."""
+    q = PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).ref_id(ref_id)
+    if label:
+        q = q.legend_format(label)
+    return q
+
+
 def _eks_apiserver_requests():
-    """EKS API server 요청량 — 컨트롤플레인 헬스 추세."""
+    """EKS API server 요청률 — kube-apiserver Prometheus 계측."""
     p = pb.timeseries_panel(
         "EKS · API server 요청률",
         unit="reqps",
         description=(
-            "AWS/EKS apiserver_request_total. Container Insights 미활성 → "
-            "노드/Pod 헬스는 Row 4·Row 8(Prometheus). 여기선 컨트롤플레인."
+            "apiserver_request_total rate (Prometheus kubernetes-apiservers 잡). "
+            "AWS/EKS CloudWatch 미발행 — 컨트롤플레인 /metrics 스크레이프."
         ),
     )
-    return p.datasource(ds.ref(ds.CLOUDWATCH)).with_target(
-        _metric("A", "AWS/EKS", "apiserver_request_total",
-                {"ClusterName": EKS_CLUSTER}, stat="Sum", label="API 요청"),
+    return p.datasource(ds.ref(ds.PROMETHEUS)).with_target(
+        _prom("A", 'sum(rate(apiserver_request_total{job="kubernetes-apiservers"}[5m]))',
+              label="API 요청"),
     )
 
 
 def _eks_apiserver_errors():
-    """EKS API server 4XX/5XX/429 — 컨트롤플레인 에러."""
+    """EKS API server 4XX/5XX/429 — kube-apiserver Prometheus 계측."""
     p = pb.timeseries_panel(
         "EKS · API server 에러 (4XX/5XX/429)",
-        unit="short",
-        description="AWS/EKS apiserver_request_total_4XX·5XX·429 — 컨트롤플레인 이상.",
+        unit="reqps",
+        description="apiserver_request_total code 별 rate (Prometheus) — 컨트롤플레인 이상.",
     )
     return (
-        p.datasource(ds.ref(ds.CLOUDWATCH))
-        .with_target(_metric("A", "AWS/EKS", "apiserver_request_total_4XX",
-                             {"ClusterName": EKS_CLUSTER}, stat="Sum", label="4XX"))
-        .with_target(_metric("B", "AWS/EKS", "apiserver_request_total_5XX",
-                             {"ClusterName": EKS_CLUSTER}, stat="Sum", label="5XX"))
-        .with_target(_metric("C", "AWS/EKS", "apiserver_request_total_429",
-                             {"ClusterName": EKS_CLUSTER}, stat="Sum", label="429"))
+        p.datasource(ds.ref(ds.PROMETHEUS))
+        .with_target(_prom("A", 'sum(rate(apiserver_request_total{job="kubernetes-apiservers",code=~"4.."}[5m]))', label="4XX"))
+        .with_target(_prom("B", 'sum(rate(apiserver_request_total{job="kubernetes-apiservers",code=~"5.."}[5m]))', label="5XX"))
+        .with_target(_prom("C", 'sum(rate(apiserver_request_total{job="kubernetes-apiservers",code="429"}[5m]))', label="429"))
     )
 
 
-def _eks_scheduler_pending():
-    """EKS 스케줄러 대기 Pod — 미스케줄 Pod 신호 (CronJob/Pod 배치 지연 대리)."""
+def _eks_nodes_ready():
+    """EKS Ready 노드 수 — Prometheus kubernetes-nodes 잡 up."""
     p = pb.stat_panel(
-        "EKS · 미스케줄 Pod",
+        "EKS · 노드 Ready",
         unit="short",
-        thresholds=pb._thresholds([(None, pb.GREEN), (1, pb.YELLOW), (5, pb.RED)]),
+        thresholds=pb._thresholds([(None, pb.RED), (1, pb.YELLOW), (2, pb.GREEN)]),
         description=(
-            "AWS/EKS scheduler_pending_pods_UNSCHEDULABLE. CronJob 4종·8 Pod 의 "
-            "성공/실패 카운트는 Row 4(Prometheus) — Container Insights 미활성."
+            "Ready 상태 노드 수 (Prometheus kubernetes-nodes 잡 up 합). "
+            "Pod 미스케줄/단위 헬스는 Row 4·8 — kube-state-metrics 미설치."
         ),
     )
-    return p.datasource(ds.ref(ds.CLOUDWATCH)).with_target(
-        _metric("A", "AWS/EKS", "scheduler_pending_pods_UNSCHEDULABLE",
-                {"ClusterName": EKS_CLUSTER}, stat="Maximum", label="미스케줄"),
+    return p.datasource(ds.ref(ds.PROMETHEUS)).with_target(
+        _prom("A", 'sum(up{job="kubernetes-nodes"})', label="Ready 노드"),
     )
 
 
@@ -422,11 +437,16 @@ def _alb_targets():
         unit="short",
         color_mode=pb.BigValueColorMode.VALUE,
         thresholds=pb._thresholds([(None, pb.RED), (1, pb.GREEN)]),
-        description="AWS/ApplicationELB HealthyHostCount — bookflow-alb-external.",
+        description=(
+            "AWS/ApplicationELB HealthyHostCount — bookflow-alb-external · "
+            "TargetGroup bookflow-inventory-api-tg. target 메트릭은 "
+            "LoadBalancer+TargetGroup 2개 차원 필요."
+        ),
     )
     return p.datasource(ds.ref(ds.CLOUDWATCH)).with_target(
         _metric("A", "AWS/ApplicationELB", "HealthyHostCount",
-                {"LoadBalancer": ALB_EXTERNAL}, stat="Average", label="healthy"),
+                {"LoadBalancer": ALB_EXTERNAL, "TargetGroup": ALB_TARGET_GROUP},
+                stat="Average", label="healthy"),
     )
 
 
@@ -526,7 +546,7 @@ def dashboard() -> Dashboard:
         .with_row(Row("Row 1 · AWS — EKS (컨트롤플레인)"))
         .with_panel(_eks_apiserver_requests())
         .with_panel(_eks_apiserver_errors())
-        .with_panel(_eks_scheduler_pending())
+        .with_panel(_eks_nodes_ready())
         # ── ECS ────────────────────────────────────────────────────────
         .with_row(Row("Row 1 · AWS — ECS"))
         .with_panel(_ecs_running_tasks())

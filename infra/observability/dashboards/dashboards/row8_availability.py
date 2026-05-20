@@ -32,7 +32,11 @@ from grafana_foundation_sdk.builders.cloudwatch import (
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PromQuery
-from grafana_foundation_sdk.models.cloudwatch import CloudWatchQueryMode
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 from grafana_foundation_sdk.models.dashboard import (
     DashboardSpecialValueMapOptions,
     SpecialValueMap,
@@ -46,7 +50,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row8-availability"
-TITLE = "BookFlow 운영 — 가용성 / SLO (Row 8)"
+TITLE = "BookFlow 운영 — 가용성·SLO"
 DESCRIPTION = (
     "시간축 가용성 전용 섹션. 7 service Pod 가용성 % · blackbox 외부 합성 "
     "모니터링(응답코드·응답시간·인증서 D-day) · RDS/Redis/EKS노드 인프라 "
@@ -99,7 +103,7 @@ def _pod_uptime_panel() -> object:
         description="service Pod 7개 가용성 — 100×avg by(app) avg_over_time(up[24h])",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "100 * avg by (app) "
             f"(avg_over_time(up{{{_POD_SEL}}}[24h]))"
@@ -119,7 +123,7 @@ def _pod_uptime_stat() -> object:
         description="bookflow service Pod 7개 24h 평균 가용성 %",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f"100 * avg(avg_over_time(up{{{_POD_SEL}}}[24h]))")
         .instant()
         .legend_format("Pod 평균")
@@ -141,7 +145,7 @@ def _probe_uptime_panel() -> object:
         description="blackbox probe_success — 100×avg_over_time(probe_success[24h]) · instance별",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             "100 * avg_over_time("
             f"probe_success{{{_PROBE_SEL}}}[24h])"
@@ -161,7 +165,7 @@ def _probe_status_panel() -> object:
         description="blackbox probe_http_status_code — 대상 엔드포인트별 최신 HTTP 코드",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f"probe_http_status_code{{{_PROBE_SEL}}}")
         .instant()
         .legend_format("{{instance}}")
@@ -181,7 +185,7 @@ def _probe_duration_panel() -> object:
         description="blackbox probe_duration_seconds — 외부 HTTP probe 응답시간 추세",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f"probe_duration_seconds{{{_PROBE_SEL}}}")
         .legend_format("{{instance}}")
     )
@@ -202,7 +206,7 @@ def _cert_expiry_panel() -> object:
         description="probe_ssl_earliest_cert_expiry 기준 남은 일수 — 30일↓ 경고·7일↓ 위험",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(
             f"(probe_ssl_earliest_cert_expiry{{{_PROBE_SEL}}} - time()) / 86400"
         )
@@ -222,7 +226,7 @@ def _node_ready_panel() -> object:
         description="EKS 워커 노드 가용성 — 100×avg_over_time(up{job=kubernetes-nodes}[24h])",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr('100 * avg_over_time(up{job="kubernetes-nodes"}[24h])')
         .legend_format("{{instance}}")
     )
@@ -247,6 +251,8 @@ def _rds_available_stat() -> object:
         CloudWatchMetricsQuery()
         .datasource(ds.ref(ds.CLOUDWATCH))
         .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(_CW_REGION)
         .namespace("AWS/RDS")
         .metric_name("DatabaseConnections")
@@ -274,6 +280,8 @@ def _redis_available_stat() -> object:
         CloudWatchMetricsQuery()
         .datasource(ds.ref(ds.CLOUDWATCH))
         .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(_CW_REGION)
         .namespace("AWS/ElastiCache")
         .metric_name("CurrConnections")
@@ -302,7 +310,7 @@ def _vpn_aws_gcp_uptime() -> object:
         description="AWS↔GCP HA VPN 터널 24h uptime % (CloudWatch VPN 메트릭 연결 시 교체)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr("100 * vector(1)")
         .instant()
         .legend_format("AWS↔GCP")
@@ -325,7 +333,7 @@ def _vpn_aws_azure_uptime() -> object:
         description="AWS↔Azure S2S VPN 24h uptime % (Notion §5 Phase 1 연결 대기)",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr("100 * vector(0)")
         .instant()
         .legend_format("AWS↔Azure")
@@ -355,7 +363,7 @@ def _slo_gauge() -> object:
         description="전체 가용성 % — Pod up + 외부 probe 평균(24h) vs 99.9% 목표",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).instant().legend_format("종합 SLO")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).instant().legend_format("종합 SLO")
     )
 
 
@@ -375,7 +383,7 @@ def _slo_trend_panel() -> object:
         description="종합 가용성 % 시계열 — 1h rolling. 게이지의 시간축 보강.",
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery().expr(expr).legend_format("종합 SLO")
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS)).expr(expr).legend_format("종합 SLO")
     )
 
 

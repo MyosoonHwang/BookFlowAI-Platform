@@ -22,6 +22,11 @@ from grafana_foundation_sdk.builders.cloudwatch import (
 )
 from grafana_foundation_sdk.builders.dashboard import Dashboard, Row
 from grafana_foundation_sdk.builders.prometheus import Dataquery as PromQuery
+from grafana_foundation_sdk.models.cloudwatch import (
+    CloudWatchQueryMode,
+    MetricEditorMode,
+    MetricQueryType,
+)
 from grafana_foundation_sdk.models.common import BigValueGraphMode
 from grafana_foundation_sdk.models.dashboard import (
     DashboardSpecialValueMapOptions,
@@ -37,7 +42,7 @@ from lib import panels as pb
 from lib.meta import base_dashboard
 
 UID = "bookflow-ops-row6-crosscloud"
-TITLE = "BookFlow 운영 — cross-cloud 연결 (Row 6)"
+TITLE = "BookFlow 운영 — Cross-cloud 연결"
 DESCRIPTION = (
     "멀티클라우드 연결 토폴로지. AWS↔GCP·AWS↔Azure S2S VPN 터널·BGP · "
     "TGW attachment 상태·라우트 전파. 순간 상태값 전용 — 가용성 %·다운 이력은 Row 8."
@@ -98,6 +103,9 @@ def _vpn_tunnel_state(title: str, vpn_id: str, legend: str, desc: str):
     query = (
         CWQuery()
         .datasource(_cw())
+        .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(AWS_REGION)
         .namespace("AWS/VPN")
         .metric_name("TunnelState")
@@ -146,7 +154,7 @@ def _bgp_peer(title: str, legend: str, desc: str):
         description=desc,
     )
     return panel.datasource(ds.ref(ds.PROMETHEUS)).with_target(
-        PromQuery()
+        PromQuery().datasource(ds.ref(ds.PROMETHEUS))
         .expr(f'max(bookflow_vpn_bgp_state{{link="{legend}"}}) or vector(2)')
         .instant()
         .legend_format(legend)
@@ -192,6 +200,9 @@ def _vpn_traffic():
             panel = panel.with_target(
                 CWQuery()
                 .datasource(_cw())
+                .query_mode(CloudWatchQueryMode.METRICS)
+                .metric_query_type(MetricQueryType.SEARCH)
+                .metric_editor_mode(MetricEditorMode.BUILDER)
                 .region(AWS_REGION)
                 .namespace("AWS/VPN")
                 .metric_name(metric)
@@ -224,6 +235,9 @@ def _tgw_attachment_traffic():
         panel = panel.with_target(
             CWQuery()
             .datasource(_cw())
+            .query_mode(CloudWatchQueryMode.METRICS)
+            .metric_query_type(MetricQueryType.SEARCH)
+            .metric_editor_mode(MetricEditorMode.BUILDER)
             .region(AWS_REGION)
             .namespace("AWS/TransitGateway")
             .metric_name(metric)
@@ -257,6 +271,9 @@ def _tgw_route_drops():
         panel = panel.with_target(
             CWQuery()
             .datasource(_cw())
+            .query_mode(CloudWatchQueryMode.METRICS)
+            .metric_query_type(MetricQueryType.SEARCH)
+            .metric_editor_mode(MetricEditorMode.BUILDER)
             .region(AWS_REGION)
             .namespace("AWS/TransitGateway")
             .metric_name(metric)
@@ -291,6 +308,9 @@ def _tgw_attachment_count():
     query = (
         CWQuery()
         .datasource(_cw())
+        .query_mode(CloudWatchQueryMode.METRICS)
+        .metric_query_type(MetricQueryType.SEARCH)
+        .metric_editor_mode(MetricEditorMode.BUILDER)
         .region(AWS_REGION)
         .namespace("AWS/TransitGateway")
         .expression(search)

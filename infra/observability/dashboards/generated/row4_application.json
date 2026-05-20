@@ -73,6 +73,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m]))",
           "instant": true,
           "legendFormat": "전체 RPS",
@@ -139,6 +143,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "100 * (sum(rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",status=\"4xx\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])), 0.001))",
           "instant": true,
           "legendFormat": "4xx 비율",
@@ -190,6 +198,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m]))",
           "legendFormat": "{{app}}",
           "refId": ""
@@ -239,6 +251,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "histogram_quantile(0.50, sum by (app, le) (rate(http_request_duration_highr_seconds_bucket{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])))",
           "legendFormat": "{{app}}",
           "refId": ""
@@ -288,6 +304,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "histogram_quantile(0.95, sum by (app, le) (rate(http_request_duration_highr_seconds_bucket{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])))",
           "legendFormat": "{{app}}",
           "refId": ""
@@ -302,7 +322,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100",
+      "description": "5xx 응답 비율(%) — sum by(app) status=5xx / 전체 ×100 (에러 0건이면 0%)",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -337,7 +357,11 @@
       "repeatDirection": "h",
       "targets": [
         {
-          "expr": "100 * (sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",status=\"5xx\"}[5m])) / clamp_min(sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])), 0.001))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * ((sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",status=\"5xx\"}[5m])) or (sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])) * 0)) / clamp_min(sum by (app) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\"}[5m])), 0.001))",
           "legendFormat": "{{app}}",
           "refId": ""
         }
@@ -386,6 +410,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (handler) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",app=\"intervention-svc\",handler=~\"/intervention/orders/.*\"}[5m]))",
           "legendFormat": "{{handler}}",
           "refId": ""
@@ -435,6 +463,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (status) (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",app=\"notification-svc\",handler=\"/notification/send\"}[5m]))",
           "legendFormat": "{{status}}",
           "refId": ""
@@ -484,6 +516,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum (rate(http_requests_total{job=\"kubernetes-pods\",namespace=\"bookflow\",app=\"dashboard-svc\",handler=~\"/dashboard/new-book-requests\"}[5m]))",
           "legendFormat": "신간 요청 조회",
           "refId": ""
@@ -533,6 +569,10 @@
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (app) (process_open_fds{job=\"kubernetes-pods\",namespace=\"bookflow\",app=\"dashboard-svc\"})",
           "legendFormat": "{{app}} open fds",
           "refId": ""
@@ -555,6 +595,6 @@
     "to": "now"
   },
   "timezone": "browser",
-  "title": "BookFlow 운영 — 애플리케이션 (Row 4)",
+  "title": "BookFlow 운영 — 애플리케이션",
   "uid": "bookflow-ops-row4-application"
 }
