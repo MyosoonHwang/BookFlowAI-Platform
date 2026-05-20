@@ -44,6 +44,13 @@
         "description": "출발지 지점/물류센터에 운송 완료 메일 발송.",
         "type": "Http",
         "operationOptions": "DisableAsyncPattern",
+        "runtimeConfiguration": {
+          "retryPolicy": {
+            "type": "fixed",
+            "count": 2,
+            "interval": "PT15S"
+          }
+        },
         "inputs": {
           "method": "POST",
           "uri": "@parameters('ACS_EMAIL_URI')",
