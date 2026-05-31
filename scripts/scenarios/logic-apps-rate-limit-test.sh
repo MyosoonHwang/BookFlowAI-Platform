@@ -118,7 +118,7 @@ from src.db import db_conn
 with db_conn() as conn, conn.cursor() as cur:
     cur.execute("""
         SELECT event_type, status, count(*) AS cnt
-          FROM notifications_log
+         FROM notifications_log
          WHERE sent_at > NOW() - INTERVAL '$minutes minutes'
          GROUP BY event_type, status
          ORDER BY cnt DESC

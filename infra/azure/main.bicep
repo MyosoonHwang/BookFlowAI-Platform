@@ -20,14 +20,14 @@ param logRetentionDays int
 param securityAdminObjectId string
 
 // ── AWS Cross-Cloud VPN 파라미터 (선택) ─────────────────────
-// AWS TGW 의 VPN attachment 가 만든 첫 번째 tunnel public IP + inside CIDR 의 customer side IP + PSK
-// 빈 문자열이면 vpn-connection 모듈 skip (Phase 1-3) · 채워지면 deploy (Phase 4+)
-param awsTgwActiveIp string = ''
-param awsTgwBgpPeeringIp string = ''
+// AWS VPN Connection 은 2개의 tunnel outside IP 를 자동 부여.
+// 빈 문자열이면 vpn-connection 모듈 skip · 채워지면 Active+Standby 양쪽 배포.
+param awsTgwActiveIp string = ''            // AWS Tunnel1 outside public IP
+param awsTgwActiveBgpPeeringIp string = ''  // AWS Tunnel1 BGP peer IP (169.254.21.5)
+param awsTgwStandbyIp string = ''           // AWS Tunnel2 outside public IP
+param awsTgwStandbyBgpPeeringIp string = '' // AWS Tunnel2 BGP peer IP (169.254.21.9)
 @secure()
 param vpnPreSharedKey string = ''
-// AWS APIPA inside CIDR 의 customer side IP (예: 169.254.21.6) — VPN GW 의 customBgpIpAddresses 로 사용
-param vpnCustomBgpIpAddresses array = []
 
 // ── 1. 관리 ID ────────────────────────────────────────────
 module identity 'modules/identity.bicep' = {
@@ -168,19 +168,21 @@ module vpn 'modules/vpn.bicep' = {
     prefix: prefix
     gatewaySubnetId: vnet.outputs.gatewaySubnetId
     vpnBgpAsn: vpnBgpAsn
-    customBgpIpAddresses: vpnCustomBgpIpAddresses
   }
 }
 
 // ── 10. VPN Connection (선택 · AWS Tunnel IP 채워질 때만 deploy) ──
-module vpnConnection 'modules/vpn-connection.bicep' = if (!empty(awsTgwActiveIp)) {
+// Active + Standby 두 연결을 동시에 배포. APIPA BGP IP는 각 연결에서 정적으로 설정.
+module vpnConnection 'modules/vpn-connection.bicep' = if (!empty(awsTgwActiveIp) && !empty(awsTgwStandbyIp)) {
   name: 'vpn-connection-deploy'
   dependsOn: [vpn]
   params: {
     prefix: prefix
     vpnGatewayName: 'vpngw-${prefix}'
     awsTgwActiveIp: awsTgwActiveIp
-    awsTgwBgpPeeringIp: awsTgwBgpPeeringIp
+    awsTgwActiveBgpPeeringIp: awsTgwActiveBgpPeeringIp
+    awsTgwStandbyIp: awsTgwStandbyIp
+    awsTgwStandbyBgpPeeringIp: awsTgwStandbyBgpPeeringIp
     preSharedKey: vpnPreSharedKey
   }
 }

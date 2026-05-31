@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from scripts.aws.lib import Config, log
-from scripts.aws.tasks import base, cicd_ecs, cicd_eks, cross_cloud, foundation, full_stack, scenario_ha, wipe_all
+from scripts.aws.tasks import base, cicd_ecs, cicd_eks, cross_cloud, foundation, full_stack, ping_test, scenario_ha, wipe_all
 
 TASK_MODULES = {
     "data":           "data",
@@ -109,6 +109,18 @@ def main():
         func=lambda a: cross_cloud.deploy())
     sub.add_parser("cross-cloud-down", help="cross-cloud minimum destroy").set_defaults(
         func=lambda a: cross_cloud.destroy())
+
+    sub.add_parser("vpn-up", help="VPN-only (CGW + TGW + VPN · VPC 불필요)").set_defaults(
+        func=lambda a: cross_cloud.deploy_vpn_only())
+    sub.add_parser("vpn-down", help="VPN-only destroy").set_defaults(
+        func=lambda a: cross_cloud.destroy_vpn_only())
+
+    sub.add_parser("ping-test-up", help="Azure/GCP ping 테스트용 VPC + EC2(t3.nano) 배포").set_defaults(
+        func=lambda a: ping_test.deploy())
+    sub.add_parser("ping-test-down", help="ping-test 리소스 destroy").set_defaults(
+        func=lambda a: ping_test.destroy())
+    sub.add_parser("ping-test-run", help="EC2 SSM으로 Azure/GCP ping 실행").set_defaults(
+        func=lambda a: ping_test.ping())
 
     sub.add_parser("cicd-eks-up", help="CICD pipeline for EKS pods (CodePipeline + CodeBuild)").set_defaults(
         func=lambda a: cicd_eks.deploy())
