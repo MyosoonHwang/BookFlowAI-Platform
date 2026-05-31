@@ -146,3 +146,55 @@ def destroy() -> None:
     for name, _tmpl in reversed(VPCS):
         Stack(tier="10", name=name, template="").destroy()
     log.step("=== cross-cloud destroy  ===")
+
+
+# ── VPN-only: VPC 없이 CGW + TGW + VPN 만 구축 ───────────────────────────
+def deploy_vpn_only() -> None:
+    """CGW + TGW (VPN-only) + Site-to-Site VPN. VPC 불필요."""
+    log.step("=== vpn-only deploy · CGW + TGW + VPN (Azure/GCP) ===")
+
+    azure_ip = os.environ.get("BOOKFLOW_AZURE_VPN_GW_IP", "0.0.0.0")
+    azure_psk = os.environ.get("BOOKFLOW_AZURE_VPN_PSK", "")
+    gcp_ip = os.environ.get("BOOKFLOW_GCP_VPN_GW_IP", "0.0.0.0")
+    gcp_psk = os.environ.get("BOOKFLOW_GCP_VPN_PSK", "")
+
+    log.info(f"Azure VPN IP : {azure_ip}  PSK: {'***' if azure_psk else '(없음)'}")
+    log.info(f"GCP VPN IP   : {gcp_ip}  PSK: {'***' if gcp_psk else '(없음)'}")
+
+    # 1. Customer Gateway (Azure + GCP 조건부)
+    Stack(tier="10", name="customer-gateway",
+          template="10-network-core/customer-gateway.yaml",
+          parameters={"AzureVpnGatewayIp": azure_ip, "GcpHaVpnIp": gcp_ip}).deploy()
+
+    # 2. TGW (VPN-only · VPC attachment 없음)
+    Stack(tier="60", name="tgw",
+          template="60-network-cross-cloud/tgw-vpn-only.yaml").deploy()
+
+    # 3. Site-to-Site VPN
+    vpn_params: dict = {}
+    if azure_ip != "0.0.0.0":
+        vpn_params["EnableAzureVpn"] = "true"
+        if azure_psk:
+            vpn_params["AzurePresharedKey"] = azure_psk
+    if gcp_ip != "0.0.0.0":
+        vpn_params["EnableGcpVpn"] = "true"
+        if gcp_psk:
+            vpn_params["GcpPresharedKey"] = gcp_psk
+
+    if not vpn_params:
+        log.warn("Azure / GCP VPN IP 미설정 · VPN connection skip")
+    else:
+        Stack(tier="60", name="vpn-site-to-site",
+              template="60-network-cross-cloud/vpn-site-to-site.yaml",
+              parameters=vpn_params).deploy()
+        _attach_vpn_to_tgw_rt()
+
+    log.step("=== vpn-only deploy 완료 · BGP 수립 ~5-10분 소요 ===")
+
+
+def destroy_vpn_only() -> None:
+    log.step("=== vpn-only destroy ===")
+    Stack(tier="60", name="vpn-site-to-site", template="").destroy()
+    Stack(tier="60", name="tgw", template="").destroy()
+    Stack(tier="10", name="customer-gateway", template="").destroy()
+    log.step("=== vpn-only destroy 완료 ===")

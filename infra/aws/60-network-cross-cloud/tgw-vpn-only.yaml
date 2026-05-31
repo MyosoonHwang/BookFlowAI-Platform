@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW - TGW Hub (VPN-only) · VPC 없이 CGW + VPN 연결만 필요할 때 사용.
+  VPC attachment 없음 — VPN attachment 는 vpn-site-to-site.yaml 배포 후 boto3 로 RT 연결.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  TgwAsn:
+    Type: Number
+    Default: 64512
+    Description: TGW Amazon-side BGP ASN
+
+Resources:
+  Tgw:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      AmazonSideAsn: !Ref TgwAsn
+      AutoAcceptSharedAttachments: enable
+      DefaultRouteTableAssociation: disable
+      DefaultRouteTablePropagation: disable
+      DnsSupport: enable
+      VpnEcmpSupport: enable
+      MulticastSupport: disable
+      Description: BOOKFLOW TGW - VPN only (Azure + GCP)
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw' }]
+
+  TgwRouteTable:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties:
+      TransitGatewayId: !Ref Tgw
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-tgw-rt' }]
+
+Outputs:
+  TgwId:
+    Value: !Ref Tgw
+    Export: { Name: !Sub '${ProjectName}-tgw-id' }
+  TgwRouteTableId:
+    Value: !Ref TgwRouteTable
+    Export: { Name: !Sub '${ProjectName}-tgw-rt-id' }
+  TgwAsn:
+    Value: !Ref TgwAsn
+    Export: { Name: !Sub '${ProjectName}-tgw-asn' }

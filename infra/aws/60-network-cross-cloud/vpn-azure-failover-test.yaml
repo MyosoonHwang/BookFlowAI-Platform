@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  BOOKFLOW - Azure VPN Failover Test 전용 최소 인프라
+  (CGW + TGW + VPN Connection only · VPC 불필요)
+  TGW DefaultRouteTableAssociation/Propagation=enable 로 VPN attachment 자동 연결.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: bookflow
+  TgwAsn:
+    Type: Number
+    Default: 64512
+    Description: TGW BGP ASN
+  AzureVpnGatewayIp:
+    Type: String
+    Description: Azure VPN Gateway Active Public IP (vpn.bicep outputs.activePublicIp)
+  AzureBgpAsn:
+    Type: Number
+    Default: 65001
+    Description: Azure VPN Gateway BGP ASN (main.bicep vpnBgpAsn)
+  AzurePresharedKey:
+    Type: String
+    NoEcho: true
+    Description: Pre-Shared Key (Azure vpnPreSharedKey 와 동일하게 설정)
+
+Resources:
+  # ─── Customer Gateway (Azure VPN GW Public IP) ───────────────────
+  AzureCgw:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      IpAddress: !Ref AzureVpnGatewayIp
+      BgpAsn: !Ref AzureBgpAsn
+      Tags:
+        - { Key: Name, Value: !Sub '${ProjectName}-cgw-azure' }
+
+  # ─── Transit Gateway ─────────────────────────────────────────────
+  # DefaultRouteTableAssociation/Propagation enable:
+  # VPN attachment 생성 시 default RT 에 자동 association + propagation → BGP 경로 즉시 반영
+  Tgw:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      AmazonSideAsn: !Ref TgwAsn
+      DefaultRouteTableAssociation: enable
+      DefaultRouteTablePropagation: enable
+      AutoAcceptSharedAttachments: enable
+      VpnEcmpSupport: enable
+      DnsSupport: enable
+      MulticastSupport: disable
+      Description: BOOKFLOW TGW - Azure VPN Failover Test
+      Tags:
+        - { Key: Name, Value: !Sub '${ProjectName}-tgw' }
+
+  # ─── VPN Connection (Tunnel1 + Tunnel2 → Azure) ──────────────────
+  # 1 VPN Connection = 2 tunnels. AWS가 2개의 outside public IP를 자동 부여.
+  # Tunnel1: inside CIDR 169.254.21.4/30  (BGP: AWS=169.254.21.5, Azure=169.254.21.6)
+  # Tunnel2: inside CIDR 169.254.21.8/30  (BGP: AWS=169.254.21.9, Azure=169.254.21.10)
+  AzureVpnConnection:
+    Type: AWS::EC2::VPNConnection
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref AzureCgw
+      TransitGatewayId: !Ref Tgw
+      StaticRoutesOnly: false
+      VpnTunnelOptionsSpecifications:
+        - PreSharedKey: !Ref AzurePresharedKey
+          TunnelInsideCidr: 169.254.21.4/30
+          IKEVersions:
+            - Value: ikev2
+          Phase1EncryptionAlgorithms:
+            - Value: AES256
+          Phase1IntegrityAlgorithms:
+            - Value: SHA2-256
+          Phase1DHGroupNumbers:
+            - Value: 14
+          Phase2EncryptionAlgorithms:
+            - Value: AES256
+          Phase2IntegrityAlgorithms:
+            - Value: SHA2-256
+          Phase2DHGroupNumbers:
+            - Value: 14
+        - PreSharedKey: !Ref AzurePresharedKey
+          TunnelInsideCidr: 169.254.21.8/30
+          IKEVersions:
+            - Value: ikev2
+          Phase1EncryptionAlgorithms:
+            - Value: AES256
+          Phase1IntegrityAlgorithms:
+            - Value: SHA2-256
+          Phase1DHGroupNumbers:
+            - Value: 14
+          Phase2EncryptionAlgorithms:
+            - Value: AES256
+          Phase2IntegrityAlgorithms:
+            - Value: SHA2-256
+          Phase2DHGroupNumbers:
+            - Value: 14
+      Tags:
+        - { Key: Name, Value: !Sub '${ProjectName}-vpn-azure' }
+
+Outputs:
+  TgwId:
+    Value: !Ref Tgw
+    Export: { Name: !Sub '${ProjectName}-failover-tgw-id' }
+  AzureCgwId:
+    Value: !Ref AzureCgw
+    Export: { Name: !Sub '${ProjectName}-failover-cgw-azure-id' }
+  AzureVpnConnectionId:
+    Value: !Ref AzureVpnConnection
+    Export: { Name: !Sub '${ProjectName}-failover-vpn-azure-id' }
+  # TGW default RT ID는 CFN GetAtt 지원 안 함 → 스크립트에서 동적 조회
+  # aws ec2 describe-transit-gateways --transit-gateway-ids <TGW_ID>
+  #   --query 'TransitGateways[0].Options.AssociationDefaultRouteTableId'
